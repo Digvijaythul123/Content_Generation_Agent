@@ -1,30 +1,29 @@
-IMAGE PROMPTS
-==================================================
+Here are the professional AI image prompts tailored for a cinematic, high-end Instagram Reel (9:16).
 
-PROMPT 1
-Photorealistic cinematic scene, Stop treating your degree as an asset. It’s actually a depreciating liability., modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**General Style Note for all prompts:** *Shot on 35mm lens, f/1.8, cinematic lighting, 8k resolution, photorealistic, shot in a modern Indian corporate aesthetic (Bangalore/Mumbai style), moody atmosphere.*
 
-PROMPT 2
-Photorealistic cinematic scene, Most Indian professionals view their degree as a lifelong shield, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+***
 
-PROMPT 3
-Photorealistic cinematic scene, But in a first-principles world, a degree is just a receipt for a transaction that happened years ago, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 1**
+**Prompt:** A cinematic close-up of a prestigious Indian university degree framed on a mahogany wall. The glass is subtly cracked, and the edges of the paper are slightly yellowed and curling. Dim, dramatic side-lighting creates a mood of decay. Shallow depth of field, ultra-realistic textures of paper and wood. --ar 9:16 --v 6.0
 
-PROMPT 4
-Photorealistic cinematic scene, The market doesn't pay you for what you learned in 2015; it pays you for the problems you can solve today, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 2**
+**Prompt:** A medium shot of a confident Indian professional in his 30s wearing a sharp charcoal grey suit, standing in a glass-walled office. He is holding his degree certificate like a shield in front of his chest, looking defensive yet proud. Modern corporate skyline of Mumbai blurred in the background. Soft bokeh, high-end corporate photography. --ar 9:16 --v 6.0
 
-PROMPT 5
-Photorealistic cinematic scene, When you rely on your credentials to get you promoted, you are betting on a dead asset, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 3**
+**Prompt:** A high-angle shot of a mahogany office desk. A university degree is lying flat, and on top of it sits a crumpled thermal grocery receipt and a coffee stain. The lighting is cold and clinical. The image symbolizes the degree becoming just another piece of paper. Hyper-realistic paper textures, sharp focus. --ar 9:16 --v 6.0
 
-PROMPT 6
-Photorealistic cinematic scene, The most dangerous place to be is "over-qualified" but "under-skilled, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 4**
+**Prompt:** A split-screen style composition. On the left, a blurry, faded image of a 2015 classroom. On the right, a sharp, vibrant close-up of a modern Indian professional's hands typing rapidly on a high-end mechanical keyboard with multiple monitors showing complex data visualizations and code. Neon blue and amber ambient lighting. --ar 9:16 --v 6.0
 
-PROMPT 7
-Photorealistic cinematic scene, ", modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 5**
+**Prompt:** A wide shot of a modern Indian corporate hallway. A professional stands still and stagnant while other blurred figures move rapidly past him in a motion blur. He is clutching a leather folder containing his credentials. The lighting is moody, with a single spotlight on him, emphasizing isolation and obsolescence. --ar 9:16 --v 6.0
 
-PROMPT 8
-Photorealistic cinematic scene, Your degree got you the interview, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 6**
+**Prompt:** A cinematic portrait of an Indian man in a formal shirt and tie, looking into a mirror. His reflection shows a version of himself that looks confused and outdated, while the real man looks exhausted. The background is a sleek, minimalist office. High contrast, dramatic shadows, conveying a sense of internal crisis. --ar 9:16 --v 6.0
 
-PROMPT 9
-Photorealistic cinematic scene, Your ability to unlearn gets you the wealth, modern Indian professional environment, high detail, realistic lighting, Instagram reel style, vertical composition
+**SCENE 7**
+**Prompt:** A low-angle shot of a polished boardroom table. A leather portfolio is open, showing a degree certificate. In the background, a panel of three diverse Indian executives are looking at the candidate (out of frame). Soft, warm overhead corporate lighting, depth of field focusing on the document. --ar 9:16 --v 6.0
 
+**SCENE 8**
+**Prompt:** A powerful shot of a modern Indian professional in a smart-casual linen shirt, sitting in a sun-drenched, modern home library. He is closing an old textbook and opening a sleek, new tablet showing a futuristic interface. The expression is one of clarity and growth. Warm golden hour light, cinematic lens flare, luxury aesthetic. --ar 9:16 --v 6.0

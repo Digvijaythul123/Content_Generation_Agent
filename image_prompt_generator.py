@@ -1,3 +1,4 @@
+from ai_service import AIService
 import os
 import sys
 
@@ -7,33 +8,40 @@ if len(sys.argv) != 2:
 
 reel_id = sys.argv[1]
 
-scenes_file = os.path.join(
+scene_file = os.path.join(
     "generated_videos",
     f"{reel_id}_scenes.txt"
 )
 
-if not os.path.exists(scenes_file):
-    print(f"Scenes file not found: {scenes_file}")
+if not os.path.exists(scene_file):
+    print("Scenes file not found")
     sys.exit(1)
 
-with open(scenes_file, "r") as file:
-    content = file.read()
+with open(scene_file, "r") as file:
+    scene_content = file.read()
 
-scenes = []
+ai_service = AIService()
 
-for line in content.splitlines():
+prompt = f"""
+You are an expert visual storyteller.
 
-    line = line.strip()
+Convert each scene into a professional AI image prompt.
 
-    if (
-        not line
-        or line.startswith("SCENES")
-        or line.startswith("=")
-        or line.startswith("SCENE ")
-    ):
-        continue
+Requirements:
+- Photorealistic
+- Cinematic
+- Vertical Instagram Reel format
+- Modern Indian professional setting
+- Rich visual detail
+- No text inside image
+- One image prompt per scene
 
-    scenes.append(line)
+Scenes:
+
+{scene_content}
+"""
+
+result = ai_service.generate_reel(prompt)
 
 output_file = os.path.join(
     "generated_videos",
@@ -41,21 +49,8 @@ output_file = os.path.join(
 )
 
 with open(output_file, "w") as file:
+    file.write(result)
 
-    file.write("IMAGE PROMPTS\n")
-    file.write("=" * 50 + "\n\n")
-
-    for index, scene in enumerate(scenes, start=1):
-
-        prompt = (
-            f"Photorealistic cinematic scene, {scene}, "
-            f"modern Indian professional environment, "
-            f"high detail, realistic lighting, "
-            f"Instagram reel style, vertical composition"
-        )
-
-        file.write(f"PROMPT {index}\n")
-        file.write(prompt)
-        file.write("\n\n")
-
-print(f"Image prompts saved to {output_file}")
+print(
+    f"Image prompts saved to {output_file}"
+)
