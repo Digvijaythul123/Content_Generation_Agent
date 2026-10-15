@@ -1,29 +1,29 @@
-Here are the professional AI image prompts tailored for a cinematic, high-end Instagram Reel (9:16).
+Here are the professional AI image prompts designed for a high-impact, cinematic Instagram Reel. 
 
-**General Style Note for all prompts:** *Shot on 35mm lens, f/1.8, cinematic lighting, 8k resolution, photorealistic, shot in a modern Indian corporate aesthetic (Bangalore/Mumbai style), moody atmosphere.*
+**Technical Constants applied to all prompts:** *Photorealistic, 8k resolution, cinematic lighting, shot on 35mm lens, f/1.8, depth of field, vertical 9:16 aspect ratio, modern Indian corporate aesthetic.*
 
 ***
 
 **SCENE 1**
-**Prompt:** A cinematic close-up of a prestigious Indian university degree framed on a mahogany wall. The glass is subtly cracked, and the edges of the paper are slightly yellowed and curling. Dim, dramatic side-lighting creates a mood of decay. Shallow depth of field, ultra-realistic textures of paper and wood. --ar 9:16 --v 6.0
+**Prompt:** A cinematic close-up of a prestigious Indian university degree lying on a polished dark mahogany office desk. The paper is slightly yellowed at the edges, with a subtle visual effect of the ink slowly fading or dissolving into dust. Dramatic side-lighting, moody atmosphere, high contrast, shallow depth of field.
 
 **SCENE 2**
-**Prompt:** A medium shot of a confident Indian professional in his 30s wearing a sharp charcoal grey suit, standing in a glass-walled office. He is holding his degree certificate like a shield in front of his chest, looking defensive yet proud. Modern corporate skyline of Mumbai blurred in the background. Soft bokeh, high-end corporate photography. --ar 9:16 --v 6.0
+**Prompt:** A medium shot of a confident Indian professional in a sharp charcoal grey suit, standing in a glass-walled corporate office in Bangalore. He is holding his degree folder like a shield in front of his chest, looking defiant. Soft morning sunlight streaming through skyscrapers in the background, corporate minimalism, hyper-realistic skin textures.
 
 **SCENE 3**
-**Prompt:** A high-angle shot of a mahogany office desk. A university degree is lying flat, and on top of it sits a crumpled thermal grocery receipt and a coffee stain. The lighting is cold and clinical. The image symbolizes the degree becoming just another piece of paper. Hyper-realistic paper textures, sharp focus. --ar 9:16 --v 6.0
+**Prompt:** A conceptual shot of a university degree transformed into a giant, oversized supermarket shopping receipt. The receipt is draped over a modern ergonomic office chair. In the background, a blurred high-tech workspace with dual monitors. Cool blue and teal color grading, crisp focus on the texture of the thermal paper.
 
 **SCENE 4**
-**Prompt:** A split-screen style composition. On the left, a blurry, faded image of a 2015 classroom. On the right, a sharp, vibrant close-up of a modern Indian professional's hands typing rapidly on a high-end mechanical keyboard with multiple monitors showing complex data visualizations and code. Neon blue and amber ambient lighting. --ar 9:16 --v 6.0
+**Prompt:** A split-screen visual storytelling shot. Left side: A dusty, old textbook from 2015 in dim light. Right side: A glowing, modern holographic dashboard showing real-time data analytics and complex problem-solving nodes. A sharp contrast between warm vintage tones and cold futuristic neon light.
 
 **SCENE 5**
-**Prompt:** A wide shot of a modern Indian corporate hallway. A professional stands still and stagnant while other blurred figures move rapidly past him in a motion blur. He is clutching a leather folder containing his credentials. The lighting is moody, with a single spotlight on him, emphasizing isolation and obsolescence. --ar 9:16 --v 6.0
+**Prompt:** A wide cinematic shot of an Indian professional standing still in a fast-moving, blurred corporate hallway. Everyone around him is a motion blur of activity, while he stands frozen, clutching a leather diploma folder. The lighting is oppressive and sterile, conveying a sense of stagnation amidst progress.
 
 **SCENE 6**
-**Prompt:** A cinematic portrait of an Indian man in a formal shirt and tie, looking into a mirror. His reflection shows a version of himself that looks confused and outdated, while the real man looks exhausted. The background is a sleek, minimalist office. High contrast, dramatic shadows, conveying a sense of internal crisis. --ar 9:16 --v 6.0
+**Prompt:** A poignant close-up of a professional's face—an Indian man in his 30s—looking into a mirror. He is wearing an expensive blazer and a gold watch (over-qualified), but his reflection shows him looking confused and overwhelmed by a complex digital interface reflecting in the glass (under-skilled). Cinematic moody lighting, sweat beads, intense gaze.
 
 **SCENE 7**
-**Prompt:** A low-angle shot of a polished boardroom table. A leather portfolio is open, showing a degree certificate. In the background, a panel of three diverse Indian executives are looking at the candidate (out of frame). Soft, warm overhead corporate lighting, depth of field focusing on the document. --ar 9:16 --v 6.0
+**Prompt:** A low-angle shot of a polished corporate boardroom door slightly ajar. A glimpse of a hiring manager's hand reaching out to shake the hand of a candidate. On the table nearby, a degree folder sits closed. Bright, optimistic high-key lighting, airy atmosphere, luxury corporate interior.
 
 **SCENE 8**
-**Prompt:** A powerful shot of a modern Indian professional in a smart-casual linen shirt, sitting in a sun-drenched, modern home library. He is closing an old textbook and opening a sleek, new tablet showing a futuristic interface. The expression is one of clarity and growth. Warm golden hour light, cinematic lens flare, luxury aesthetic. --ar 9:16 --v 6.0
+**Prompt:** A powerful shot of a professional sitting in a modern cafe in Mumbai, laptop open, with a stack of current industry books and a digital tablet. He is physically pushing an old degree certificate off the table to make room for a new project. Warm sunset lighting, bokeh city lights in the background, a feeling of liberation and growth.

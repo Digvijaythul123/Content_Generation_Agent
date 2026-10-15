@@ -1,7 +1,7 @@
 import json
 import os
-import sys
 import re
+import sys
 
 if len(sys.argv) != 2:
     print("Usage: python3 scene_generator.py <reel_id>")
@@ -24,21 +24,45 @@ with open(file_path, "r") as file:
 hook = reel.get("hook", "")
 script = reel.get("script", "")
 
-output_folder = "generated_videos"
-os.makedirs(output_folder, exist_ok=True)
+# Remove visual instructions
+script = re.sub(
+    r"\(Visual:.*?\)",
+    "",
+    script,
+    flags=re.IGNORECASE | re.DOTALL
+)
 
-sentences = []
-
-if hook:
-    sentences.append(hook)
-
+# Remove remaining brackets
 script = re.sub(r"\(.*?\)", "", script)
 
-for sentence in re.split(r"[.!?]+", script):
+# Remove quote artifacts
+script = script.replace('"', "")
+
+# Normalize whitespace
+script = script.replace("\n", " ")
+script = re.sub(r"\s+", " ", script).strip()
+
+scenes = []
+
+if hook:
+    scenes.append(hook.strip())
+
+sentences = re.split(r"(?<=[.!?])\s+", script)
+
+for sentence in sentences:
+
     sentence = sentence.strip()
 
-    if len(sentence) > 20:
-        sentences.append(sentence)
+    if not sentence:
+        continue
+
+    if len(sentence) < 30:
+        continue
+
+    scenes.append(sentence)
+
+output_folder = "generated_videos"
+os.makedirs(output_folder, exist_ok=True)
 
 output_file = os.path.join(
     output_folder,
@@ -48,12 +72,13 @@ output_file = os.path.join(
 with open(output_file, "w") as file:
 
     file.write("SCENES\n")
-    file.write("=" * 50 + "\n\n")
+    file.write("=" * 50)
+    file.write("\n\n")
 
-    for index, sentence in enumerate(sentences, start=1):
+    for index, scene in enumerate(scenes, start=1):
 
         file.write(f"SCENE {index}\n")
-        file.write(sentence)
+        file.write(scene)
         file.write("\n\n")
 
 print(f"Scenes saved to {output_file}")

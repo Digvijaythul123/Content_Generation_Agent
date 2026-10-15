@@ -1,0 +1,81 @@
+
+Create a professional cinematic Instagram Reel.
+
+TITLE:
+The Education Debt Fallacy
+
+FORMAT:
+- Vertical 9:16
+- Instagram Reel
+- 1080 x 1920
+- Duration: 25 to 35 seconds
+
+VISUAL STYLE:
+- Photorealistic
+- Cinematic
+- High-end commercial quality
+- Modern Indian corporate environment
+- Premium storytelling
+- Consistent visual style
+- Realistic lighting
+- No text inside visuals
+
+VOICEOVER:
+
+Stop treating your degree as an asset. It’s actually a depreciating liability.
+
+Most Indian professionals view their degree as a lifelong shield. But in a first-principles world, a degree is just a receipt for a transaction that happened years ago. The market doesn't pay you for what you learned in 2015; it pays you for the problems you can solve today. When you rely on your credentials to get you promoted, you are betting on a dead asset. The most dangerous place to be is over-qualified but under-skilled. Your degree got you the interview. Your ability to unlearn gets you the wealth.
+
+VISUAL STORYBOARD:
+
+Here are the professional AI image prompts designed for a high-impact, cinematic Instagram Reel. 
+
+**Technical Constants applied to all prompts:** *Photorealistic, 8k resolution, cinematic lighting, shot on 35mm lens, f/1.8, depth of field, vertical 9:16 aspect ratio, modern Indian corporate aesthetic.*
+
+***
+
+**SCENE 1**
+**Prompt:** A cinematic close-up of a prestigious Indian university degree lying on a polished dark mahogany office desk. The paper is slightly yellowed at the edges, with a subtle visual effect of the ink slowly fading or dissolving into dust. Dramatic side-lighting, moody atmosphere, high contrast, shallow depth of field.
+
+**SCENE 2**
+**Prompt:** A medium shot of a confident Indian professional in a sharp charcoal grey suit, standing in a glass-walled corporate office in Bangalore. He is holding his degree folder like a shield in front of his chest, looking defiant. Soft morning sunlight streaming through skyscrapers in the background, corporate minimalism, hyper-realistic skin textures.
+
+**SCENE 3**
+**Prompt:** A conceptual shot of a university degree transformed into a giant, oversized supermarket shopping receipt. The receipt is draped over a modern ergonomic office chair. In the background, a blurred high-tech workspace with dual monitors. Cool blue and teal color grading, crisp focus on the texture of the thermal paper.
+
+**SCENE 4**
+**Prompt:** A split-screen visual storytelling shot. Left side: A dusty, old textbook from 2015 in dim light. Right side: A glowing, modern holographic dashboard showing real-time data analytics and complex problem-solving nodes. A sharp contrast between warm vintage tones and cold futuristic neon light.
+
+**SCENE 5**
+**Prompt:** A wide cinematic shot of an Indian professional standing still in a fast-moving, blurred corporate hallway. Everyone around him is a motion blur of activity, while he stands frozen, clutching a leather diploma folder. The lighting is oppressive and sterile, conveying a sense of stagnation amidst progress.
+
+**SCENE 6**
+**Prompt:** A poignant close-up of a professional's face—an Indian man in his 30s—looking into a mirror. He is wearing an expensive blazer and a gold watch (over-qualified), but his reflection shows him looking confused and overwhelmed by a complex digital interface reflecting in the glass (under-skilled). Cinematic moody lighting, sweat beads, intense gaze.
+
+**SCENE 7**
+**Prompt:** A low-angle shot of a polished corporate boardroom door slightly ajar. A glimpse of a hiring manager's hand reaching out to shake the hand of a candidate. On the table nearby, a degree folder sits closed. Bright, optimistic high-key lighting, airy atmosphere, luxury corporate interior.
+
+**SCENE 8**
+**Prompt:** A powerful shot of a professional sitting in a modern cafe in Mumbai, laptop open, with a stack of current industry books and a digital tablet. He is physically pushing an old degree certificate off the table to make room for a new project. Warm sunset lighting, bokeh city lights in the background, a feeling of liberation and growth.
+
+CAMERA STYLE:
+- Slow cinematic camera movement
+- Documentary-style visuals
+- Smooth scene transitions
+- Professional commercial cinematography
+- Shallow depth of field
+
+BACKGROUND MUSIC:
+- Minimal cinematic piano
+- Thought-provoking
+- Modern corporate documentary feel
+- No vocals
+- Inspirational ending
+
+SUBTITLES:
+- Burned-in captions
+- White modern typography
+- Match voiceover timing
+
+OUTPUT:
+Generate a complete vertical Instagram Reel ready for publishing.
