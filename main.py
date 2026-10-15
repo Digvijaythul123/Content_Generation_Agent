@@ -16,14 +16,6 @@ hook = re.search(r"Hook:\s*(.*)", result)
 script = re.search(r"Script:\s*(.*?)Caption:", result, re.DOTALL)
 caption = re.search(r"Caption:\s*(.*)", result, re.DOTALL)
 
-data = {
-    "title": title.group(1).strip() if title else "",
-    "hook": hook.group(1).strip() if hook else "",
-    "script": script.group(1).strip() if script else "",
-    "caption": caption.group(1).strip() if caption else "",
-    "raw_content": result
-}
-
 folder_path = "generated_reels"
 
 existing_files = [
@@ -34,6 +26,16 @@ existing_files = [
 next_number = len(existing_files) + 1
 
 file_name = f"reel_{next_number:03d}.json"
+
+data = {
+    "id": file_name.replace(".json", ""),
+    "title": title.group(1).strip() if title else "",
+    "hook": hook.group(1).strip() if hook else "",
+    "script": script.group(1).strip() if script else "",
+    "caption": caption.group(1).strip() if caption else "",
+    "status": "Draft",
+    "raw_content": result
+}
 
 file_path = os.path.join(folder_path, file_name)
 
