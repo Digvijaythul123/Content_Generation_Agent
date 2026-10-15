@@ -39,7 +39,14 @@ with open(output_file, "w") as file:
     file.write("=" * 50 + "\n\n")
 
     file.write(f"TITLE:\n{title}\n\n")
+
     file.write(f"HOOK:\n{hook}\n\n")
 
     file.write("SCRIPT:\n")
-    file
+    file.write(script)
+    file.write("\n\n")
+
+    file.write("CAPTION:\n")
+    file.write(caption)
+
+print(f"Video plan saved to {output_file}")
