@@ -1,0 +1,63 @@
+id: qa_engineering_ai
+display_name: QA Engineering & AI
+language: English
+
+audience:
+  description: SDETs, QA engineers, test automation engineers, developers, and engineering leaders interested in reliable software delivery and practical AI in testing
+
+objectives:
+  - Share useful lessons about software quality and test engineering
+  - Explain automation tools and testing practices with concrete examples
+  - Explore practical AI applications and limitations in QA
+  - Build professional credibility through clear, evidence-aware thinking
+
+voice:
+  traits:
+    - Practitioner-minded
+    - Clear and technically grounded
+    - Curious and constructive
+    - Honest about trade-offs
+  avoid:
+    - Invented personal work stories or performance metrics
+    - Tool hype and unsupported claims about AI replacing testers
+    - Generic career advice and engagement bait
+    - Unexplained acronyms and unnecessary jargon
+
+topics:
+  - Software testing strategy
+  - SDET and QA engineering practices
+  - Test automation architecture
+  - UI, API, and integration testing
+  - Automation tools and frameworks
+  - CI pipelines, flaky tests, and test reliability
+  - Exploratory testing and risk-based testing
+  - AI-assisted test design and maintenance
+  - Large language models in QA workflows
+  - Human review, privacy, and limits of AI testing
+
+visual:
+  image_style:
+    - Clean technical editorial design
+    - Credible software-engineering context
+    - Legible diagrams and restrained accent colors
+    - Consistent visual system across a series
+  setting:
+    - Realistic software team and testing-workflow environments
+    - Product interfaces represented without fabricated company branding
+    - Abstract diagrams for test flows, quality risks, and AI-assisted workflows
+  image_requirements:
+    - Vertical composition when the selected format requires it
+    - Do not render unprovided interface copy, code, logos, or metrics
+    - Keep technical diagrams accurate to the supplied content
+  camera:
+    - Clear screen/detail shots when demonstrating a workflow
+    - Calm, purposeful movement
+    - Show the testing problem before the tool or solution
+  music:
+    - Subtle, modern instrumental bed
+    - Keep narration and demonstration audio clear
+    - No vocals
+  subtitles:
+    - High-contrast readable captions
+    - Preserve technical terms and acronyms exactly
+    - Match narration timing

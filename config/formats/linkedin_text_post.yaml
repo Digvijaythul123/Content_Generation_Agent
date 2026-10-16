@@ -1,0 +1,15 @@
+id: linkedin_text_post
+display_name: LinkedIn text post
+content_fields:
+  - title
+  - post_text
+generation:
+  content_kind: post
+  prompt_template: linkedin_text_post.md
+  instructions:
+    - Write a useful LinkedIn post for the selected professional content profile.
+    - Open with a specific, honest hook; use short paragraphs and whitespace.
+    - Explain one idea with a concrete example, trade-off, or practical takeaway.
+    - Do not invent personal experience, employer details, client examples, or metrics.
+    - Use a hypothetical example when the brief does not provide a real one.
+    - End with one genuine question only when it adds value; avoid engagement bait.

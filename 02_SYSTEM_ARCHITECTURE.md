@@ -34,8 +34,11 @@ video prompt CLI -> reel + storyboard + image prompts + profile/format/platform 
 prepare_reel CLI -> runs storyboard, image-prompt, and master-prompt stages
 single-page CLI -> content pipeline -> generated_posts/*.json
                                   -> generated_assets/*_design_prompt.txt
-local review UI -> read-only list/detail of generated Reels and posts
-               -> generation form uses content_pipeline.py and current storage
+LinkedIn text CLI -> content pipeline -> generated_posts/*.json
+                                        (no image-prompt asset)
+local review UI -> draft generation, shared review decisions, and local history
+               -> format-aware pipeline status and production-stage actions
+               -> asset links for generated prompts and scene files
 ```
 
 ### [CURRENT] Components and limits
@@ -43,12 +46,15 @@ local review UI -> read-only list/detail of generated Reels and posts
 - `scripts/` contains the canonical CLI commands.
 - Root Python modules provide configuration models/loading, generation,
   prompt composition, JSON file operations, and model communication.
-- YAML currently configures Rational Thoughts and Comedy profiles, a default
-  brand, Reel format, and Instagram platform.
+- YAML configures Rational Thoughts, Comedy, and QA Engineering & AI profiles;
+  a default brand; Reel, single-page, and LinkedIn text-post formats; and
+  Instagram and LinkedIn platform compatibility.
 - Review is local and human-operated. Saved status values are Draft, Approved,
   and Rejected.
-- The local browser UI displays current statuses and can generate drafts, but
-  leaves approve/reject actions to the existing CLI commands.
+- The local browser UI supports review decisions for Reels and single-page
+  posts; CLI review commands remain available for Reels.
+- The browser UI derives production readiness from existing artifacts and
+  records review/stage events in per-content JSONL history files.
 - Storyboard preparation produces validated JSON plus a readable text export.
   Image/video rendering, scheduler, publisher, analytics, and an external asset
   library do not exist.
@@ -73,7 +79,7 @@ Source / Brief
 - **Brand** owns publisher identity, reusable branding, voice overlays, and
   defaults. Examples: Rational Thoughts, Daily LOL, Growth Lab.
 - **Format** owns output fields and production constraints. Examples:
-  Instagram Reel, YouTube Short, TikTok Video, Carousel, LinkedIn Post,
+  Instagram Reel, YouTube Short, single-page graphic, LinkedIn text post,
   Thread, Blog Article.
 - **Platform** owns destination capabilities and eventual publishing rules.
 - **Source** is input material, not an editorial category.
@@ -126,10 +132,10 @@ to empty architectural layers.
 | Brief/source | [CURRENT] | Text brief enters generation and is saved; structured source references are [NEXT]. |
 | Brand/profile/format/platform resolution | [CURRENT] | YAML resolution exists; fuller profile/brand/format support is [NEXT]. |
 | Content generation | [CURRENT] | Reel fields are generated via configured prompt and fixed model client. |
-| Human review | [CURRENT] | CLI listing and approval/rejection operate on JSON records. |
+| Human review | [CURRENT] | The local UI and CLI can review saved records; UI actions are recorded in local history. |
 | Scene planning | [CURRENT] | Timed beats are parsed and untimed legacy scripts remain explicitly untimed; richer intent/continuity is [NEXT]. |
 | Visual planning | [CURRENT] | Profile visual guidance informs image and master prompt text. |
-| Storyboard | [CURRENT] | Versioned JSON records preserve timing, visual beats, narration/dialogue, sound, and camera notes; editing/review is [NEXT]. |
+| Storyboard | [CURRENT] | JSON records preserve timing, visual beats, narration/dialogue, sound, and camera notes; UI exposes the output and stage action. |
 | Character/environment/camera/voice/music plans | [NEXT] | Start with optional plan fields/config; avoid assuming 3D. |
 | Master video prompt | [CURRENT] | A composed text prompt is saved; registry/version provenance is [NEXT]. |
 | AI video generation / rendered asset | [FUTURE] | Define only after storyboard and provider requirements are proven. |

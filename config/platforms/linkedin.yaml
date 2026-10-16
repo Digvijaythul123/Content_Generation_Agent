@@ -1,0 +1,5 @@
+id: linkedin
+display_name: LinkedIn
+supported_format_ids:
+  - linkedin_text_post
+  - single_page

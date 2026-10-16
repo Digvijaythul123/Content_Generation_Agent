@@ -329,6 +329,63 @@ def test_main_saves_single_page_post_and_design_prompt(tmp_path, monkeypatch):
     )
 
 
+def test_main_saves_linkedin_text_post_without_design_prompt(
+    tmp_path, monkeypatch
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+    from scripts import main
+    import post_storage
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    monkeypatch.setattr(
+        post_storage, "GENERATED_POSTS_DIRECTORY", posts_directory
+    )
+    monkeypatch.setattr(main, "GENERATED_ASSETS_DIRECTORY", assets_directory)
+
+    def fake_generate_content(**kwargs):
+        request = resolve_generation_request(
+            profile_id=kwargs["profile_id"],
+            brand_id=kwargs["brand_id"],
+            format_id=kwargs["format_id"],
+            platform_id=kwargs["platform_id"],
+            brief=kwargs["brief"],
+        )
+        content = GeneratedContent.from_text(
+            "Title: Why tests flake\n"
+            "Post_text: A flaky test is a signal to investigate.\n\n"
+            "Start with the environment and shared state.",
+            request.content_format.content_fields,
+        )
+        return GenerationResult(request=request, content=content)
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+
+    assert main.main(
+        [
+            "--profile",
+            "qa_engineering_ai",
+            "--format",
+            "linkedin_text_post",
+            "--platform",
+            "linkedin",
+            "--brief",
+            "Discuss flaky test investigation.",
+        ]
+    ) == 0
+
+    record = json.loads(
+        (posts_directory / "post_001.json").read_text(encoding="utf-8")
+    )
+    assert record["profile_id"] == "qa_engineering_ai"
+    assert record["format_id"] == "linkedin_text_post"
+    assert record["platform_id"] == "linkedin"
+    assert record["post_text"].startswith("A flaky test")
+    assert "design_prompt" not in record
+    assert not assets_directory.exists()
+
+
 def test_review_ui_lists_content_from_both_formats(tmp_path, monkeypatch):
     from scripts import review_ui
 
@@ -399,6 +456,302 @@ def test_review_ui_generation_options_expose_type_platform_and_profiles():
     assert any(
         item["id"] == "rational_thoughts" for item in options["profiles"]
     )
+    assert any(
+        item["id"] == "qa_engineering_ai" for item in options["profiles"]
+    )
+    assert any(
+        item["id"] == "linkedin"
+        and {"linkedin_text_post", "single_page"}.issubset(
+            item["supported_format_ids"]
+        )
+        for item in options["platforms"]
+    )
+    assert any(
+        item["id"] == "linkedin_text_post" and item["content_kind"] == "post"
+        for item in options["formats"]
+    )
+
+
+def test_review_ui_text_post_has_no_visual_production_stage(
+    tmp_path, monkeypatch
+):
+    from scripts import review_ui
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    posts_directory.mkdir()
+    record = {
+        "id": "post_001",
+        "title": "Investigating flaky tests",
+        "post_text": "A flaky test is a signal to investigate.",
+        "status": "Approved",
+        "profile_id": "qa_engineering_ai",
+        "format_id": "linkedin_text_post",
+        "platform_id": "linkedin",
+    }
+    (posts_directory / "post_001.json").write_text(
+        json.dumps(record), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {"reel": tmp_path / "generated_reels", "post": posts_directory},
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", assets_directory
+    )
+
+    stages = review_ui.get_pipeline("post", "post_001")["stages"]
+
+    assert all(stage["id"] != "design_prompt" for stage in stages)
+    video = next(stage for stage in stages if stage["id"] == "video")
+    assert video["status"] == "not_applicable"
+    assert review_ui.list_assets("post", "post_001") == []
+    assert review_ui.get_dashboard_summary()["ready_for_production"] == 1
+
+
+def test_review_ui_approves_post_and_records_history(tmp_path, monkeypatch):
+    from scripts import review_ui
+    import post_storage
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    posts_directory.mkdir()
+    assets_directory.mkdir()
+    record = {
+        "id": "post_001",
+        "title": "A post",
+        "main_point": "A main point",
+        "supporting_copy": "Some supporting copy.",
+        "visual_labels": "First label, Second label",
+        "design_prompt": "A clean diagram.",
+        "profile_id": "rational_thoughts",
+        "format_id": "single_page",
+        "platform_id": "instagram_feed",
+        "status": "Draft",
+    }
+    (posts_directory / "post_001.json").write_text(
+        json.dumps(record), encoding="utf-8"
+    )
+    monkeypatch.setattr(post_storage, "GENERATED_POSTS_DIRECTORY", posts_directory)
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {"reel": tmp_path / "generated_reels", "post": posts_directory},
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", assets_directory
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_POSTS_DIRECTORY", posts_directory
+    )
+    (assets_directory / "post_001_design_prompt.txt").write_text(
+        "Existing prompt", encoding="utf-8"
+    )
+
+    assert review_ui.get_dashboard_summary()["ready_for_production"] == 0
+    updated = review_ui.review_content("post", "post_001", "Approved")
+    pipeline = review_ui.get_pipeline("post", "post_001")
+
+    assert updated["status"] == "Approved"
+    assert review_ui.get_dashboard_summary()["ready_for_production"] == 1
+    assert next(
+        stage for stage in pipeline["stages"] if stage["id"] == "design_prompt"
+    )["status"] == "ready"
+    assert review_ui.get_history("post", "post_001")[0]["decision"] == "Approved"
+    with pytest.raises(ValueError, match="Only Draft content"):
+        review_ui.review_content("post", "post_001", "Rejected")
+
+
+def test_review_ui_reel_stage_prerequisites_assets_and_history(
+    tmp_path, monkeypatch
+):
+    from scripts import review_ui
+    import reel_storage
+
+    reels_directory = tmp_path / "generated_reels"
+    videos_directory = tmp_path / "generated_videos"
+    images_directory = tmp_path / "generated_images"
+    assets_directory = tmp_path / "generated_assets"
+    for directory in (
+        reels_directory,
+        videos_directory,
+        images_directory,
+        assets_directory,
+    ):
+        directory.mkdir()
+    reel = {
+        "id": "reel_001",
+        "title": "A reel",
+        "hook": "Start here.",
+        "script": "A short script.",
+        "status": "Draft",
+    }
+    (reels_directory / "reel_001.json").write_text(
+        json.dumps(reel), encoding="utf-8"
+    )
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory)
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {
+            "reel": reels_directory,
+            "post": tmp_path / "generated_posts",
+        },
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", assets_directory
+    )
+
+    with pytest.raises(ValueError, match="require Approved"):
+        review_ui.run_production_stage("reel", "reel_001", "storyboard")
+
+    review_ui.review_content("reel", "reel_001", "Approved")
+    with pytest.raises(ValueError, match="storyboard before image prompts"):
+        review_ui.run_production_stage("reel", "reel_001", "image_prompts")
+
+    def create_storyboard(reel_id):
+        storyboard = videos_directory / f"{reel_id}_storyboard.json"
+        scenes = videos_directory / f"{reel_id}_scenes.txt"
+        storyboard.write_text('{"scenes": []}', encoding="utf-8")
+        scenes.write_text("Scene one", encoding="utf-8")
+        return storyboard
+
+    monkeypatch.setattr(review_ui, "generate_storyboard", create_storyboard)
+    assert review_ui.run_production_stage(
+        "reel", "reel_001", "storyboard"
+    ) == {"stage": "storyboard", "status": "ready"}
+    pipeline = review_ui.get_pipeline("reel", "reel_001")
+    statuses = {stage["id"]: stage for stage in pipeline["stages"]}
+    assert statuses["storyboard"]["status"] == "ready"
+    assert statuses["scene_plan"]["status"] == "ready"
+    assert statuses["image_prompts"]["can_run"] is True
+    assert {asset["key"] for asset in review_ui.list_assets("reel", "reel_001")} >= {
+        "storyboard",
+        "scene_plan",
+    }
+    assert review_ui.get_history("reel", "reel_001")[0]["event"] == "stage_ready"
+
+
+def test_review_ui_http_review_endpoint_updates_post(tmp_path, monkeypatch):
+    from http.server import ThreadingHTTPServer
+    import threading
+    from urllib.request import Request, urlopen
+
+    from scripts import review_ui
+    import post_storage
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    posts_directory.mkdir()
+    record = {
+        "id": "post_001",
+        "title": "HTTP review test",
+        "status": "Draft",
+    }
+    (posts_directory / "post_001.json").write_text(
+        json.dumps(record), encoding="utf-8"
+    )
+    monkeypatch.setattr(post_storage, "GENERATED_POSTS_DIRECTORY", posts_directory)
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {"reel": tmp_path / "generated_reels", "post": posts_directory},
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", assets_directory
+    )
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0), review_ui.ReviewRequestHandler
+    )
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    try:
+        request = Request(
+            f"{base_url}/api/content/post/post_001/review",
+            data=json.dumps({"decision": "Approved"}).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Origin": base_url,
+            },
+            method="POST",
+        )
+        with urlopen(request, timeout=5) as response:
+            result = json.loads(response.read())
+        assert result["record"]["status"] == "Approved"
+        assert json.loads(
+            (posts_directory / "post_001.json").read_text(encoding="utf-8")
+        )["status"] == "Approved"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_review_ui_asset_endpoint_returns_text_for_inline_copy(
+    tmp_path, monkeypatch
+):
+    from http.server import ThreadingHTTPServer
+    import threading
+    from urllib.request import urlopen
+
+    from scripts import review_ui
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    posts_directory.mkdir()
+    assets_directory.mkdir()
+    (posts_directory / "post_001.json").write_text(
+        json.dumps(
+            {
+                "id": "post_001",
+                "title": "A post",
+                "status": "Approved",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (assets_directory / "post_001_design_prompt.txt").write_text(
+        "Exact prompt text\nwith multiple lines.",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {"reel": tmp_path / "generated_reels", "post": posts_directory},
+    )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", assets_directory
+    )
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0), review_ui.ReviewRequestHandler
+    )
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        with urlopen(
+            f"http://127.0.0.1:{server.server_port}"
+            "/api/assets/post/post_001/design_prompt",
+            timeout=5,
+        ) as response:
+            payload = json.loads(response.read())
+            assert response.headers.get_content_type() == "application/json"
+        assert payload == {
+            "name": "post_001_design_prompt.txt",
+            "type": "Image prompt",
+            "content": "Exact prompt text\nwith multiple lines.",
+        }
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def test_ready_design_prompt_includes_exact_diagram_labels(tmp_path):

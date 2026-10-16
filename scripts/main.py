@@ -81,21 +81,22 @@ def main(argv=None):
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)
-        prompt_file = (
-            GENERATED_ASSETS_DIRECTORY / f"{post_id}_design_prompt.txt"
-        )
-        GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
-        prompt_file.write_text(
-            build_ready_design_prompt(
-                result.content.fields,
-                result.request.content_format,
-                result.request.platform,
+        if "design_prompt" in result.content.fields:
+            prompt_file = (
+                GENERATED_ASSETS_DIRECTORY / f"{post_id}_design_prompt.txt"
             )
-            + "\n",
-            encoding="utf-8",
-        )
+            GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+            prompt_file.write_text(
+                build_ready_design_prompt(
+                    result.content.fields,
+                    result.request.content_format,
+                    result.request.platform,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            print(f"Design prompt saved to {prompt_file}")
         print(f"\nPost saved to {file_path}")
-        print(f"Design prompt saved to {prompt_file}")
     else:
         _, file_path = create_reel(data)
         print(f"\nContent saved to {file_path}")

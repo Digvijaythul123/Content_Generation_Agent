@@ -48,6 +48,103 @@ def test_single_page_format_and_instagram_feed_platform_are_configured():
     assert platform.aspect_ratio == "4:5"
 
 
+def test_qa_engineering_profile_and_linkedin_formats_are_configured():
+    profile = load_profile("qa_engineering_ai")
+    text_post = load_format("linkedin_text_post")
+    visual_post = load_format("single_page")
+    linkedin = load_platform("linkedin")
+
+    assert profile["display_name"] == "QA Engineering & AI"
+    assert any("AI-assisted" in topic for topic in profile["topics"])
+    assert text_post.content_kind == "post"
+    assert text_post.content_fields == ("title", "post_text")
+    assert text_post.prompt_template == "linkedin_text_post.md"
+    assert linkedin.supported_format_ids == (
+        "linkedin_text_post",
+        "single_page",
+    )
+    assert visual_post.id in linkedin.supported_format_ids
+
+
+def test_linkedin_request_accepts_qa_text_and_visual_posts():
+    text_request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+        brief="Explain how to investigate flaky tests.",
+    )
+    visual_request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        format_id="single_page",
+        platform_id="linkedin",
+        brief="Show a concise test-pyramid principle.",
+    )
+
+    assert text_request.platform.id == "linkedin"
+    assert text_request.content_format.id == "linkedin_text_post"
+    assert visual_request.platform.id == "linkedin"
+    assert visual_request.content_format.id == "single_page"
+
+
+def test_linkedin_single_page_prompt_uses_linkedin_and_exact_copy():
+    from post_prompt import build_ready_design_prompt
+
+    request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        format_id="single_page",
+        platform_id="linkedin",
+    )
+    prompt = build_ready_design_prompt(
+        {
+            "title": "Reliable tests start with clear ownership",
+            "main_point": "Every automated test needs an owner.",
+            "supporting_copy": "Review flaky tests instead of rerunning blindly.",
+            "visual_labels": "Test, Owner, Evidence",
+            "design_prompt": "Use a clean technical editorial layout.",
+        },
+        request.content_format,
+        request.platform,
+    )
+
+    assert prompt.startswith(
+        "Create one finished LinkedIn social media graphic.\n"
+        "Canvas: 4:5 portrait; 1080x1350."
+    )
+    assert "Headline: Reliable tests start with clear ownership" in prompt
+    assert "Main point: Every automated test needs an owner." in prompt
+    assert "Supporting copy: Review flaky tests instead of rerunning blindly." in prompt
+    assert "EXACT DIAGRAM LABELS TO INCLUDE:\nTest, Owner, Evidence" in prompt
+
+
+def test_linkedin_text_post_uses_profile_and_format_prompt():
+    request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+        brief="Explain how AI can help review test cases.",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated content"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            brief=request.brief,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "QA Engineering & AI" in prompt
+    assert "LinkedIn post" in prompt
+    assert "Do not invent first-person work experience" in prompt
+    assert "AI-assisted test design and maintenance" in prompt
+    assert "Post_text:" in prompt
+
+
 
 def test_unknown_profile_raises_clear_error():
     with pytest.raises(ProfileError, match="was not found"):

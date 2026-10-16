@@ -76,7 +76,7 @@
     .message.error { color: var(--red); }
     .review-grid { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(0, 1.5fr); gap: 22px; min-height: 520px; }
     .list-panel, .detail-panel { min-width: 0; padding: 20px; }
-    .list-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 14px 0; }
+    .list-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 14px 0; }
     .list-tools input { grid-column: 1 / -1; }
     .counts { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
     .count { border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: var(--muted); font-size: 12px; }
@@ -109,10 +109,79 @@
     .field-name { margin-bottom: 6px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
     .field-value { white-space: pre-wrap; overflow-wrap: anywhere; }
     .notice { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+    .workspace-nav { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0 2px; }
+    .workspace-nav a, .secondary {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 12px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .workspace-nav a:hover, .secondary:hover { border-color: var(--accent); }
+    .dashboard { margin-top: 20px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .summary-card { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+    .summary-value { font-size: 27px; font-weight: 800; line-height: 1.1; }
+    .summary-label { margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .activity-strip { display: flex; align-items: center; gap: 10px; overflow-x: auto; margin-top: 12px; padding: 12px 14px; }
+    .activity-strip strong { white-space: nowrap; }
+    .activity-entry { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .detail-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+    .detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+    .danger { border-color: #81443e; color: #ffc0b7; }
+    .pipeline-wrap { margin: 18px 0; overflow-x: auto; }
+    .pipeline { display: flex; align-items: stretch; min-width: 760px; gap: 7px; }
+    .stage { flex: 1 0 95px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 10px; background: #11181e; }
+    .stage-label { font-size: 11px; font-weight: 750; line-height: 1.25; }
+    .stage-status { margin-top: 6px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
+    .stage.ready { border-color: #426b50; }
+    .stage.ready .stage-status { color: var(--green); }
+    .stage.failed, .stage.rejected { border-color: #81443e; }
+    .stage.failed .stage-status, .stage.rejected .stage-status { color: var(--red); }
+    .stage.running { border-color: #8a6b3b; }
+    .stage.running .stage-status { color: var(--accent); }
+    .stage.future { opacity: .65; }
+    .detail-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+    .tab {
+      flex: 0 0 auto;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .tab[aria-selected="true"] { border-color: var(--accent); color: var(--text); }
+    .tab-content { min-height: 180px; padding-top: 8px; }
+    .tab-content h3 { margin: 12px 0 6px; font-size: 16px; }
+    .asset-list, .history-list { display: grid; gap: 9px; margin-top: 12px; }
+    .asset-row, .history-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #11181e; }
+    .asset-row button { flex: 0 0 auto; }
+    .asset-preview { margin-top: 10px; }
+    .asset-preview pre {
+      max-height: 420px;
+      overflow: auto;
+      margin: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0c1115;
+      color: var(--text);
+      font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .asset-preview img, .asset-preview video { display: block; max-width: 100%; max-height: 520px; border-radius: 10px; background: #0c1115; }
+    .history-row { align-items: flex-start; }
+    .history-time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .inline-actions { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
     @media (max-width: 900px) {
       .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .review-grid { grid-template-columns: 1fr; }
       .items { max-height: 360px; }
+      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
       .shell { width: min(100% - 24px, 1440px); padding-top: 20px; }
@@ -122,6 +191,9 @@
       .list-tools { grid-template-columns: 1fr; }
       .list-tools input { grid-column: auto; }
       .generator, .list-panel, .detail-panel { padding: 16px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .activity-strip { align-items: flex-start; flex-direction: column; }
+      .detail-heading { flex-direction: column; }
     }
   </style>
 </head>
@@ -136,7 +208,31 @@
       <div class="local-tag">Local-only · Draft generation can call your configured model</div>
     </header>
 
-    <section class="panel generator" aria-labelledby="generate-heading">
+    <nav class="workspace-nav" aria-label="Workspace navigation">
+      <a href="#dashboard">Dashboard</a>
+      <a href="#generate">Generate</a>
+      <a href="#library">Content library</a>
+      <a href="#library" data-queue="Draft">Review queue</a>
+      <a href="#library" data-queue="Approved">Production</a>
+      <a href="#library" data-tab="assets">Assets</a>
+      <a href="#activity">Activity</a>
+    </nav>
+
+    <section class="dashboard" id="dashboard" aria-labelledby="dashboard-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="dashboard-heading">Production overview</h2>
+          <p class="hint">A quick view of review and production readiness.</p>
+        </div>
+      </div>
+      <div class="summary-grid" id="summary-cards" aria-live="polite"></div>
+      <div class="panel activity-strip" id="activity" aria-label="Recent activity">
+        <strong>Recent activity</strong>
+        <div id="recent-activity" class="activity-entry">No activity recorded yet.</div>
+      </div>
+    </section>
+
+    <section class="panel generator" id="generate" aria-labelledby="generate-heading">
       <div class="panel-heading">
         <div>
           <h2 id="generate-heading">Generate content</h2>
@@ -158,7 +254,7 @@
       </form>
     </section>
 
-    <section class="review-grid" aria-label="Generated content review">
+    <section class="review-grid" id="library" aria-label="Generated content review">
       <section class="panel list-panel" aria-labelledby="content-heading">
         <div class="panel-heading">
           <div>
@@ -182,23 +278,45 @@
             <option>Rejected</option>
             <option>UNKNOWN</option>
           </select>
+          <select id="brand-filter" aria-label="Filter by brand"><option value="">All brands</option></select>
+          <select id="profile-filter" aria-label="Filter by profile"><option value="">All profiles</option></select>
+          <select id="format-filter" aria-label="Filter by format"><option value="">All formats</option></select>
+          <select id="platform-filter" aria-label="Filter by platform"><option value="">All platforms</option></select>
         </div>
         <div class="items" id="items" aria-live="polite"></div>
       </section>
       <section class="panel detail-panel" id="detail" aria-label="Content details">
-        <div class="detail-empty">Choose a generated item to see its content and status.</div>
+        <div class="detail-empty">Choose a generated item to review its content, pipeline, and assets.</div>
       </section>
     </section>
-    <p class="notice">Status is shown from the saved record. Use the existing review commands to approve or reject content.</p>
+    <p class="notice">Video rendering and publishing are future capabilities. Review decisions and production stages are recorded locally.</p>
   </main>
   <script>
-    const state = { items: [], options: {}, selected: null };
+    const state = {
+      items: [],
+      options: {},
+      selected: null,
+      record: null,
+      pipeline: [],
+      assets: [],
+      history: [],
+      activeTab: "overview"
+    };
     const $ = (id) => document.getElementById(id);
     const labelize = (key) => key.replace(/_/g, " ");
     const asText = (value) => {
       if (value === null || value === undefined || value === "") return "";
       return typeof value === "string" ? value : JSON.stringify(value, null, 2);
     };
+    const contentUrl = (item, resource) =>
+      `/api/content/${encodeURIComponent(item.type)}/${encodeURIComponent(item.id)}/${resource}`;
+
+    async function requestJson(url, options) {
+      const response = await fetch(url, options);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Request failed.");
+      return payload;
+    }
 
     function addOption(select, option, selectedId) {
       const element = document.createElement("option");
@@ -276,14 +394,77 @@
       });
     }
 
+    function populateFilter(id, label, values, key) {
+      const select = $(id);
+      const current = select.value;
+      select.replaceChildren(new Option(label, ""));
+      [...new Set(values.map((item) => item[key]).filter(Boolean))]
+        .sort()
+        .forEach((value) => select.append(new Option(value, value)));
+      select.value = values.some((item) => item[key] === current) ? current : "";
+    }
+
+    function refreshFilters() {
+      populateFilter("brand-filter", "All brands", state.items, "brand_id");
+      populateFilter("profile-filter", "All profiles", state.items, "profile_id");
+      populateFilter("format-filter", "All formats", state.items, "format_id");
+      populateFilter("platform-filter", "All platforms", state.items, "platform_id");
+    }
+
+    function renderDashboard(summary, activity) {
+      const cards = [
+        ["total", "Total content"],
+        ["drafts", "Drafts"],
+        ["approved", "Approved"],
+        ["rejected", "Rejected"],
+        ["ready_for_production", "Ready for production"],
+        ["failed_stages", "Failed stages"]
+      ];
+      const container = $("summary-cards");
+      container.replaceChildren();
+      cards.forEach(([key, label]) => {
+        const card = document.createElement("div");
+        card.className = "summary-card";
+        const value = document.createElement("div");
+        value.className = "summary-value";
+        value.textContent = summary[key] ?? 0;
+        const caption = document.createElement("div");
+        caption.className = "summary-label";
+        caption.textContent = label;
+        card.append(value, caption);
+        container.append(card);
+      });
+      const activityContainer = $("recent-activity");
+      activityContainer.replaceChildren();
+      if (!activity.length) {
+        activityContainer.textContent = "No activity recorded yet.";
+        return;
+      }
+      activity.slice(0, 5).forEach((entry) => {
+        const line = document.createElement("span");
+        line.className = "activity-entry";
+        const eventName = labelize(entry.event || "updated");
+        line.textContent = `${entry.content_id}: ${eventName}`;
+        activityContainer.append(line);
+      });
+    }
+
     function renderItems() {
       const term = $("search").value.trim().toLowerCase();
       const type = $("type-filter").value;
       const status = $("status-filter").value;
+      const brand = $("brand-filter").value;
+      const profile = $("profile-filter").value;
+      const format = $("format-filter").value;
+      const platform = $("platform-filter").value;
       const filtered = state.items.filter((item) =>
         (!type || item.type === type) &&
         (!status || item.status === status) &&
-        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id}`.toLowerCase().includes(term))
+        (!brand || item.brand_id === brand) &&
+        (!profile || item.profile_id === profile) &&
+        (!format || item.format_id === format) &&
+        (!platform || item.platform_id === platform) &&
+        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id} ${item.search_text || ""}`.toLowerCase().includes(term))
       );
       const list = $("items");
       list.replaceChildren();
@@ -321,64 +502,492 @@
       });
     }
 
-    function renderDetail(item, record) {
+    function createField(key, value) {
+      const field = document.createElement("section");
+      field.className = "field";
+      const name = document.createElement("div");
+      name.className = "field-name";
+      name.textContent = labelize(key);
+      const content = document.createElement("div");
+      content.className = "field-value";
+      content.textContent = asText(value);
+      field.append(name);
+      if (key === "post_text") {
+        const actions = document.createElement("div");
+        actions.className = "inline-actions";
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "secondary";
+        copy.textContent = "Copy post";
+        const message = document.createElement("span");
+        message.className = "message";
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(asText(value));
+            message.textContent = "Copied to clipboard.";
+          } catch (error) {
+            message.textContent = `Copy failed: ${error.message}`;
+          }
+        });
+        actions.append(copy, message);
+        field.append(actions);
+      }
+      field.append(content);
+      return field;
+    }
+
+    function renderPipeline(container) {
+      const wrapper = document.createElement("section");
+      wrapper.className = "pipeline-wrap";
+      wrapper.setAttribute("aria-label", "Production pipeline status");
+      const stages = document.createElement("div");
+      stages.className = "pipeline";
+      state.pipeline.forEach((stage) => {
+        const card = document.createElement("div");
+        card.className = `stage ${stage.status}`;
+        const label = document.createElement("div");
+        label.className = "stage-label";
+        label.textContent = stage.label;
+        const status = document.createElement("div");
+        status.className = "stage-status";
+        status.textContent = stage.status.replace(/_/g, " ");
+        card.append(label, status);
+        if (stage.reason) card.title = stage.reason;
+        stages.append(card);
+      });
+      wrapper.append(stages);
+      container.append(wrapper);
+    }
+
+    function renderTabs(container) {
+      const tabNames = [
+        ["overview", "Overview"],
+        ["content", "Content"],
+        ["storyboard", "Storyboard"],
+        ["scene_plan", "Scene Plan"],
+        ["image_prompts", "Image Prompts"],
+        ["video_prompt", "Video Prompt"],
+        ["assets", "Assets"],
+        ["history", "History"]
+      ];
+      const visibleTabs = state.selected.type === "post"
+        ? tabNames.filter(([id]) =>
+          ["overview", "content", "assets", "history"].includes(id)
+          || (id === "image_prompts" && Object.hasOwn(state.record, "design_prompt"))
+        )
+        : tabNames;
+      const tabBar = document.createElement("div");
+      tabBar.className = "detail-tabs";
+      tabBar.setAttribute("role", "tablist");
+      tabBar.setAttribute("aria-label", "Content workspace tabs");
+      visibleTabs.forEach(([id, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tab";
+        button.setAttribute("role", "tab");
+        button.id = `tab-${id}`;
+        button.setAttribute("aria-selected", String(state.activeTab === id));
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          state.activeTab = id;
+          history.replaceState(null, "", `#${state.selected.type}/${state.selected.id}/${id}`);
+          renderDetail();
+        });
+        tabBar.append(button);
+      });
+      container.append(tabBar);
+    }
+
+    function stageButton(stageId, label, content) {
+      const stage = state.pipeline.find((item) => item.id === stageId);
+      if (!stage) return;
+      const assets = state.assets.filter((item) => item.key === stageId);
+      const inProgress = stage.status === "running";
+      const ready = assets.length > 0;
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary";
+      button.disabled = !stage.can_run || inProgress;
+      button.textContent = inProgress ? "Running…" : (ready ? `Regenerate ${label}` : `Generate ${label}`);
+      button.title = stage.reason || "";
+      button.addEventListener("click", () => runStage(stageId, button));
+      actions.append(button);
+      if (!stage.can_run && stage.reason) {
+        const reason = document.createElement("span");
+        reason.className = "message";
+        reason.textContent = stage.reason;
+        actions.append(reason);
+      }
+      if (stage.status === "failed") {
+        const failed = document.createElement("span");
+        failed.className = "message error";
+        failed.textContent = "The last run failed. Review the error in History and retry.";
+        actions.append(failed);
+      }
+      content.append(actions);
+    }
+
+    function renderAssets(container, assets) {
+      const list = document.createElement("div");
+      list.className = "asset-list";
+      if (!assets.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint";
+        empty.textContent = "No assets have been generated for this content yet.";
+        list.append(empty);
+      }
+      assets.forEach((asset) => {
+        const row = document.createElement("div");
+        row.className = "asset-row";
+        const info = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = asset.name;
+        const type = document.createElement("div");
+        type.className = "item-meta";
+        type.textContent = asset.type;
+        info.append(name, type);
+        const link = document.createElement("a");
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "secondary";
+        open.textContent = "Preview";
+        open.setAttribute("aria-expanded", "false");
+        const preview = document.createElement("div");
+        preview.className = "asset-preview";
+        preview.hidden = true;
+        open.addEventListener("click", async () => {
+          if (preview.hidden) {
+            open.disabled = true;
+            try {
+              const response = await fetch(asset.url);
+              if (!response.ok) throw new Error("Could not load asset content.");
+              const contentType = response.headers.get("Content-Type") || "";
+              preview.replaceChildren();
+              if (contentType.includes("application/json")) {
+                const result = await response.json();
+                const tools = document.createElement("div");
+                tools.className = "inline-actions";
+                const copy = document.createElement("button");
+                copy.type = "button";
+                copy.className = "secondary";
+                copy.textContent = "Copy";
+                const message = document.createElement("span");
+                message.className = "message";
+                copy.addEventListener("click", async () => {
+                  try {
+                    await navigator.clipboard.writeText(result.content);
+                    message.textContent = "Copied to clipboard.";
+                  } catch (error) {
+                    message.textContent = `Copy failed: ${error.message}`;
+                  }
+                });
+                tools.append(copy, message);
+                const pre = document.createElement("pre");
+                pre.textContent = result.content;
+                preview.append(tools, pre);
+              } else if (contentType.startsWith("image/")) {
+                const image = document.createElement("img");
+                image.src = asset.url;
+                image.alt = asset.name;
+                preview.append(image);
+              } else if (contentType.startsWith("video/")) {
+                const video = document.createElement("video");
+                video.src = asset.url;
+                video.controls = true;
+                video.preload = "metadata";
+                preview.append(video);
+              } else {
+                const pre = document.createElement("pre");
+                pre.textContent = await response.text();
+                preview.append(pre);
+              }
+              preview.hidden = false;
+              open.textContent = "Hide preview";
+              open.setAttribute("aria-expanded", "true");
+            } catch (error) {
+              preview.textContent = error.message;
+              preview.hidden = false;
+            } finally {
+              open.disabled = false;
+            }
+          } else {
+            preview.hidden = true;
+            open.textContent = "Preview";
+            open.setAttribute("aria-expanded", "false");
+          }
+        });
+        row.append(info, open);
+        list.append(row, preview);
+      });
+      container.append(list);
+    }
+
+    function renderHistory(container) {
+      const list = document.createElement("div");
+      list.className = "history-list";
+      if (!state.history.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint";
+        empty.textContent = "No workspace activity has been recorded for this item yet.";
+        list.append(empty);
+      }
+      state.history.forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = "history-row";
+        const summary = document.createElement("div");
+        const event = document.createElement("strong");
+        event.textContent = labelize(entry.event || "updated");
+        const details = document.createElement("div");
+        details.className = "item-meta";
+        const detailsText = [
+          entry.decision,
+          entry.stage,
+          entry.reason,
+          entry.error,
+          entry.new_content_id
+        ].filter(Boolean).join(" · ");
+        details.textContent = detailsText;
+        summary.append(event, details);
+        const time = document.createElement("time");
+        time.className = "history-time";
+        time.dateTime = entry.timestamp || "";
+        time.textContent = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "";
+        row.append(summary, time);
+        list.append(row);
+      });
+      container.append(list);
+    }
+
+    function renderTabContent(container) {
+      const tab = document.createElement("div");
+      tab.className = "tab-content";
+      tab.id = "content-tab-panel";
+      tab.setAttribute("role", "tabpanel");
+      tab.setAttribute("aria-labelledby", `tab-${state.activeTab}`);
+      tab.tabIndex = 0;
+      const applicableTabs = state.selected.type === "post"
+        ? [
+          "overview",
+          "content",
+          "assets",
+          "history",
+          ...(Object.hasOwn(state.record, "design_prompt") ? ["image_prompts"] : [])
+        ]
+        : ["overview", "content", "storyboard", "scene_plan", "image_prompts", "video_prompt", "assets", "history"];
+      if (!applicableTabs.includes(state.activeTab)) {
+        tab.textContent = "This production stage does not apply to single-page posts.";
+      } else if (state.activeTab === "assets") {
+        renderAssets(tab, state.assets);
+      } else if (state.activeTab === "history") {
+        renderHistory(tab);
+      } else if (state.activeTab === "overview") {
+        const next = state.pipeline.find((stage) =>
+          stage.can_run && ["not_started", "failed"].includes(stage.status)
+        );
+        const message = document.createElement("p");
+        message.className = "hint";
+        message.textContent = next
+          ? `Next suggested step: ${next.label}.`
+          : "Review the pipeline status and content below.";
+        tab.append(message);
+        ["brief", "caption"].forEach((key) => {
+          if (state.record[key]) tab.append(createField(key, state.record[key]));
+        });
+        const failed = state.pipeline.filter((stage) => stage.status === "failed");
+        failed.forEach((stage) => {
+          const warning = document.createElement("p");
+          warning.className = "message error";
+          warning.textContent = `${stage.label} failed. Open History for details.`;
+          tab.append(warning);
+        });
+      } else if (state.activeTab === "content") {
+        const hidden = new Set([
+          "id", "status", "raw_content", "brand_id", "profile_id",
+          "format_id", "platform_id"
+        ]);
+        Object.entries(state.record)
+          .filter(([key, value]) => !hidden.has(key) && value !== null && value !== "")
+          .forEach(([key, value]) => tab.append(createField(key, value)));
+      } else {
+        const stageId = state.activeTab === "image_prompts" && state.selected.type === "post"
+          ? "design_prompt"
+          : state.activeTab;
+        if (state.selected.type === "reel" || stageId === "design_prompt") {
+          stageButton(stageId, labelize(stageId), tab);
+        }
+        const stageAssets = state.assets.filter((asset) => asset.key === stageId);
+        if (stageAssets.length) {
+          renderAssets(tab, stageAssets);
+        } else {
+          const stage = state.pipeline.find((item) => item.id === stageId);
+          const empty = document.createElement("p");
+          empty.className = "hint";
+          empty.textContent = stage && stage.status === "blocked"
+            ? "Approve this content before running production stages."
+            : "No output yet. Run the stage when it is available.";
+          tab.append(empty);
+        }
+      }
+      container.append(tab);
+    }
+
+    function renderDetail() {
+      if (!state.record || !state.selected) return;
       const detail = $("detail");
       detail.replaceChildren();
+      const heading = document.createElement("div");
+      heading.className = "detail-heading";
       const title = document.createElement("h2");
       title.className = "detail-title";
-      title.textContent = record.title || "Untitled";
+      title.textContent = state.record.title || "Untitled";
       const meta = document.createElement("div");
       meta.className = "detail-meta";
-      [item.type, item.id, record.status || "UNKNOWN", record.profile_id, record.format_id, record.platform_id]
+      [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.format_id, state.record.platform_id]
         .filter(Boolean).forEach((value) => {
           const tag = document.createElement("span");
           tag.className = `badge ${badgeClass(value)}`;
           tag.textContent = value;
           meta.append(tag);
         });
-      detail.append(title, meta);
+      heading.append(title, meta);
+      detail.append(heading);
 
-      const hidden = new Set(["id", "status", "raw_content"]);
-      const entries = Object.entries(record).filter(([key, value]) =>
-        !hidden.has(key) && value !== null && value !== ""
-      );
-      entries.forEach(([key, value]) => {
-        const field = document.createElement("section");
-        field.className = "field";
-        const name = document.createElement("div");
-        name.className = "field-name";
-        name.textContent = labelize(key);
-        const content = document.createElement("div");
-        content.className = "field-value";
-        content.textContent = asText(value);
-        field.append(name, content);
-        detail.append(field);
-      });
+      const actions = document.createElement("div");
+      actions.className = "detail-actions";
+      const status = state.record.status || "Draft";
+      if (status === "Draft") {
+        actions.append(
+          makeAction("Approve", () => reviewItem("Approved")),
+          makeAction("Reject", () => reviewItem("Rejected"), "secondary danger"),
+          makeAction("Regenerate", () => regenerateItem(), "secondary")
+        );
+      } else if (status === "Rejected") {
+        actions.append(makeAction("Regenerate as new draft", () => regenerateItem(), "secondary"));
+      } else if (status === "Approved") {
+        const next = state.pipeline.find((stage) =>
+          stage.can_run && ["not_started", "failed"].includes(stage.status)
+        );
+        if (next) {
+          actions.append(makeAction(`Continue: ${next.label}`, () => {
+            state.activeTab = next.id === "design_prompt" ? "image_prompts" : next.id;
+            history.replaceState(null, "", `#${state.selected.type}/${state.selected.id}/${state.activeTab}`);
+            renderDetail();
+          }));
+        }
+      }
+      detail.append(actions);
+      renderPipeline(detail);
+      renderTabs(detail);
+      renderTabContent(detail);
+    }
+
+    function makeAction(label, callback, className = "primary") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = className;
+      button.textContent = label;
+      button.addEventListener("click", callback);
+      return button;
+    }
+
+    async function loadSelected(item) {
+      const [content, pipeline, assets, history] = await Promise.all([
+        requestJson(`/api/content?type=${encodeURIComponent(item.type)}&id=${encodeURIComponent(item.id)}`),
+        requestJson(contentUrl(item, "pipeline")),
+        requestJson(contentUrl(item, "assets")),
+        requestJson(contentUrl(item, "history"))
+      ]);
+      state.record = content.record;
+      state.pipeline = pipeline.stages;
+      state.assets = assets.items;
+      state.history = history.items;
+      renderDetail();
     }
 
     async function openItem(item) {
       state.selected = item;
+      state.activeTab = "overview";
       renderItems();
       try {
-        const response = await fetch(`/api/content?type=${encodeURIComponent(item.type)}&id=${encodeURIComponent(item.id)}`);
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Could not load content.");
-        renderDetail(item, payload.record);
+        await loadSelected(item);
+        history.replaceState(null, "", `#${item.type}/${item.id}/${state.activeTab}`);
       } catch (error) {
         $("detail").textContent = error.message;
       }
     }
 
+    async function refreshDashboard() {
+      const [summary, activity] = await Promise.all([
+        requestJson("/api/dashboard"),
+        requestJson("/api/activity")
+      ]);
+      renderDashboard(summary, activity.items);
+    }
+
     async function refreshItems(selectItem) {
-      const response = await fetch("/api/content");
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not load content.");
+      const payload = await requestJson("/api/content");
       state.items = payload.items;
+      refreshFilters();
       renderItems();
       const target = selectItem || state.selected;
       if (target) {
         const found = state.items.find((item) => item.id === target.id && item.type === target.type);
-        if (found) await openItem(found);
+        if (found) {
+          state.selected = found;
+          await loadSelected(found);
+        }
+      }
+      await refreshDashboard();
+    }
+
+    async function reviewItem(decision) {
+      if (!window.confirm(`${decision} this draft?`)) return;
+      let reason = "";
+      if (decision === "Rejected") {
+        reason = window.prompt("Optional reason for rejection:") || "";
+      }
+      try {
+        await requestJson(contentUrl(state.selected, "review"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision, reason })
+        });
+        await refreshItems(state.selected);
+      } catch (error) {
+        window.alert(error.message);
+      }
+    }
+
+    async function regenerateItem() {
+      if (!window.confirm("Generate a new draft version? The current item will be kept.")) return;
+      try {
+        const result = await requestJson(contentUrl(state.selected, "regenerate"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}"
+        });
+        await refreshItems(result.item);
+        $("generate-message").textContent = `Saved ${result.item.id} as a new Draft.`;
+      } catch (error) {
+        window.alert(error.message);
+      }
+    }
+
+    async function runStage(stage, button) {
+      button.disabled = true;
+      button.textContent = "Running…";
+      try {
+        await requestJson(contentUrl(state.selected, `stages/${stage}/run`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}"
+        });
+        await refreshItems(state.selected);
+      } catch (error) {
+        window.alert(error.message);
+        await refreshItems(state.selected);
       }
     }
 
@@ -398,15 +1007,14 @@
         brief: $("brief").value.trim() || null
       };
       try {
-        const response = await fetch("/api/generate", {
+        const result = await requestJson("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Generation failed.");
         message.textContent = `Saved ${result.item.id} as ${result.item.status}.`;
         await refreshItems(result.item);
+        location.hash = "library";
       } catch (error) {
         message.className = "message error";
         message.textContent = error.message;
@@ -416,8 +1024,21 @@
       }
     });
 
-    ["search", "type-filter", "status-filter"].forEach((id) =>
+    ["search", "type-filter", "status-filter", "brand-filter", "profile-filter", "format-filter", "platform-filter"].forEach((id) =>
       $(id).addEventListener("input", renderItems)
+    );
+    document.querySelectorAll("[data-queue]").forEach((link) =>
+      link.addEventListener("click", () => {
+        $("status-filter").value = link.dataset.queue;
+        renderItems();
+      })
+    );
+    document.querySelectorAll("[data-tab]").forEach((link) =>
+      link.addEventListener("click", () => {
+        if (!state.selected) return;
+        state.activeTab = link.dataset.tab;
+        renderDetail();
+      })
     );
     $("refresh").addEventListener("click", () =>
       refreshItems().catch((error) => {
@@ -426,18 +1047,29 @@
     );
 
     async function start() {
-      const [optionsResponse, contentResponse] = await Promise.all([
-        fetch("/api/options"),
-        fetch("/api/content")
+      const [options, content, summary, activity] = await Promise.all([
+        requestJson("/api/options"),
+        requestJson("/api/content"),
+        requestJson("/api/dashboard"),
+        requestJson("/api/activity")
       ]);
-      const options = await optionsResponse.json();
-      const content = await contentResponse.json();
-      if (!optionsResponse.ok) throw new Error(options.error || "Could not load configuration.");
-      if (!contentResponse.ok) throw new Error(content.error || "Could not load saved content.");
       state.options = options;
       state.items = content.items;
       loadSelects();
+      refreshFilters();
       renderItems();
+      renderDashboard(summary, activity.items);
+      const selection = location.hash.slice(1).split("/");
+      if (selection.length === 3) {
+        const item = state.items.find(
+          (candidate) => candidate.type === selection[0] && candidate.id === selection[1]
+        );
+        if (item) {
+          state.selected = item;
+          state.activeTab = selection[2];
+          await loadSelected(item);
+        }
+      }
     }
     start().catch((error) => {
       $("generate-message").className = "message error";

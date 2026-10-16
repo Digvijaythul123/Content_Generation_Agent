@@ -19,12 +19,13 @@ work:
 
 | Capability | Status | What that means today |
 |---|---|---|
-| Profile-based content generation | [CURRENT] | YAML profiles currently include Rational Thoughts and Comedy. |
+| Profile-based content generation | [CURRENT] | YAML profiles include Rational Thoughts, Comedy, and QA Engineering & AI. |
 | Brief input and JSON content records | [CURRENT] | The CLI accepts a brief and saves a local JSON draft. |
-| Draft review and approval | [CURRENT] | CLI commands list, approve, reject, and bulk-review saved drafts. |
+| Draft review and approval | [CURRENT] | The local workspace reviews posts and Reels; CLI commands also remain available. |
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |
-| Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
-| Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but support and coverage are incomplete. |
+| Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed or LinkedIn post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
+| LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish professional text posts without creating image-prompt assets. |
+| Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but broader profile and platform coverage remains incomplete. |
 | Structured storyboard parsing | [CURRENT] | Timed or untimed scene beats are saved as JSON and readable text; richer review/edit flows remain [NEXT]. |
 | Character, environment, camera, and music plans | [NEXT] | Reusable, independently reviewable plans are not yet modeled. |
 | AI video rendering | [FUTURE] | No video provider integration or rendered video output exists. |
@@ -35,11 +36,12 @@ work:
 
 ```text
 Brief + Brand + Content Profile + Format + Platform
-    -> generated Reel or single-page post draft
+    -> generated Reel, single-page post, or LinkedIn text post draft
     -> local JSON record
     -> human review / approval
     -> Reel: structured storyboard + image prompt + master video prompt
     -> Single-page: post copy + design prompt
+    -> LinkedIn text post: ready-to-publish post copy
 ```
 
 **[CURRENT]** The model client uses a fixed Ollama-compatible endpoint/model.
@@ -55,8 +57,8 @@ under `generated_assets/`.
   direction.
 - **Brand**: publisher identity, brand voice, reusable identity, and defaults.
   A brand can use multiple content profiles.
-- **Format**: output shape, such as Instagram Reel, YouTube Short, carousel,
-  LinkedIn post, thread, or blog article.
+- **Format**: output shape, such as Instagram Reel, YouTube Short, LinkedIn
+  text post, single-page graphic, thread, or blog article.
 - **Platform**: destination and its capabilities or publishing constraints.
 
 **Format is not a content profile.** Comedy is an editorial profile; Instagram
@@ -74,6 +76,12 @@ python3 -m scripts.main --profile comedy \
 python3 -m scripts.main --profile rational_thoughts \
   --format single_page --platform instagram_feed \
   --brief "Explain why confidence is not evidence."
+python3 -m scripts.main --profile qa_engineering_ai \
+  --format linkedin_text_post --platform linkedin \
+  --brief "Explain how to investigate flaky tests."
+python3 -m scripts.main --profile qa_engineering_ai \
+  --format single_page --platform linkedin \
+  --brief "Share one practical lesson about test automation."
 python3 -m scripts.review_ui
 python3 -m scripts.list_reels
 python3 -m scripts.approve_reel reel_017
@@ -91,17 +99,26 @@ The older `scripts.scene_generator` command remains as a compatibility alias
 for storyboard generation.
 
 `scripts.review_ui` opens a local-only browser workspace at
-`http://127.0.0.1:8765`. It lists saved Reels and single-page posts with their
-statuses, lets you inspect their content, and provides a form to generate
-drafts by brand, profile, format, platform, and optional brief. Generation
-uses the same configured model service as the CLI; status changes remain in
-the existing review commands.
+`http://127.0.0.1:8765`. It lists saved Reels, single-page posts, and LinkedIn
+text posts with their
+statuses, provides dashboard counts and activity, and lets you generate
+drafts by brand, profile, format, platform, and optional brief. Select a
+content item to review its details, approve/reject it, regenerate it as a new
+draft, inspect format-specific production stages, preview text artifacts inline
+with one-click copy and preview generated media,
+and review its local activity history. Approved Reels can run storyboard,
+scene-plan, image-prompt, and master video-prompt stages individually;
+approved single-page posts can refresh their design prompt. LinkedIn text posts
+show ready-to-publish copy without image-prompt actions. Video rendering and
+publishing are not integrated. Generation and AI-backed production stages use
+the same configured model service as the CLI.
 
 ## Configuration and storage
 
 **[CURRENT]** Brand, profile, format, and platform YAML live under `config/`.
 Reusable generation instructions are in `prompts/`. Reel records are JSON in
-`generated_reels/`; single-page records are JSON in `generated_posts/`.
+`generated_reels/`; single-page and LinkedIn text-post records are JSON in
+`generated_posts/`.
 Storyboard records are JSON and scene/master prompts are text under
 `generated_videos/`; image/design prompts are text under `generated_images/`
 and `generated_assets/`.

@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 
 from project_paths import GENERATED_POSTS_DIRECTORY
@@ -38,6 +39,51 @@ def create_post(record):
         finally:
             temporary_path.unlink(missing_ok=True)
         return post_id, path
+
+
+def post_path(post_id):
+    if not isinstance(post_id, str) or not re.fullmatch(
+        r"post_[A-Za-z0-9_-]+", post_id
+    ):
+        raise PostStorageError(f"Invalid post ID: {post_id!r}")
+    return GENERATED_POSTS_DIRECTORY / f"{post_id}.json"
+
+
+def load_post(post_id):
+    path = post_path(post_id)
+    if not path.is_file():
+        raise FileNotFoundError(f"Post not found: {post_id}")
+    try:
+        with path.open(encoding="utf-8") as post_file:
+            record = json.load(post_file)
+    except (OSError, json.JSONDecodeError) as error:
+        raise PostStorageError(
+            f"Could not read post record {path}: {error}"
+        ) from error
+    if not isinstance(record, dict):
+        raise PostStorageError(f"Post record {path} must contain a JSON object.")
+    return record
+
+
+def save_post(post_id, record):
+    path = post_path(post_id)
+    if not isinstance(record, dict):
+        raise PostStorageError("Post record must be a dictionary.")
+    _atomic_write_json(path, record)
+    return path
+
+
+def _atomic_write_json(destination, record):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = _write_temporary_json(destination, record)
+    try:
+        os.replace(temporary_path, destination)
+    except OSError as error:
+        raise PostStorageError(
+            f"Could not safely write post record {destination}: {error}"
+        ) from error
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _write_temporary_json(destination: Path, record):
