@@ -19,8 +19,9 @@ infrastructure.
 
 ## Current implementation baseline
 
-**[CURRENT]** The project has a local CLI; configured Rational Thoughts and
-Comedy content profiles; one default brand, Reel format, and Instagram
+**[CURRENT]** The project has a local CLI; configured Critical Thinking,
+Comedy, and QA Engineering & AI content profiles; an optional Digvijay Thul
+personal brand; Reel, single-page, and LinkedIn text-post formats; Instagram
 platform; brief-driven content generation; local JSON records; manual list,
 approval, rejection, and bulk review; structured timed/untimed storyboard
 generation with readable scene-text export; image prompt generation; master
@@ -51,7 +52,7 @@ or analytics is implemented.
 - Define brand identity, voice, visual identity, defaults, and allowed
   profiles separately from content profiles.
 - Specify brand/profile/format/platform precedence and test conflicts.
-- Add examples for Rational Thoughts, Daily LOL, and Growth Lab as
+- Add examples for personal, Daily LOL, and Growth Lab brands as
   configuration only after the schema supports them.
 - Keep credentials separate from branding configuration.
 

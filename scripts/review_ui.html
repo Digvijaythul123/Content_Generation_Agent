@@ -241,7 +241,7 @@
       </div>
       <form id="generate-form">
         <div class="form-grid">
-          <label>Brand<select id="brand" name="brand_id" required></select></label>
+          <label>Brand<select id="brand" name="brand_id"></select></label>
           <label>Content profile<select id="profile" name="profile_id" required></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
@@ -334,7 +334,8 @@
       brandSelect.replaceChildren();
       profileSelect.replaceChildren();
       formatSelect.replaceChildren();
-      options.brands.forEach((option) => addOption(brandSelect, option, "default"));
+      brandSelect.append(new Option("No brand", ""));
+      options.brands.forEach((option) => addOption(brandSelect, option, ""));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
       options.formats.forEach((option) => addOption(formatSelect, option, "reel"));
       updateProfilesFromBrand();
@@ -347,12 +348,13 @@
       const brand = state.options.brands.find((item) => item.id === $("brand").value);
       const previous = $("profile").value;
       $("profile").replaceChildren();
-      state.options.profiles.forEach((option) => addOption(
-        $("profile"), option,
-        option.id === previous ? previous : brand.default_profile_id
-      ));
+      state.options.profiles.forEach((option) => addOption($("profile"), option, ""));
+      const hasPrevious = state.options.profiles.some((item) => item.id === previous);
+      $("profile").value = hasPrevious
+        ? previous
+        : (brand?.default_profile_id || state.options.profiles[0]?.id || "");
       const format = state.options.formats.find((item) => item.id === $("format").value);
-      if (brand && format && format.id === brand.default_format_id) {
+      if (brand && format && format.id === brand.default_format_id && !hasPrevious) {
         $("profile").value = brand.default_profile_id;
       }
     }
@@ -367,7 +369,7 @@
       available.forEach((option) => addOption($("platform"), option, current));
       if (!available.some((item) => item.id === current)) {
         const brand = state.options.brands.find((item) => item.id === $("brand").value);
-        const preferred = available.find((item) => item.id === brand.default_platform_id);
+        const preferred = available.find((item) => item.id === brand?.default_platform_id);
         $("platform").value = preferred ? preferred.id : (available[0]?.id || "");
       }
     }
@@ -512,13 +514,13 @@
       content.className = "field-value";
       content.textContent = asText(value);
       field.append(name);
-      if (key === "post_text") {
+      if (key === "post_text" || key === "image_generation_prompt") {
         const actions = document.createElement("div");
         actions.className = "inline-actions";
         const copy = document.createElement("button");
         copy.type = "button";
         copy.className = "secondary";
-        copy.textContent = "Copy post";
+        copy.textContent = key === "post_text" ? "Copy post" : "Copy image prompt";
         const message = document.createElement("span");
         message.className = "message";
         copy.addEventListener("click", async () => {

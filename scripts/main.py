@@ -70,7 +70,9 @@ def main(argv=None):
     print(result.content.raw_content)
 
     data = {
-        "brand_id": result.request.brand.id,
+        "brand_id": (
+            result.request.brand.id if result.request.brand is not None else None
+        ),
         "profile_id": result.request.profile.id,
         "format_id": result.request.content_format.id,
         "platform_id": result.request.platform.id,

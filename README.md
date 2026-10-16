@@ -19,12 +19,13 @@ work:
 
 | Capability | Status | What that means today |
 |---|---|---|
-| Profile-based content generation | [CURRENT] | YAML profiles include Rational Thoughts, Comedy, and QA Engineering & AI. |
+| Profile-based content generation | [CURRENT] | YAML profiles include Critical Thinking, Comedy, and QA Engineering & AI. |
+| Optional publisher brand | [CURRENT] | The personal brand is Digvijay Thul; generation can also explicitly omit a brand. |
 | Brief input and JSON content records | [CURRENT] | The CLI accepts a brief and saves a local JSON draft. |
 | Draft review and approval | [CURRENT] | The local workspace reviews posts and Reels; CLI commands also remain available. |
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |
 | Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed or LinkedIn post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
-| LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish professional text posts without creating image-prompt assets. |
+| LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish post copy and a topic-specific image-generation prompt to copy into an image tool; it does not generate the image file. |
 | Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but broader profile and platform coverage remains incomplete. |
 | Structured storyboard parsing | [CURRENT] | Timed or untimed scene beats are saved as JSON and readable text; richer review/edit flows remain [NEXT]. |
 | Character, environment, camera, and music plans | [NEXT] | Reusable, independently reviewable plans are not yet modeled. |
@@ -61,8 +62,9 @@ under `generated_assets/`.
   text post, single-page graphic, thread, or blog article.
 - **Platform**: destination and its capabilities or publishing constraints.
 
-**Format is not a content profile.** Comedy is an editorial profile; Instagram
-Reel is a format; Instagram is a platform. A profile should work across
+**Format is not a content profile.** Critical Thinking and QA Engineering & AI
+are editorial profiles; Instagram Reel is a format; Instagram is a platform.
+A brand is optional publisher identity, not an editorial category. A profile should work across
 compatible brands, formats, and platforms without niche-specific branches in
 the shared pipeline.
 

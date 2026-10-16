@@ -19,13 +19,13 @@ assets, publishing, scheduling, or analytics.
 
 ## Phase 1 — Multi-profile content generation
 
-**Status: [NEXT]** Current profiles include Rational Thoughts and Comedy;
-catalog breadth and evaluation are incomplete.
+**Status: [CURRENT/NEXT]** Critical Thinking, Comedy, and QA Engineering & AI
+are configured; broader catalog breadth and evaluation remain incomplete.
 
 - **Objectives:** make editorial modes genuinely configurable and keep the
   generation pipeline independent of niche-specific conditions.
 - **Deliverables:** profile schema/prompt guidance; initial profiles for
-  Rational Thoughts, Comedy, Storytelling, Motivation, Finance, Career,
+  Critical Thinking, Comedy, Storytelling, Motivation, Finance, Career,
   Fitness, Education, Relationships, and future profiles; profile isolation
   tests; prompt/version references; consistent field validation.
 - **Dependencies:** current config loader and content contracts.
@@ -36,7 +36,8 @@ catalog breadth and evaluation are incomplete.
 
 ## Phase 2 — Multi-brand support
 
-**Status: [NEXT]** One default brand is currently configured.
+**Status: [CURRENT/NEXT]** The Digvijay Thul personal brand is configured;
+brand catalog breadth and evaluation remain incomplete.
 
 - **Objectives:** separate publisher identity from editorial profile.
 - **Deliverables:** brand name, voice, reusable branding, visual identity,

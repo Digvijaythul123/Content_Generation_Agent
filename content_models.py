@@ -356,7 +356,7 @@ class Platform:
 
 @dataclass(frozen=True)
 class GenerationRequest:
-    brand: Brand
+    brand: Optional[Brand]
     profile: ContentProfile
     content_format: ContentFormat
     platform: Platform

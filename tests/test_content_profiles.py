@@ -5,7 +5,12 @@ from unittest.mock import Mock, patch
 import pytest
 
 import content_agent
-from config_loader import load_format, load_platform, resolve_generation_request
+from config_loader import (
+    load_brand,
+    load_format,
+    load_platform,
+    resolve_generation_request,
+)
 from scripts import main
 from profile_loader import ProfileError, load_profile
 import reel_storage
@@ -15,9 +20,10 @@ def test_loads_rational_thoughts_profile():
     profile = load_profile("rational_thoughts")
 
     assert profile["id"] == "rational_thoughts"
-    assert profile["display_name"] == "Rational Thoughts"
+    assert profile["display_name"] == "Critical Thinking"
     assert profile["audience"]["description"] == (
-        "Indian professionals aged 25-40"
+        "Curious professionals who want to reason clearly about work, money, "
+        "society, and everyday decisions"
     )
 
 
@@ -57,7 +63,11 @@ def test_qa_engineering_profile_and_linkedin_formats_are_configured():
     assert profile["display_name"] == "QA Engineering & AI"
     assert any("AI-assisted" in topic for topic in profile["topics"])
     assert text_post.content_kind == "post"
-    assert text_post.content_fields == ("title", "post_text")
+    assert text_post.content_fields == (
+        "title",
+        "post_text",
+        "image_generation_prompt",
+    )
     assert text_post.prompt_template == "linkedin_text_post.md"
     assert linkedin.supported_format_ids == (
         "linkedin_text_post",
@@ -84,6 +94,49 @@ def test_linkedin_request_accepts_qa_text_and_visual_posts():
     assert text_request.content_format.id == "linkedin_text_post"
     assert visual_request.platform.id == "linkedin"
     assert visual_request.content_format.id == "single_page"
+
+
+def test_personal_brand_name_and_explicit_no_brand_request():
+    no_brand_request = resolve_generation_request(
+        brand_id="",
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+
+    assert load_brand("default").display_name == "Digvijay Thul"
+    assert no_brand_request.brand is None
+    assert no_brand_request.profile.id == "qa_engineering_ai"
+    assert no_brand_request.content_format.id == "linkedin_text_post"
+    assert no_brand_request.platform.id == "linkedin"
+    assert no_brand_request.brand_identity_explicit is False
+
+
+def test_no_brand_request_does_not_add_brand_identity_to_prompt():
+    request = resolve_generation_request(
+        brand_id="",
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated content"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            brand_identity_explicit=request.brand_identity_explicit,
+            brand_selected=request.brand is not None,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Publishing brand:" not in prompt
+    assert "Digvijay Thul" not in prompt
 
 
 def test_linkedin_single_page_prompt_uses_linkedin_and_exact_copy():
@@ -143,6 +196,8 @@ def test_linkedin_text_post_uses_profile_and_format_prompt():
     assert "Do not invent first-person work experience" in prompt
     assert "AI-assisted test design and maintenance" in prompt
     assert "Post_text:" in prompt
+    assert "Image_generation_prompt:" in prompt
+    assert "specific to this post" in prompt
 
 
 

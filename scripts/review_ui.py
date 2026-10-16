@@ -112,7 +112,7 @@ def list_content_items():
                     "type": content_type,
                     "title": title.strip() or "Untitled",
                     "status": status.strip() or "UNKNOWN",
-                    "brand_id": record.get("brand_id", ""),
+                    "brand_id": record.get("brand_id") or "",
                     "profile_id": record.get("profile_id", ""),
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
@@ -664,7 +664,11 @@ def regenerate_content(content_type, content_id):
         raise ValueError("Only Draft or Rejected content can be regenerated.")
     result = generate_and_save(
         {
-            "brand_id": record.get("brand_id"),
+            "brand_id": (
+                ""
+                if "brand_id" in record and record["brand_id"] is None
+                else record.get("brand_id")
+            ),
             "profile_id": record.get("profile_id"),
             "format_id": record.get("format_id"),
             "platform_id": record.get("platform_id"),
@@ -747,7 +751,9 @@ def generate_and_save(payload):
         brief=brief.strip() if brief else None,
     )
     data = {
-        "brand_id": result.request.brand.id,
+        "brand_id": (
+            result.request.brand.id if result.request.brand is not None else None
+        ),
         "profile_id": result.request.profile.id,
         "format_id": result.request.content_format.id,
         "platform_id": result.request.platform.id,

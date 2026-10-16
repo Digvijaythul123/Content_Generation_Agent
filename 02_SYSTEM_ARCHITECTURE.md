@@ -46,8 +46,9 @@ local review UI -> draft generation, shared review decisions, and local history
 - `scripts/` contains the canonical CLI commands.
 - Root Python modules provide configuration models/loading, generation,
   prompt composition, JSON file operations, and model communication.
-- YAML configures Rational Thoughts, Comedy, and QA Engineering & AI profiles;
-  a default brand; Reel, single-page, and LinkedIn text-post formats; and
+- YAML configures Critical Thinking, Comedy, and QA Engineering & AI profiles;
+  the Digvijay Thul personal brand with optional no-brand generation; Reel,
+  single-page, and LinkedIn text-post formats; and
   Instagram and LinkedIn platform compatibility.
 - Review is local and human-operated. Saved status values are Draft, Approved,
   and Rejected.
@@ -76,8 +77,8 @@ Source / Brief
 
 - **Content Profile** owns audience, objective, voice, exclusions, and
   editorial/visual guidance. Examples: Comedy, Finance, Education.
-- **Brand** owns publisher identity, reusable branding, voice overlays, and
-  defaults. Examples: Rational Thoughts, Daily LOL, Growth Lab.
+- **Brand** owns optional publisher identity, reusable branding, voice
+  overlays, and defaults. Example: Digvijay Thul.
 - **Format** owns output fields and production constraints. Examples:
   Instagram Reel, YouTube Short, single-page graphic, LinkedIn text post,
   Thread, Blog Article.
@@ -85,7 +86,8 @@ Source / Brief
 - **Source** is input material, not an editorial category.
 
 Core code resolves validated context; it should not infer brand identity from
-a profile or make profile-specific branches in the shared pipeline.
+a profile or make profile-specific branches in the shared pipeline. A blank
+brand selection means no publisher identity is included or saved.
 
 ## 4. Target modular-monolith organization
 

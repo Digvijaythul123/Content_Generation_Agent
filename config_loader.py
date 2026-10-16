@@ -85,11 +85,20 @@ def resolve_generation_request(
     platform_id=None,
     brief=None,
 ):
-    brand_was_explicit = brand_id is not None
-    brand = load_brand(brand_id or "default")
-    profile = load_profile_config(profile_id or brand.default_profile_id)
-    content_format = load_format(format_id or brand.default_format_id)
-    platform = load_platform(platform_id or brand.default_platform_id)
+    no_brand_selected = brand_id == ""
+    brand_was_explicit = bool(brand_id)
+    defaults = load_brand("default") if no_brand_selected else None
+    brand = None if no_brand_selected else load_brand(brand_id or "default")
+    default_context = defaults or brand
+    profile = load_profile_config(
+        profile_id or default_context.default_profile_id
+    )
+    content_format = load_format(
+        format_id or default_context.default_format_id
+    )
+    platform = load_platform(
+        platform_id or default_context.default_platform_id
+    )
 
     if platform.supported_format_ids and (
         content_format.id not in platform.supported_format_ids

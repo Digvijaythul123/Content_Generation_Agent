@@ -23,12 +23,12 @@ future scope explicitly; they do not imply unbuilt features exist.
 ### [CURRENT] Implemented capabilities
 
 - Profile-aware content generation for configured profiles, currently
-  Rational Thoughts and Comedy.
+  Critical Thinking, Comedy, and QA Engineering & AI.
 - Single-page social post generation with a format-specific design prompt
   containing exact copy and explicit optional visual labels.
 - CLI brief input and JSON draft storage.
-- Brand, profile, format, and platform configuration loading; current usable
-  defaults are one brand, Reel format, and Instagram platform.
+- Brand, profile, format, and platform configuration loading; the personal
+  brand is Digvijay Thul, and generation supports no brand.
 - Human review commands for listing, approving, rejecting, and bulk reviewing
   saved content.
 - Structured timed/untimed storyboard generation from a saved Reel, with a
@@ -53,10 +53,9 @@ and rendered video generation are not implemented.
 
 - **Source / idea / brief:** input to a generation run. Initially a text brief;
   later it may include a transcript or referenced source with provenance.
-- **Brand:** publishing identity: name, brand voice, reusable branding,
-  defaults, and (later) account references. Examples include Rational
-  Thoughts, Daily LOL, and Growth Lab.
-- **Content profile:** editorial mode, such as Rational Thoughts, Comedy,
+- **Brand:** optional publishing identity: name, brand voice, reusable
+  branding, defaults, and (later) account references. Example: Digvijay Thul.
+- **Content profile:** editorial mode, such as Critical Thinking, Comedy,
   Storytelling, Motivation, Finance, Career, Fitness, Education, Relationships,
   or a future profile. It defines audience, objectives, voice, constraints,
   and relevant prompt/visual guidance.

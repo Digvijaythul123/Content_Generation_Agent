@@ -3,6 +3,7 @@ display_name: LinkedIn text post
 content_fields:
   - title
   - post_text
+  - image_generation_prompt
 generation:
   content_kind: post
   prompt_template: linkedin_text_post.md

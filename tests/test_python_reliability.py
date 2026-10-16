@@ -329,7 +329,7 @@ def test_main_saves_single_page_post_and_design_prompt(tmp_path, monkeypatch):
     )
 
 
-def test_main_saves_linkedin_text_post_without_design_prompt(
+def test_main_saves_linkedin_text_post_and_image_prompt(
     tmp_path, monkeypatch
 ):
     from content_models import GeneratedContent
@@ -355,7 +355,9 @@ def test_main_saves_linkedin_text_post_without_design_prompt(
         content = GeneratedContent.from_text(
             "Title: Why tests flake\n"
             "Post_text: A flaky test is a signal to investigate.\n\n"
-            "Start with the environment and shared state.",
+            "Start with the environment and shared state.\n"
+            "Image_generation_prompt: A focused editorial illustration of "
+            "isolated test runs revealing a shared-state problem.",
             request.content_format.content_fields,
         )
         return GenerationResult(request=request, content=content)
@@ -382,8 +384,58 @@ def test_main_saves_linkedin_text_post_without_design_prompt(
     assert record["format_id"] == "linkedin_text_post"
     assert record["platform_id"] == "linkedin"
     assert record["post_text"].startswith("A flaky test")
+    assert record["image_generation_prompt"].startswith(
+        "A focused editorial illustration"
+    )
     assert "design_prompt" not in record
     assert not assets_directory.exists()
+
+
+def test_review_ui_saves_explicitly_unbranded_content(
+    tmp_path, monkeypatch
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+    from scripts import review_ui
+    import post_storage
+
+    posts_directory = tmp_path / "generated_posts"
+    monkeypatch.setattr(
+        post_storage, "GENERATED_POSTS_DIRECTORY", posts_directory
+    )
+    request = resolve_generation_request(
+        brand_id="",
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+    result = GenerationResult(
+        request=request,
+        content=GeneratedContent.from_text(
+            "Title: A practical QA post\n"
+            "Post_text: Start with a testable quality risk.\n"
+            "Image_generation_prompt: A clear editorial image about a "
+            "testable quality risk.",
+            request.content_format.content_fields,
+        ),
+    )
+    monkeypatch.setattr(review_ui, "generate_content", lambda **kwargs: result)
+
+    saved = review_ui.generate_and_save(
+        {
+            "brand_id": "",
+            "profile_id": "qa_engineering_ai",
+            "format_id": "linkedin_text_post",
+            "platform_id": "linkedin",
+        }
+    )
+
+    record = json.loads(
+        (posts_directory / f"{saved['id']}.json").read_text(encoding="utf-8")
+    )
+    assert record["brand_id"] is None
+    assert record["image_generation_prompt"].startswith("A clear editorial")
+    assert saved["type"] == "post"
 
 
 def test_review_ui_lists_content_from_both_formats(tmp_path, monkeypatch):
@@ -454,7 +506,13 @@ def test_review_ui_generation_options_expose_type_platform_and_profiles():
         for item in options["platforms"]
     )
     assert any(
-        item["id"] == "rational_thoughts" for item in options["profiles"]
+        item["id"] == "rational_thoughts"
+        and item["name"] == "Critical Thinking"
+        for item in options["profiles"]
+    )
+    assert any(
+        item["id"] == "default" and item["name"] == "Digvijay Thul"
+        for item in options["brands"]
     )
     assert any(
         item["id"] == "qa_engineering_ai" for item in options["profiles"]

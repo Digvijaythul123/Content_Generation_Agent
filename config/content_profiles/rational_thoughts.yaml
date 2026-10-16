@@ -1,34 +1,35 @@
 id: rational_thoughts
-display_name: Rational Thoughts
+display_name: Critical Thinking
 language: English
 
 audience:
-  description: Indian professionals aged 25-40
+  description: Curious professionals who want to reason clearly about work, money, society, and everyday decisions
 
 objectives:
-  - Challenge common beliefs
-  - Use first-principles thinking
-  - Create curiosity
-  - Make people stop scrolling
+  - Separate evidence from assumptions and opinions
+  - Explain complex ideas through clear reasoning and practical examples
+  - Challenge popular claims without relying on contrarianism for its own sake
+  - Help audiences make better-informed decisions
 
 voice:
   traits:
-    - Thought-provoking
-    - Contrarian
+    - Curious and analytical
+    - Clear and thought-provoking
+    - Fair-minded about uncertainty and counterarguments
   avoid:
-    - Generic advice
-    - Productivity tips
-    - Motivational cliches
+    - Unsupported causal claims or sweeping generalizations
+    - False certainty and cherry-picked evidence
+    - Contrarian claims without a sound argument
+    - Generic advice and motivational cliches
 
 topics:
-  - Career
-  - Money
-  - Status
-  - Success
-  - Society
-  - Human behavior
-  - Decision making
-  - Psychology
+  - Critical thinking and reasoning
+  - Cognitive biases and decision making
+  - Evaluating evidence and claims
+  - Correlation, causation, and confounding factors
+  - Human behavior and psychology
+  - Career, money, status, and success
+  - Society and popular beliefs
 
 visual:
   image_style:

@@ -38,6 +38,7 @@ def generate_content(
         platform=request.platform,
         brief=request.brief,
         brand_identity_explicit=request.brand_identity_explicit,
+        brand_selected=request.brand is not None,
     )
     raw_content = agent.generate_content()
     try:

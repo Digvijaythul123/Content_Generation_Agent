@@ -25,6 +25,7 @@ class ContentAgent:
         platform=None,
         brief=None,
         brand_identity_explicit=False,
+        brand_selected=True,
     ):
         self.ai_service = AIService()
         self.profile = profile or load_profile(profile_id)
@@ -33,12 +34,21 @@ class ContentAgent:
         self.platform = platform
         self.brief = brief
         self.brand_identity_explicit = brand_identity_explicit
+        self.brand_selected = brand_selected
 
     def get_previous_titles(self, profile_id=None, brand_id=None):
 
         titles = []
         selected_profile_id = profile_id or self.profile["id"]
-        selected_brand_id = brand_id or getattr(self.brand, "id", "default")
+        selected_brand_id = (
+            brand_id
+            if brand_id is not None
+            else (
+                getattr(self.brand, "id", "default")
+                if self.brand_selected
+                else None
+            )
+        )
         content_files = []
         for folder in (
             GENERATED_REELS_DIRECTORY,
