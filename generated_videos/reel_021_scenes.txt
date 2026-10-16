@@ -1,0 +1,16 @@
+STORYBOARD
+==================================================
+
+TITLE: The Hard Work Delusion
+
+PREMISE / HOOK (context, not voiceover): Stop bragging about how many hours you work.
+
+SCENE S01 | UNTIMED
+VISUAL: Close-up of a clock ticking fast, cutting to a shot of someone looking exhausted at a laptop at 11 PM NARRATION:
+Narrator: In India, we treat "the grind" as a badge of honor. We equate exhaustion with achievement.
+VISUAL: Cut to a minimalist graphic showing a linear line labeled "Hours" and a plateauing line labeled "Output" NARRATION:
+Narrator: But first principles tell us that output is not a linear function of time.
+VISUAL: Fast cuts of high-pressure office environments NARRATION:
+Narrator: Most "hard work" is actually just inefficient processing or a fear of making high-leverage decisions.
+VISUAL: Direct to camera, calm expression NARRATION:
+Narrator: If you're working 80 hours a week to stay relevant, you aren't hardworking. You're just inefficient. The real winners don't work the most; they solve the most expensive problems.

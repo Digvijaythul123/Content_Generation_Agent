@@ -1,0 +1,86 @@
+
+Create a polished video for the selected content profile.
+
+TITLE:
+The Hard Work Delusion
+
+HOOK / PREMISE (context, not voiceover unless repeated below):
+Stop bragging about how many hours you work.
+
+FORMAT:
+- Instagram Reel
+- Destination platform: Instagram
+- Aspect ratio: 9:16
+- Resolution: 1080x1920
+DURATION:
+- Minimum duration: 25 seconds
+- Maximum duration: 35 seconds
+- Platform maximum duration: 90 seconds
+
+VISUAL STYLE:
+- Photorealistic
+- Cinematic
+- Rich visual detail
+- Consistent premium commercial quality
+- Modern Indian professional setting
+- Corporate documentary atmosphere
+- Vertical composition
+- No text inside image
+
+VOICEOVER:
+
+No voiceover specified.
+
+VISUAL STORYBOARD:
+
+STORYBOARD
+==================================================
+
+TITLE: The Hard Work Delusion
+
+PREMISE / HOOK (context, not voiceover): Stop bragging about how many hours you work.
+
+SCENE S01 | UNTIMED
+VISUAL: Close-up of a clock ticking fast, cutting to a shot of someone looking exhausted at a laptop at 11 PM NARRATION:
+Narrator: In India, we treat "the grind" as a badge of honor. We equate exhaustion with achievement.
+VISUAL: Cut to a minimalist graphic showing a linear line labeled "Hours" and a plateauing line labeled "Output" NARRATION:
+Narrator: But first principles tell us that output is not a linear function of time.
+VISUAL: Fast cuts of high-pressure office environments NARRATION:
+Narrator: Most "hard work" is actually just inefficient processing or a fear of making high-leverage decisions.
+VISUAL: Direct to camera, calm expression NARRATION:
+Narrator: If you're working 80 hours a week to stay relevant, you aren't hardworking. You're just inefficient. The real winners don't work the most; they solve the most expensive problems.
+
+
+IMAGE GENERATION PROMPTS:
+
+SCENE S01 | 0:00-0:05
+Cinematic close-up, vertical 9:16. A high-end modern analog wall clock with a sweeping second hand, shallow depth of field, soft moody office lighting. Cut to a tired Indian male professional in his 30s, wearing a crisp white shirt with rolled-up sleeves, illuminated by the cool blue glow of a laptop screen in a dimly lit luxury home office at night. Photorealistic, 8k resolution, corporate documentary style, rich shadows, moody atmosphere.
+
+SCENE S02 | 0:05-0:10
+Cinematic vertical shot, 9:16. A minimalist, high-end corporate presentation slide projected on a matte grey wall. The visual shows a clean, professional white line graph on a dark background: one axis represents 'Hours' increasing linearly, while the other axis represents 'Output' which rises sharply and then plateaus. Professional studio lighting, soft ambient office glow, architectural photography style.
+
+SCENE S03 | 0:10-0:15
+Cinematic montage, vertical 9:16. A fast-paced, blurred motion shot of a modern glass-walled corporate office in Bangalore. Indian professionals in smart-casual attire moving rapidly in the background, motion blur emphasizing chaos and high pressure. Cool tones, sharp focus on a foreground glass partition with soft reflections, premium commercial cinematography, high contrast.
+
+SCENE S04 | 0:15-0:20
+Cinematic medium close-up, vertical 9:16. An Indian male professional in his 30s, wearing a premium navy blue blazer over a white shirt, looking directly into the lens with a calm, confident, and composed expression. Setting is a bright, airy, minimalist modern executive office with a blurred background of a city skyline. Soft natural daylight, high-end commercial skin texture, shallow depth of field, sophisticated corporate aesthetic.
+
+CAMERA STYLE:
+- Slow cinematic camera movement
+- Documentary-style visuals
+- Smooth scene transitions
+- Shallow depth of field
+
+BACKGROUND MUSIC:
+- Minimal cinematic piano
+- Thought-provoking modern corporate documentary feel
+- No vocals
+- Inspirational ending
+
+SUBTITLES:
+- Burned-in captions
+- White modern typography
+- Match voiceover timing
+
+OUTPUT:
+Create a complete video suitable for the selected format and destination.

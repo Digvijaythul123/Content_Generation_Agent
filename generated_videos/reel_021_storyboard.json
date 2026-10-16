@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "title": "The Hard Work Delusion",
+  "premise": "Stop bragging about how many hours you work.",
+  "duration_seconds": null,
+  "scenes": [
+    {
+      "id": "S01",
+      "start_seconds": null,
+      "end_seconds": null,
+      "visual_beats": [
+        "Close-up of a clock ticking fast, cutting to a shot of someone looking exhausted at a laptop at 11 PM NARRATION:\nNarrator: In India, we treat \"the grind\" as a badge of honor. We equate exhaustion with achievement.",
+        "Cut to a minimalist graphic showing a linear line labeled \"Hours\" and a plateauing line labeled \"Output\" NARRATION:\nNarrator: But first principles tell us that output is not a linear function of time.",
+        "Fast cuts of high-pressure office environments NARRATION:\nNarrator: Most \"hard work\" is actually just inefficient processing or a fear of making high-leverage decisions.",
+        "Direct to camera, calm expression NARRATION:\nNarrator: If you're working 80 hours a week to stay relevant, you aren't hardworking. You're just inefficient. The real winners don't work the most; they solve the most expensive problems."
+      ],
+      "narration": [],
+      "dialogue": [],
+      "sound_cues": [],
+      "camera_notes": [],
+      "transition": null,
+      "continuity": []
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{"timestamp": "2026-10-16T19:27:47.242393+00:00", "content_type": "reel", "content_id": "reel_021", "event": "content_generated", "title": "The Hard Work Delusion", "regenerated_from": "reel_019"}
+{"timestamp": "2026-10-16T19:28:22.156960+00:00", "content_type": "reel", "content_id": "reel_021", "event": "review_decision", "decision": "Approved", "reason": ""}
+{"timestamp": "2026-10-16T19:28:32.553601+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_started", "stage": "storyboard"}
+{"timestamp": "2026-10-16T19:28:32.556118+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_ready", "stage": "storyboard", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_videos/reel_021_storyboard.json"}
+{"timestamp": "2026-10-16T19:29:03.102791+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_started", "stage": "image_prompts"}
+{"timestamp": "2026-10-16T19:29:06.388801+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_ready", "stage": "image_prompts", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_images/reel_021_image_prompts.txt"}
+{"timestamp": "2026-10-16T19:29:19.652146+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_started", "stage": "video_prompt"}
+{"timestamp": "2026-10-16T19:29:19.658067+00:00", "content_type": "reel", "content_id": "reel_021", "event": "stage_ready", "stage": "video_prompt", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_videos/reel_021_master_prompt.txt"}
