@@ -1,0 +1,11 @@
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+CONFIG_DIRECTORY = PROJECT_ROOT / "config"
+PROMPT_DIRECTORY = PROJECT_ROOT / "prompts"
+GENERATED_REELS_DIRECTORY = PROJECT_ROOT / "generated_reels"
+GENERATED_POSTS_DIRECTORY = PROJECT_ROOT / "generated_posts"
+GENERATED_IMAGES_DIRECTORY = PROJECT_ROOT / "generated_images"
+GENERATED_VIDEOS_DIRECTORY = PROJECT_ROOT / "generated_videos"
+GENERATED_ASSETS_DIRECTORY = PROJECT_ROOT / "generated_assets"

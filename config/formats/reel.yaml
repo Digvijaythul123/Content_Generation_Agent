@@ -1,0 +1,17 @@
+id: reel
+display_name: Instagram Reel
+content_fields:
+  - title
+  - hook
+  - script
+  - caption
+generation:
+  instructions:
+    - Create one Instagram Reel idea.
+    - Return exactly the configured content fields.
+media:
+  aspect_ratio: "9:16"
+  resolution: "1080x1920"
+  duration_seconds:
+    minimum: 25
+    maximum: 35

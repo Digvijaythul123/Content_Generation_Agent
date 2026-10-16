@@ -1,0 +1,810 @@
+import json
+import importlib
+import sys
+from unittest.mock import Mock, patch
+
+import pytest
+import requests
+
+from ai_service import AIService, AIServiceError
+from content_agent import ContentAgent
+from config_loader import resolve_generation_request
+from profile_loader import load_profile
+import reel_storage
+from reel_storage import ReelStorageError, create_reel, load_reel, save_reel
+
+
+def test_create_reel_uses_first_available_filename_and_does_not_overwrite(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", tmp_path)
+    (tmp_path / "reel_001.json").write_text(
+        json.dumps({"id": "reel_001", "title": "Existing"}),
+        encoding="utf-8",
+    )
+    (tmp_path / "reel_003.json").write_text(
+        json.dumps({"id": "reel_003", "title": "Also existing"}),
+        encoding="utf-8",
+    )
+
+    reel_id, path = create_reel({"title": "New", "status": "Draft"})
+
+    assert reel_id == "reel_002"
+    assert path == tmp_path / "reel_002.json"
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "id": "reel_002",
+        "title": "New",
+        "status": "Draft",
+    }
+    assert json.loads(
+        (tmp_path / "reel_001.json").read_text(encoding="utf-8")
+    )["title"] == "Existing"
+
+
+def test_storage_uses_project_path_outside_current_directory(
+    tmp_path, monkeypatch
+):
+    data_directory = tmp_path / "project" / "generated_reels"
+    unrelated_directory = tmp_path / "elsewhere"
+    unrelated_directory.mkdir()
+    monkeypatch.chdir(unrelated_directory)
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", data_directory
+    )
+
+    save_reel("reel_001", {"id": "reel_001", "status": "Draft"})
+
+    assert load_reel("reel_001") == {"id": "reel_001", "status": "Draft"}
+    assert (data_directory / "reel_001.json").is_file()
+
+
+@pytest.mark.parametrize("reel_id", ["../outside", "/tmp/escape", ""])
+def test_storage_rejects_unsafe_reel_ids(reel_id):
+    with pytest.raises(ReelStorageError, match="Invalid reel ID"):
+        load_reel(reel_id)
+
+
+@pytest.mark.parametrize(
+    ("command", "status"),
+    [("approve_reel", "Approved"), ("reject_reel", "Rejected")],
+)
+def test_review_commands_preserve_other_record_fields(
+    tmp_path, monkeypatch, command, status
+):
+    data_directory = tmp_path / "project" / "generated_reels"
+    other_directory = tmp_path / "elsewhere"
+    data_directory.mkdir(parents=True)
+    other_directory.mkdir()
+    record = {
+        "id": "reel_001",
+        "title": "Keep this title",
+        "profile_id": "comedy",
+        "metadata": {"source": "test"},
+        "status": "Draft",
+    }
+    (data_directory / "reel_001.json").write_text(
+        json.dumps(record), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", data_directory
+    )
+    monkeypatch.chdir(other_directory)
+    monkeypatch.setattr(sys, "argv", [f"{command}.py", "reel_001"])
+
+    assert importlib.import_module(f"scripts.{command}").main() == 0
+
+    saved_record = json.loads(
+        (data_directory / "reel_001.json").read_text(encoding="utf-8")
+    )
+    assert saved_record == {**record, "status": status}
+
+
+def test_ai_service_validates_http_status_and_response_shape():
+    response = Mock()
+    response.json.return_value = {"response": "  generated text  "}
+    with patch("ai_service.requests.post", return_value=response) as post:
+        assert AIService().generate_reel("prompt") == "  generated text  "
+    response.raise_for_status.assert_called_once()
+    assert post.call_args.kwargs["timeout"] == 180
+
+    response.raise_for_status.side_effect = requests.HTTPError("bad status")
+    with patch("ai_service.requests.post", return_value=response):
+        with pytest.raises(AIServiceError, match="HTTP error"):
+            AIService().generate_reel("prompt")
+
+    response.raise_for_status.side_effect = None
+    response.json.return_value = {"other": "field"}
+    with patch("ai_service.requests.post", return_value=response):
+        with pytest.raises(AIServiceError, match="missing non-empty text"):
+            AIService().generate_reel("prompt")
+
+    response.json.side_effect = ValueError("invalid json")
+    with patch("ai_service.requests.post", return_value=response):
+        with pytest.raises(AIServiceError, match="invalid JSON"):
+            AIService().generate_reel("prompt")
+
+
+def test_ai_service_reports_timeout():
+    with patch(
+        "ai_service.requests.post", side_effect=requests.Timeout("timed out")
+    ):
+        with pytest.raises(AIServiceError, match="timed out"):
+            AIService().generate_reel("prompt")
+
+
+def test_default_brand_identity_is_omitted_for_comedy_unless_explicit():
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    comedy_profile = load_profile("comedy")
+    brand = Mock(
+        display_name="Rational Thoughts",
+        default_profile_id="rational_thoughts",
+        voice_traits=("thoughtful",),
+        voice_avoid=(),
+    )
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = ContentAgent(
+            profile_id="comedy",
+            profile=comedy_profile,
+            brand=brand,
+        )
+        agent.generate_content()
+        prompt_without_brand = service.generate_reel.call_args.args[0]
+        assert "Publishing brand: Rational Thoughts" not in prompt_without_brand
+        assert "Brand voice traits: thoughtful" not in prompt_without_brand
+
+        service.generate_reel.reset_mock()
+        explicit_agent = ContentAgent(
+            profile_id="comedy",
+            profile=comedy_profile,
+            brand=brand,
+            brand_identity_explicit=True,
+        )
+        explicit_agent.generate_content()
+        prompt_with_brand = service.generate_reel.call_args.args[0]
+
+    assert "Publishing brand: Rational Thoughts" in prompt_with_brand
+    assert "Brand voice traits: thoughtful" in prompt_with_brand
+
+
+def test_generation_brief_is_included_in_model_prompt(tmp_path, monkeypatch):
+    history_directory = tmp_path / "generated_reels"
+    history_directory.mkdir()
+    monkeypatch.setattr(
+        "content_agent.GENERATED_REELS_DIRECTORY", history_directory
+    )
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Title: Example\nHook: Hook\nScript: Script\nCaption: Caption"
+    )
+    brief = "Explain the hidden cost of convenience."
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = ContentAgent(
+            profile_id="comedy",
+            profile=load_profile("comedy"),
+            brief=brief,
+        )
+        agent.generate_content()
+
+    model_prompt = service.generate_reel.call_args.args[0]
+    assert f"Generation brief:\n{brief}" in model_prompt
+
+
+def test_generation_request_tracks_explicit_brand_selection():
+    default_brand = resolve_generation_request(profile_id="comedy")
+    explicit_brand = resolve_generation_request(
+        profile_id="comedy", brand_id="default"
+    )
+
+    assert default_brand.brand_identity_explicit is False
+    assert explicit_brand.brand_identity_explicit is True
+
+
+@pytest.mark.parametrize(
+    "brief_arguments",
+    [
+        ["--brief", "Explain why small habits compound."],
+        ["--brief-file", "brief.txt"],
+    ],
+)
+def test_main_saves_and_passes_generation_brief(
+    tmp_path, monkeypatch, brief_arguments
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+    from scripts import main
+
+    reels_directory = tmp_path / "generated_reels"
+    reels_directory.mkdir()
+    brief_text = "Explain why small habits compound."
+    (tmp_path / "brief.txt").write_text(brief_text, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    requested_briefs = []
+
+    def fake_generate_content(**kwargs):
+        requested_briefs.append(kwargs["brief"])
+        request = resolve_generation_request(
+            profile_id=kwargs["profile_id"],
+            brand_id=kwargs["brand_id"],
+            format_id=kwargs["format_id"],
+            platform_id=kwargs["platform_id"],
+            brief=kwargs["brief"],
+        )
+        content = GeneratedContent.from_text(
+            "Title: Test\nHook: Hook\nScript: Script\nCaption: Caption"
+        )
+        return GenerationResult(request=request, content=content)
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+    assert main.main(brief_arguments) == 0
+
+    saved_record = json.loads(
+        (reels_directory / "reel_001.json").read_text(encoding="utf-8")
+    )
+    assert requested_briefs == [brief_text]
+    assert saved_record["brief"] == brief_text
+
+
+def test_main_saves_single_page_post_and_design_prompt(tmp_path, monkeypatch):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+    from scripts import main
+    import post_storage
+
+    posts_directory = tmp_path / "generated_posts"
+    assets_directory = tmp_path / "generated_assets"
+    monkeypatch.setattr(
+        post_storage, "GENERATED_POSTS_DIRECTORY", posts_directory
+    )
+    monkeypatch.setattr(main, "GENERATED_ASSETS_DIRECTORY", assets_directory)
+    generated = (
+        "Title: Confidence isn't evidence\n"
+        "Main_point: Confidence does not make a claim true.\n"
+        "Supporting_copy: Ask what evidence would change your mind.\n"
+        "Visual_labels: None\n"
+        "Design_prompt: Editorial 4:5 layout with accurate supplied copy.\n"
+        "Caption: Test the claim, not the confidence."
+    )
+
+    def fake_generate_content(**kwargs):
+        request = resolve_generation_request(
+            profile_id=kwargs["profile_id"],
+            brand_id=kwargs["brand_id"],
+            format_id=kwargs["format_id"],
+            platform_id=kwargs["platform_id"],
+            brief=kwargs["brief"],
+        )
+        content = GeneratedContent.from_text(
+            generated, request.content_format.content_fields
+        )
+        return type("Result", (), {"request": request, "content": content})()
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+
+    assert main.main(
+        [
+            "--format",
+            "single_page",
+            "--platform",
+            "instagram_feed",
+            "--brief",
+            "Explain confidence versus evidence.",
+        ]
+    ) == 0
+
+    saved_record = json.loads(
+        (posts_directory / "post_001.json").read_text(encoding="utf-8")
+    )
+    assert saved_record["format_id"] == "single_page"
+    assert saved_record["platform_id"] == "instagram_feed"
+    assert saved_record["main_point"] == (
+        "Confidence does not make a claim true."
+    )
+    assert (
+        assets_directory / "post_001_design_prompt.txt"
+    ).read_text(encoding="utf-8") == (
+        "Create one finished Instagram Feed social media graphic.\n"
+        "Canvas: 4:5 portrait; 1080x1350.\n\n"
+        "VISUAL DESIGN DIRECTION:\n"
+        "Editorial 4:5 layout with accurate supplied copy.\n\n"
+        "EXACT COPY TO INCLUDE IN THE IMAGE:\n"
+        "Headline: Confidence isn't evidence\n"
+        "Main point: Confidence does not make a claim true.\n"
+        "Supporting copy: Ask what evidence would change your mind.\n\n"
+        "Render the supplied copy verbatim: preserve spelling, punctuation, "
+        "capitalization, and wording. Include only the exact diagram labels "
+        "listed above when that section is present. Do not add, omit, repeat, "
+        "paraphrase, or invent any other text, labels, numbers, or logos. "
+        "Label every diagram node clearly and connect labels to the correct "
+        "nodes. Arrange the copy in a clear, readable hierarchy with "
+        "sufficient contrast and spacing. "
+        "Keep all text inside the canvas safe area. Do not include the caption. "
+        "The finished image must communicate the idea without relying on "
+        "unprovided words.\n"
+    )
+
+
+def test_review_ui_lists_content_from_both_formats(tmp_path, monkeypatch):
+    from scripts import review_ui
+
+    reels_directory = tmp_path / "generated_reels"
+    posts_directory = tmp_path / "generated_posts"
+    reels_directory.mkdir()
+    posts_directory.mkdir()
+    (reels_directory / "reel_003.json").write_text(
+        json.dumps(
+            {
+                "id": "reel_003",
+                "title": "A reel",
+                "status": "Approved",
+                "profile_id": "comedy",
+                "format_id": "reel",
+                "platform_id": "instagram",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (posts_directory / "post_002.json").write_text(
+        json.dumps(
+            {
+                "id": "post_002",
+                "title": "A post",
+                "status": "Draft",
+                "profile_id": "rational_thoughts",
+                "format_id": "single_page",
+                "platform_id": "instagram_feed",
+                "main_point": "A post main point",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        review_ui,
+        "_CONTENT_DIRECTORIES",
+        {"reel": reels_directory, "post": posts_directory},
+    )
+
+    items = review_ui.list_content_items()
+
+    assert [(item["id"], item["type"], item["status"]) for item in items] == [
+        ("reel_003", "reel", "Approved"),
+        ("post_002", "post", "Draft"),
+    ]
+    assert review_ui.get_content_item("post", "post_002")["main_point"] == (
+        "A post main point"
+    )
+    with pytest.raises(KeyError, match="Unknown content type"):
+        review_ui.get_content_item("image", "post_002")
+
+
+def test_review_ui_generation_options_expose_type_platform_and_profiles():
+    from scripts.review_ui import get_generation_options
+
+    options = get_generation_options()
+
+    assert any(
+        item["id"] == "single_page" and item["content_kind"] == "post"
+        for item in options["formats"]
+    )
+    assert any(
+        item["id"] == "instagram_feed"
+        and "single_page" in item["supported_format_ids"]
+        for item in options["platforms"]
+    )
+    assert any(
+        item["id"] == "rational_thoughts" for item in options["profiles"]
+    )
+
+
+def test_ready_design_prompt_includes_exact_diagram_labels(tmp_path):
+    from config_loader import load_format, load_platform
+    from post_prompt import build_ready_design_prompt
+
+    prompt = build_ready_design_prompt(
+        {
+            "title": "Correlation isn't causation",
+            "main_point": "A third factor may explain both.",
+            "supporting_copy": "Look for a plausible confounder.",
+            "visual_labels": (
+                "Warm weather\n"
+                "Higher ice-cream sales\n"
+                "More time swimming"
+            ),
+            "design_prompt": (
+                "Draw warm weather as the shared cause and label each node."
+            ),
+        },
+        load_format("single_page"),
+        load_platform("instagram_feed"),
+    )
+
+    assert "EXACT DIAGRAM LABELS TO INCLUDE:" in prompt
+    assert "Warm weather\nHigher ice-cream sales\nMore time swimming" in prompt
+    assert "Label every diagram node clearly" in prompt
+
+
+def test_ready_design_prompt_omits_empty_diagram_label_section():
+    from config_loader import load_format, load_platform
+    from post_prompt import build_ready_design_prompt
+
+    prompt = build_ready_design_prompt(
+        {
+            "title": "Think clearly",
+            "main_point": "Ask what would change your mind.",
+            "supporting_copy": "Evidence matters more than confidence.",
+            "visual_labels": "None",
+            "design_prompt": "Minimal editorial typography.",
+        },
+        load_format("single_page"),
+        load_platform("instagram_feed"),
+    )
+
+    assert "EXACT DIAGRAM LABELS TO INCLUDE:" not in prompt
+
+
+def test_main_rejects_empty_generation_brief():
+    from scripts import main
+
+    with pytest.raises(SystemExit) as error:
+        main.main(["--brief", "  "])
+    assert error.value.code == 2
+
+
+def test_scene_generator_compatibility_command_writes_storyboard(
+    tmp_path, monkeypatch
+):
+    from scripts import scene_generator, storyboard_generator
+
+    reels_directory = tmp_path / "project" / "generated_reels"
+    videos_directory = tmp_path / "project" / "generated_videos"
+    reels_directory.mkdir(parents=True)
+    (reels_directory / "reel_001.json").write_text(
+        json.dumps(
+            {
+                "id": "reel_001",
+                "hook": "Think again.",
+                "script": "We can win. (Visual: A city street.) Then move.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        scene_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        storyboard_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", ["scene_generator.py", "reel_001"])
+
+    assert scene_generator.main() == 0
+
+    scene_text = (videos_directory / "reel_001_scenes.txt").read_text(
+        encoding="utf-8"
+    )
+    assert "Think again." in scene_text
+    assert "We can win." in scene_text
+    assert "Then move." in scene_text
+    assert "A city street" in scene_text
+    assert "NARRATION: We can win." in scene_text
+    assert "VISUAL: A city street." in scene_text
+    assert "NARRATION: Then move." in scene_text
+    assert "UNTIMED" in scene_text
+    assert (videos_directory / "reel_001_storyboard.json").is_file()
+
+
+def test_storyboard_preserves_reel_018_timed_beats_and_content(
+    tmp_path, monkeypatch
+):
+    from scripts import storyboard_generator
+
+    reels_directory = tmp_path / "generated_reels"
+    videos_directory = tmp_path / "generated_videos"
+    reels_directory.mkdir()
+    (reels_directory / "reel_018.json").write_text(
+        (reel_storage.GENERATED_REELS_DIRECTORY / "reel_018.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        storyboard_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+
+    storyboard_file = storyboard_generator.generate_storyboard("reel_018")
+    storyboard = storyboard_generator.read_storyboard(storyboard_file)
+
+    assert storyboard.duration_seconds == 30
+    assert [
+        (scene.start_seconds, scene.end_seconds)
+        for scene in storyboard.scenes
+    ] == [(0, 5), (5, 12), (12, 20), (20, 27), (27, 30)]
+    assert len(storyboard.scenes) == 5
+    assert "nodding seriously" in storyboard.scenes[0].visual_beats[0]
+    assert storyboard.scenes[0].narration == (
+        "Yes, I completely agree. The Q3 projections are looking very promising.",
+    )
+    assert "batting at Alex’s ear" in storyboard.scenes[1].visual_beats[0]
+    assert "asdfghjkl" in storyboard.scenes[2].sound_cues[0]
+    assert "Meeting adjourned." in storyboard.scenes[4].narration[0]
+
+    scenes_text = (videos_directory / "reel_018_scenes.txt").read_text(
+        encoding="utf-8"
+    )
+    assert scenes_text.count("SCENE S") == 5
+    assert "TOTAL DURATION: 0:30" in scenes_text
+    assert "NARRATION: Yes, I completely agree." in scenes_text
+
+
+@pytest.mark.parametrize(
+    "script",
+    [
+        "(0:00-0:05) First beat.\n\n(0:04-0:08) Overlap.",
+        "(0:08-0:05) Reversed time.",
+        "(0:99-1:05) Invalid seconds.",
+        "(0:00-) Missing end time.",
+    ],
+)
+def test_storyboard_rejects_invalid_timing(script):
+    from scripts.storyboard_generator import (
+        StoryboardValidationError,
+        build_storyboard,
+    )
+
+    with pytest.raises(StoryboardValidationError):
+        build_storyboard({"hook": "Hook", "script": script})
+
+
+def test_storyboard_keeps_untimed_legacy_scenes_untimed():
+    from scripts.storyboard_generator import build_storyboard, render_storyboard
+
+    storyboard = build_storyboard(
+        {
+            "hook": "A short opening.",
+            "script": "First paragraph.\n\nSecond paragraph.",
+        }
+    )
+
+    assert storyboard.duration_seconds is None
+    assert len(storyboard.scenes) == 2
+    assert all(scene.start_seconds is None for scene in storyboard.scenes)
+    rendered = render_storyboard(storyboard)
+    assert rendered.count("| UNTIMED") == 2
+    assert "First paragraph." in rendered
+
+
+def test_storyboard_extracts_explicit_transition_and_continuity():
+    from scripts.storyboard_generator import build_storyboard
+
+    storyboard = build_storyboard(
+        {
+            "script": (
+                "(0:00-0:05) Visual: Alex enters the office. "
+                "Transition: Cut to the desk. "
+                "Continuity: Keep the navy blazer and glasses."
+            )
+        }
+    )
+
+    scene = storyboard.scenes[0]
+    assert scene.visual_beats == ("Alex enters the office.",)
+    assert scene.transition == "Cut to the desk."
+    assert scene.continuity == ("Keep the navy blazer and glasses.",)
+
+
+def test_master_prompt_uses_storyboard_timing_and_separates_visuals(
+    tmp_path, monkeypatch
+):
+    from scripts import storyboard_generator, video_prompt_generator
+
+    reels_directory = tmp_path / "generated_reels"
+    videos_directory = tmp_path / "generated_videos"
+    images_directory = tmp_path / "generated_images"
+    reels_directory.mkdir()
+    images_directory.mkdir()
+    (reels_directory / "reel_018.json").write_text(
+        (reel_storage.GENERATED_REELS_DIRECTORY / "reel_018.json").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+    (images_directory / "reel_018_image_prompts.txt").write_text(
+        "SCENE S01 | 0:00-0:05: image prompt", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        storyboard_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+
+    storyboard_generator.generate_storyboard("reel_018")
+    prompt_file = video_prompt_generator.generate_master_prompt("reel_018")
+    master_prompt = prompt_file.read_text(encoding="utf-8")
+    voiceover = master_prompt.split("VOICEOVER:\n", 1)[1].split(
+        "VISUAL STORYBOARD:", 1
+    )[0]
+
+    assert "[0:00-0:05] Yes, I completely agree." in voiceover
+    assert "Meeting adjourned." in voiceover
+    assert "[Medium shot]" not in voiceover
+    assert "nodding seriously" not in voiceover
+    assert "SCENE S01 | 0:00-0:05" in master_prompt
+    assert "SCENE S01 | 0:00-0:05: image prompt" in master_prompt
+
+
+def test_image_prompts_save_in_generated_images_and_video_reads_them(
+    tmp_path, monkeypatch
+):
+    from scripts import (
+        image_prompt_generator,
+        storyboard_generator,
+        video_prompt_generator,
+    )
+
+    videos_directory = tmp_path / "project" / "generated_videos"
+    images_directory = tmp_path / "project" / "generated_images"
+    reels_directory = tmp_path / "project" / "generated_reels"
+    videos_directory.mkdir(parents=True)
+    reels_directory.mkdir(parents=True)
+    (videos_directory / "reel_001_scenes.txt").write_text(
+        "SCENE 1\nA short scene.", encoding="utf-8"
+    )
+    (reels_directory / "reel_001.json").write_text(
+        json.dumps(
+            {
+                "id": "reel_001",
+                "profile_id": "comedy",
+                "format_id": "reel",
+                "platform_id": "instagram",
+                "title": "Example",
+                "hook": "A hook",
+                "script": "A line.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        image_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        storyboard_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        image_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(sys, "argv", ["image_prompt_generator.py", "reel_001"])
+    model = Mock()
+    model.generate_reel.return_value = "Storyboard prompts"
+    monkeypatch.setattr(
+        image_prompt_generator, "AIService", lambda: model
+    )
+
+    assert image_prompt_generator.main() == 0
+    prompt_file = images_directory / "reel_001_image_prompts.txt"
+    assert prompt_file.read_text(encoding="utf-8") == "Storyboard prompts"
+    generation_prompt = model.generate_reel.call_args.args[0]
+    assert "lively visual storytelling" in generation_prompt
+    assert "Relatable everyday environments" in generation_prompt
+    assert "Instagram Reel" in generation_prompt
+    assert "Aspect ratio: 9:16" in generation_prompt
+
+    monkeypatch.setattr(sys, "argv", ["video_prompt_generator.py", "reel_001"])
+    assert video_prompt_generator.main() == 0
+    master_prompt = (
+        videos_directory / "reel_001_master_prompt.txt"
+    ).read_text(encoding="utf-8")
+    assert "Storyboard prompts" in master_prompt
+    assert "A line." in master_prompt
+    assert "Energetic but readable camera movement" in master_prompt
+    assert "modern Indian corporate environment" not in master_prompt
+
+
+def test_prepare_reel_runs_storyboard_preparation_stages(monkeypatch):
+    from scripts import prepare_reel
+
+    stages = []
+    monkeypatch.setattr(
+        prepare_reel, "generate_storyboard", lambda reel_id: stages.append(
+            ("storyboard", reel_id)
+        ) or "scenes.txt"
+    )
+    monkeypatch.setattr(
+        prepare_reel, "generate_image_prompts", lambda reel_id: stages.append(
+            ("images", reel_id)
+        ) or "images.txt"
+    )
+    monkeypatch.setattr(
+        prepare_reel, "generate_master_prompt", lambda reel_id: stages.append(
+            ("video", reel_id)
+        ) or "video.txt"
+    )
+
+    assert prepare_reel.main(["reel_007"]) == 0
+    assert stages == [
+        ("storyboard", "reel_007"),
+        ("images", "reel_007"),
+        ("video", "reel_007"),
+    ]
+
+
+def test_prepare_reel_stops_when_a_stage_fails(monkeypatch):
+    from scripts import prepare_reel
+
+    monkeypatch.setattr(
+        prepare_reel, "generate_storyboard", lambda reel_id: "storyboard.json"
+    )
+
+    def fail_image_stage(reel_id):
+        raise AIServiceError("model unavailable")
+
+    monkeypatch.setattr(
+        prepare_reel, "generate_image_prompts", fail_image_stage
+    )
+    monkeypatch.setattr(
+        prepare_reel,
+        "generate_master_prompt",
+        lambda reel_id: pytest.fail("Video stage must not run."),
+    )
+
+    assert prepare_reel.main(["reel_007"]) == 1
+
+
+def test_video_prompt_generator_reads_legacy_image_prompt_path(
+    tmp_path, monkeypatch
+):
+    from scripts import video_prompt_generator
+
+    videos_directory = tmp_path / "generated_videos"
+    images_directory = tmp_path / "generated_images"
+    reels_directory = tmp_path / "generated_reels"
+    videos_directory.mkdir()
+    reels_directory.mkdir()
+    (videos_directory / "reel_002_image_prompts.txt").write_text(
+        "Legacy storyboard", encoding="utf-8"
+    )
+    (reels_directory / "reel_002.json").write_text(
+        json.dumps({"id": "reel_002"}), encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        reel_storage, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(sys, "argv", ["video_prompt_generator.py", "reel_002"])
+
+    assert video_prompt_generator.main() == 0
+    prompt = (
+        videos_directory / "reel_002_master_prompt.txt"
+    ).read_text(encoding="utf-8")
+    assert "Legacy storyboard" in prompt

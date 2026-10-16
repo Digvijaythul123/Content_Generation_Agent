@@ -1,0 +1,15 @@
+Create one finished Instagram Feed social media graphic.
+Canvas: 4:5 portrait; 1080x1350.
+
+VISUAL DESIGN DIRECTION:
+A 4:5 editorial graphic using a minimalist, high-contrast palette of cream, charcoal, and one accent color (electric blue). The composition features a split-screen visual metaphor. On the left side, a large, meticulously detailed checklist with various colored markers and checkboxes, labeled "To-Do List." On the right side, a single, small, untouched piece of paper labeled "Actual Work." The hierarchy places the Main_point as a bold header at the top center. The Supporting_copy is placed in a smaller, italicized font at the bottom center. Clean vector lines, ample negative space, and a modern sans-serif aesthetic.
+
+EXACT COPY TO INCLUDE IN THE IMAGE:
+Headline: The Productivity Paradox
+Main point: Spending three hours organizing a to-do list to avoid doing the actual tasks.
+Supporting copy: Does the color-coding count as progress?
+
+EXACT DIAGRAM LABELS TO INCLUDE:
+To-Do List, Actual Work
+
+Render the supplied copy verbatim: preserve spelling, punctuation, capitalization, and wording. Include only the exact diagram labels listed above when that section is present. Do not add, omit, repeat, paraphrase, or invent any other text, labels, numbers, or logos. Label every diagram node clearly and connect labels to the correct nodes. Arrange the copy in a clear, readable hierarchy with sufficient contrast and spacing. Keep all text inside the canvas safe area. Do not include the caption. The finished image must communicate the idea without relying on unprovided words.

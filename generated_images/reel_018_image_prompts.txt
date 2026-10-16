@@ -1,0 +1,55 @@
+To maintain consistency for an AI generator (like Midjourney, DALL-E 3, or Stable Diffusion), we will define **ALEX** and **THE CAT** as consistent visual anchors.
+
+**Character Consistency Key:**
+*   **ALEX:** A 30-year-old professional with short neat brown hair, wearing a navy blue crisp blazer over a white shirt, wearing thin-rimmed black glasses. Expressive face.
+*   **THE CAT:** A fluffy, mischievous orange tabby cat with bright green eyes.
+*   **SETTING:** A bright, modern home office with a white desk, a MacBook, a potted Monstera plant in the background, and soft natural sunlight streaming from a window.
+
+---
+
+### AI IMAGE PROMPTS (9:16 Aspect Ratio)
+
+**SCENE 1 (Establishing Shot)**
+Vertical composition, wide shot. A remote worker (Alex) sitting at a modern white desk in a bright home office. Alex is wearing a professional navy blazer, looking focused at a laptop. A fluffy orange tabby cat is peeking over the edge of the desk with a mischievous look. Bright natural lighting, cinematic photography, 8k, highly detailed. --ar 9:16
+
+**SCENE 2 (The Persona)**
+Vertical medium shot. Alex, a 30-year-old professional with short brown hair and black glasses, wearing a navy blazer. They are nodding seriously with a corporate, focused expression, looking directly into the laptop webcam. Soft bokeh background of a home office. High resolution, commercial photography. --ar 9:16
+
+**SCENE 3 & 4 (Corporate Vibe)**
+Vertical medium shot. Same character (Alex) in navy blazer and glasses. A slight, confident professional smile, leaning in toward the screen. Lighting is bright and clean. The composition focuses on the "corporate" upper body. Hyper-realistic, 8k. --ar 9:16
+
+**SCENE 5 (The Intrusion)**
+Vertical tight shot. Close-up on the side of Alex’s head and ear. A fluffy orange tabby cat’s paw is captured in mid-motion, gently batting at Alex’s ear. The background is the navy blue fabric of the blazer. Shallow depth of field, sharp focus on the cat's paw and fur. --ar 9:16
+
+**SCENE 6 (The Struggle)**
+Vertical close-up shot of Alex’s face. Alex is maintaining a frozen, serious corporate expression, but one eye is visibly twitching. A hint of a cat's orange fur is visible at the edge of the frame. Extreme detail on skin texture and the tension in the eye. --ar 9:16
+
+**SCENE 7 (The Irony)**
+Vertical medium shot. Alex staring intensely at the camera with a forced look of "stability and focus." In the blurry foreground, the orange tabby cat's tail is swishing across the desk. Bright, airy home office lighting. --ar 9:16
+
+**SCENE 8 (The Chaos)**
+Vertical wide shot. The fluffy orange tabby cat is walking directly across the silver laptop keyboard. Alex is sitting behind the laptop, frozen in a professional pose, eyes wide in a panic while the cat occupies the entire workspace. Modern home office setting. --ar 9:16
+
+**SCENE 9 (The Digital Error)**
+Vertical close-up shot of the laptop screen (over the shoulder). A chat window is open showing the text "asdfghjkl" typed into the box. An orange cat's paw is pressed firmly onto the keys. High-tech screen glow, soft lighting. --ar 9:16
+
+**SCENE 10 (The Multitask)**
+Vertical medium shot. Alex is looking at the camera with a frozen, wide-eyed professional smile. One hand is hidden below the desk line, gently pushing the fluffy orange cat away. The contrast between the "corporate face" and the "cat-wrangling hand." --ar 9:16
+
+**SCENE 11 & 12 (The Transition)**
+Vertical medium shot. Alex adjusting their glasses, maintaining the professional facade. The orange cat is now sitting on the desk, staring intensely at Alex. Bright, natural sunlight, clean composition. --ar 9:16
+
+**SCENE 13 (The Takeover)**
+Vertical medium shot. The fluffy orange tabby cat has leaped onto Alex's shoulders, curling up comfortably around their neck like a scarf. Alex is still wearing the navy blazer, looking stunned but remaining still. Heartwarming yet comedic. --ar 9:16
+
+**SCENE 14 (The Break)**
+Vertical medium shot. Alex has stopped pretending. They are looking directly into the camera with a genuine, warm, and defeated smile, leaning their head back against the fluffy orange cat on their shoulders. Soft, cozy lighting. --ar 9:16
+
+**SCENE 15 & 16 (The Introduction)**
+Vertical medium shot. Alex gesturing with a hand toward the cat on their shoulder, looking at the camera with a playful, ironic expression. The cat looks proud. Bright, high-key lighting, lifestyle photography. --ar 9:16
+
+**SCENE 17 (The Assistant)**
+Vertical extreme close-up of the orange tabby cat's face. The cat has its mouth slightly open as if letting out a meow. Whiskers in sharp focus, bright green eyes, soft orange fur. Cinematic macro photography. --ar 9:16
+
+**SCENE 18 (The End)**
+Vertical wide shot. Alex leaning back in the office chair, laughing, with the orange cat curled up on their chest. The laptop is pushed aside. The room is filled with warm, golden afternoon sunlight. Peaceful and funny conclusion. --ar 9:16

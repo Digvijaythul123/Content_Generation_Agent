@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Content workspace</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10151a;
+      --panel: #192128;
+      --panel-soft: #202b33;
+      --line: #34414a;
+      --text: #f1f0eb;
+      --muted: #aab4ba;
+      --accent: #efb46a;
+      --green: #8ec9a0;
+      --red: #e98d83;
+      --blue: #91b9dc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 85% 0%, #342c22 0, transparent 27rem),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    .shell { width: min(1440px, 100% - 40px); margin: 0 auto; padding: 32px 0 56px; }
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 7px 0 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.1; letter-spacing: -.04em; }
+    .subhead { margin: 8px 0 0; color: var(--muted); }
+    .local-tag { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .workspace { display: grid; gap: 22px; margin-top: 24px; }
+    .panel { border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--panel) 94%, transparent); }
+    .generator { padding: 22px; }
+    .panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+    .hint { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #11181e;
+      color: var(--text);
+      padding: 10px 12px;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #efb46a22; }
+    textarea { min-height: 78px; resize: vertical; }
+    .brief-field { grid-column: 1 / -1; }
+    .form-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+    .primary {
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: #20170e;
+      padding: 10px 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary:disabled { cursor: wait; opacity: .65; }
+    .message { color: var(--muted); font-size: 13px; }
+    .message.error { color: var(--red); }
+    .review-grid { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(0, 1.5fr); gap: 22px; min-height: 520px; }
+    .list-panel, .detail-panel { min-width: 0; padding: 20px; }
+    .list-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin: 14px 0; }
+    .list-tools input { grid-column: 1 / -1; }
+    .counts { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+    .count { border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; color: var(--muted); font-size: 12px; }
+    .items { display: grid; gap: 8px; max-height: 610px; overflow: auto; }
+    .item {
+      display: grid;
+      width: 100%;
+      gap: 5px;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      background: #11181e;
+      color: var(--text);
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .item:hover, .item[aria-current="true"] { border-color: #efb46a88; background: #242b30; }
+    .item-top, .detail-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .item-title { font-weight: 750; line-height: 1.3; }
+    .item-meta { color: var(--muted); font-size: 12px; }
+    .badge { border-radius: 999px; padding: 2px 8px; background: #303a42; color: #d8e0e4; font-size: 11px; font-weight: 750; text-transform: uppercase; }
+    .badge.draft { background: #5a472c; color: #ffd796; }
+    .badge.approved { background: #244733; color: #b5e4c2; }
+    .badge.rejected { background: #512e2b; color: #ffc0b7; }
+    .badge.reel { background: #293c4b; color: #b6d9f1; }
+    .detail-empty { display: grid; min-height: 390px; place-items: center; color: var(--muted); text-align: center; }
+    .detail-title { margin: 14px 0 8px; font-size: clamp(24px, 3vw, 34px); line-height: 1.15; letter-spacing: -.035em; }
+    .detail-meta { color: var(--muted); font-size: 12px; }
+    .field { border-top: 1px solid var(--line); padding: 15px 0; }
+    .field-name { margin-bottom: 6px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .field-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .notice { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+    @media (max-width: 900px) {
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .review-grid { grid-template-columns: 1fr; }
+      .items { max-height: 360px; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 24px, 1440px); padding-top: 20px; }
+      header { align-items: start; flex-direction: column; }
+      .form-grid { grid-template-columns: 1fr; }
+      .brief-field { grid-column: auto; }
+      .list-tools { grid-template-columns: 1fr; }
+      .list-tools input { grid-column: auto; }
+      .generator, .list-panel, .detail-panel { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <div class="eyebrow">Local content studio</div>
+        <h1>Review &amp; generate</h1>
+        <p class="subhead">Create a draft, then inspect saved content and its status.</p>
+      </div>
+      <div class="local-tag">Local-only · Draft generation can call your configured model</div>
+    </header>
+
+    <section class="panel generator" aria-labelledby="generate-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="generate-heading">Generate content</h2>
+          <p class="hint">Choose the format and context. The brief is optional.</p>
+        </div>
+      </div>
+      <form id="generate-form">
+        <div class="form-grid">
+          <label>Brand<select id="brand" name="brand_id" required></select></label>
+          <label>Content profile<select id="profile" name="profile_id" required></select></label>
+          <label>Content type / format<select id="format" name="format_id" required></select></label>
+          <label>Platform<select id="platform" name="platform_id" required></select></label>
+          <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
+        </div>
+        <div class="form-actions">
+          <button class="primary" id="generate-button" type="submit">Generate draft</button>
+          <div class="message" id="generate-message" role="status" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+
+    <section class="review-grid" aria-label="Generated content review">
+      <section class="panel list-panel" aria-labelledby="content-heading">
+        <div class="panel-heading">
+          <div>
+            <h2 id="content-heading">Generated content</h2>
+            <p class="hint">Select an item to inspect its fields.</p>
+          </div>
+          <button class="primary" id="refresh" type="button">Refresh</button>
+        </div>
+        <div class="counts" id="counts"></div>
+        <div class="list-tools">
+          <input id="search" type="search" placeholder="Search titles and content" aria-label="Search content">
+          <select id="type-filter" aria-label="Filter by content type">
+            <option value="">All types</option>
+            <option value="reel">Reels</option>
+            <option value="post">Single-page posts</option>
+          </select>
+          <select id="status-filter" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option>Draft</option>
+            <option>Approved</option>
+            <option>Rejected</option>
+            <option>UNKNOWN</option>
+          </select>
+        </div>
+        <div class="items" id="items" aria-live="polite"></div>
+      </section>
+      <section class="panel detail-panel" id="detail" aria-label="Content details">
+        <div class="detail-empty">Choose a generated item to see its content and status.</div>
+      </section>
+    </section>
+    <p class="notice">Status is shown from the saved record. Use the existing review commands to approve or reject content.</p>
+  </main>
+  <script>
+    const state = { items: [], options: {}, selected: null };
+    const $ = (id) => document.getElementById(id);
+    const labelize = (key) => key.replace(/_/g, " ");
+    const asText = (value) => {
+      if (value === null || value === undefined || value === "") return "";
+      return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    };
+
+    function addOption(select, option, selectedId) {
+      const element = document.createElement("option");
+      element.value = option.id;
+      element.textContent = option.name;
+      element.selected = option.id === selectedId;
+      select.append(element);
+    }
+
+    function loadSelects() {
+      const options = state.options;
+      const brandSelect = $("brand");
+      const profileSelect = $("profile");
+      const formatSelect = $("format");
+      brandSelect.replaceChildren();
+      profileSelect.replaceChildren();
+      formatSelect.replaceChildren();
+      options.brands.forEach((option) => addOption(brandSelect, option, "default"));
+      options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
+      options.formats.forEach((option) => addOption(formatSelect, option, "reel"));
+      updateProfilesFromBrand();
+      updatePlatforms();
+      brandSelect.addEventListener("change", updateProfilesFromBrand);
+      formatSelect.addEventListener("change", updatePlatforms);
+    }
+
+    function updateProfilesFromBrand() {
+      const brand = state.options.brands.find((item) => item.id === $("brand").value);
+      const previous = $("profile").value;
+      $("profile").replaceChildren();
+      state.options.profiles.forEach((option) => addOption(
+        $("profile"), option,
+        option.id === previous ? previous : brand.default_profile_id
+      ));
+      const format = state.options.formats.find((item) => item.id === $("format").value);
+      if (brand && format && format.id === brand.default_format_id) {
+        $("profile").value = brand.default_profile_id;
+      }
+    }
+
+    function updatePlatforms() {
+      const format = state.options.formats.find((item) => item.id === $("format").value);
+      const current = $("platform").value;
+      const available = state.options.platforms.filter((item) =>
+        !item.supported_format_ids.length || item.supported_format_ids.includes(format.id)
+      );
+      $("platform").replaceChildren();
+      available.forEach((option) => addOption($("platform"), option, current));
+      if (!available.some((item) => item.id === current)) {
+        const brand = state.options.brands.find((item) => item.id === $("brand").value);
+        const preferred = available.find((item) => item.id === brand.default_platform_id);
+        $("platform").value = preferred ? preferred.id : (available[0]?.id || "");
+      }
+    }
+
+    function badgeClass(value) {
+      const known = ["draft", "approved", "rejected", "reel"];
+      return known.includes(String(value).toLowerCase()) ? String(value).toLowerCase() : "";
+    }
+
+    function renderCounts(items) {
+      const statuses = new Map();
+      items.forEach((item) => statuses.set(item.status, (statuses.get(item.status) || 0) + 1));
+      const counts = $("counts");
+      counts.replaceChildren();
+      const all = document.createElement("span");
+      all.className = "count";
+      all.textContent = `${items.length} total`;
+      counts.append(all);
+      statuses.forEach((count, status) => {
+        const chip = document.createElement("span");
+        chip.className = `badge ${badgeClass(status)}`;
+        chip.textContent = `${status}: ${count}`;
+        counts.append(chip);
+      });
+    }
+
+    function renderItems() {
+      const term = $("search").value.trim().toLowerCase();
+      const type = $("type-filter").value;
+      const status = $("status-filter").value;
+      const filtered = state.items.filter((item) =>
+        (!type || item.type === type) &&
+        (!status || item.status === status) &&
+        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id}`.toLowerCase().includes(term))
+      );
+      const list = $("items");
+      list.replaceChildren();
+      renderCounts(state.items);
+      if (!filtered.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint";
+        empty.textContent = state.items.length ? "No items match these filters." : "No generated content found yet.";
+        list.append(empty);
+        return;
+      }
+      filtered.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "item";
+        button.setAttribute("aria-current", state.selected && state.selected.id === item.id && state.selected.type === item.type ? "true" : "false");
+        const top = document.createElement("span");
+        top.className = "item-top";
+        const kind = document.createElement("span");
+        kind.className = `badge ${badgeClass(item.type)}`;
+        kind.textContent = item.type;
+        const currentStatus = document.createElement("span");
+        currentStatus.className = `badge ${badgeClass(item.status)}`;
+        currentStatus.textContent = item.status;
+        top.append(kind, currentStatus);
+        const title = document.createElement("span");
+        title.className = "item-title";
+        title.textContent = item.title;
+        const meta = document.createElement("span");
+        meta.className = "item-meta";
+        meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}`;
+        button.append(top, title, meta);
+        button.addEventListener("click", () => openItem(item));
+        list.append(button);
+      });
+    }
+
+    function renderDetail(item, record) {
+      const detail = $("detail");
+      detail.replaceChildren();
+      const title = document.createElement("h2");
+      title.className = "detail-title";
+      title.textContent = record.title || "Untitled";
+      const meta = document.createElement("div");
+      meta.className = "detail-meta";
+      [item.type, item.id, record.status || "UNKNOWN", record.profile_id, record.format_id, record.platform_id]
+        .filter(Boolean).forEach((value) => {
+          const tag = document.createElement("span");
+          tag.className = `badge ${badgeClass(value)}`;
+          tag.textContent = value;
+          meta.append(tag);
+        });
+      detail.append(title, meta);
+
+      const hidden = new Set(["id", "status", "raw_content"]);
+      const entries = Object.entries(record).filter(([key, value]) =>
+        !hidden.has(key) && value !== null && value !== ""
+      );
+      entries.forEach(([key, value]) => {
+        const field = document.createElement("section");
+        field.className = "field";
+        const name = document.createElement("div");
+        name.className = "field-name";
+        name.textContent = labelize(key);
+        const content = document.createElement("div");
+        content.className = "field-value";
+        content.textContent = asText(value);
+        field.append(name, content);
+        detail.append(field);
+      });
+    }
+
+    async function openItem(item) {
+      state.selected = item;
+      renderItems();
+      try {
+        const response = await fetch(`/api/content?type=${encodeURIComponent(item.type)}&id=${encodeURIComponent(item.id)}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Could not load content.");
+        renderDetail(item, payload.record);
+      } catch (error) {
+        $("detail").textContent = error.message;
+      }
+    }
+
+    async function refreshItems(selectItem) {
+      const response = await fetch("/api/content");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not load content.");
+      state.items = payload.items;
+      renderItems();
+      const target = selectItem || state.selected;
+      if (target) {
+        const found = state.items.find((item) => item.id === target.id && item.type === target.type);
+        if (found) await openItem(found);
+      }
+    }
+
+    $("generate-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = $("generate-button");
+      const message = $("generate-message");
+      button.disabled = true;
+      button.textContent = "Generating…";
+      message.className = "message";
+      message.textContent = "Generating and saving your draft…";
+      const payload = {
+        brand_id: $("brand").value,
+        profile_id: $("profile").value,
+        format_id: $("format").value,
+        platform_id: $("platform").value,
+        brief: $("brief").value.trim() || null
+      };
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Generation failed.");
+        message.textContent = `Saved ${result.item.id} as ${result.item.status}.`;
+        await refreshItems(result.item);
+      } catch (error) {
+        message.className = "message error";
+        message.textContent = error.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = "Generate draft";
+      }
+    });
+
+    ["search", "type-filter", "status-filter"].forEach((id) =>
+      $(id).addEventListener("input", renderItems)
+    );
+    $("refresh").addEventListener("click", () =>
+      refreshItems().catch((error) => {
+        $("items").textContent = error.message;
+      })
+    );
+
+    async function start() {
+      const [optionsResponse, contentResponse] = await Promise.all([
+        fetch("/api/options"),
+        fetch("/api/content")
+      ]);
+      const options = await optionsResponse.json();
+      const content = await contentResponse.json();
+      if (!optionsResponse.ok) throw new Error(options.error || "Could not load configuration.");
+      if (!contentResponse.ok) throw new Error(content.error || "Could not load saved content.");
+      state.options = options;
+      state.items = content.items;
+      loadSelects();
+      renderItems();
+    }
+    start().catch((error) => {
+      $("generate-message").className = "message error";
+      $("generate-message").textContent = error.message;
+    });
+  </script>
+</body>
+</html>

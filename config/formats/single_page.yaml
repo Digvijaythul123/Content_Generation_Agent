@@ -1,0 +1,20 @@
+id: single_page
+display_name: Single-page post
+content_fields:
+  - title
+  - main_point
+  - supporting_copy
+  - visual_labels
+  - design_prompt
+  - caption
+generation:
+  content_kind: post
+  prompt_template: single_page_generation.md
+  instructions:
+    - Create one concise, thoughtful single-page social media post.
+    - Make the main point understandable at a glance and the supporting copy brief.
+    - Return a specific visual design prompt for a 4:5 editorial graphic.
+    - Keep all final words in the content fields; image artwork should not invent text.
+media:
+  aspect_ratio: "4:5"
+  resolution: "1080x1350"

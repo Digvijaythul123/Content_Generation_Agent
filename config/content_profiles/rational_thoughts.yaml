@@ -1,0 +1,58 @@
+id: rational_thoughts
+display_name: Rational Thoughts
+language: English
+
+audience:
+  description: Indian professionals aged 25-40
+
+objectives:
+  - Challenge common beliefs
+  - Use first-principles thinking
+  - Create curiosity
+  - Make people stop scrolling
+
+voice:
+  traits:
+    - Thought-provoking
+    - Contrarian
+  avoid:
+    - Generic advice
+    - Productivity tips
+    - Motivational cliches
+
+topics:
+  - Career
+  - Money
+  - Status
+  - Success
+  - Society
+  - Human behavior
+  - Decision making
+  - Psychology
+
+visual:
+  image_style:
+    - Photorealistic
+    - Cinematic
+    - Rich visual detail
+    - Consistent premium commercial quality
+  setting:
+    - Modern Indian professional setting
+    - Corporate documentary atmosphere
+  image_requirements:
+    - Vertical composition
+    - No text inside image
+  camera:
+    - Slow cinematic camera movement
+    - Documentary-style visuals
+    - Smooth scene transitions
+    - Shallow depth of field
+  music:
+    - Minimal cinematic piano
+    - Thought-provoking modern corporate documentary feel
+    - No vocals
+    - Inspirational ending
+  subtitles:
+    - Burned-in captions
+    - White modern typography
+    - Match voiceover timing

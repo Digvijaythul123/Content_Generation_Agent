@@ -1,0 +1,50 @@
+id: comedy
+display_name: Comedy
+language: English
+
+audience:
+  description: A broad social media audience
+
+objectives:
+  - Entertain
+  - Create a relatable comedic payoff
+
+voice:
+  traits:
+    - Playful
+    - Concise
+    - Observational
+  avoid:
+    - Targeted harassment
+    - Demeaning protected groups
+    - Confusing setups or payoffs
+
+topics:
+  - Everyday situations
+  - Work and office life
+  - Family
+  - Social habits
+  - Technology
+
+visual:
+  image_style:
+    - Expressive, lively visual storytelling
+    - Bright, natural lighting
+    - Consistent characters and visual style
+  setting:
+    - Relatable everyday environments
+    - Use scene details that reinforce the joke
+  image_requirements:
+    - Vertical composition
+    - No text inside image
+  camera:
+    - Clear visual setup and payoff
+    - Energetic but readable camera movement
+    - Smooth scene transitions
+  music:
+    - Light, playful instrumental music
+    - No vocals
+  subtitles:
+    - Burned-in captions
+    - High-contrast readable typography
+    - Match voiceover timing

@@ -1,0 +1,8 @@
+id: default
+display_name: Rational Thoughts
+default_profile_id: rational_thoughts
+default_format_id: reel
+default_platform_id: instagram
+voice:
+  traits: []
+  avoid: []
