@@ -21,6 +21,9 @@ def generate_content(
     format_id=None,
     platform_id=None,
     brief=None,
+    category_id=None,
+    comedy_subtype=None,
+    qa_subtype=None,
 ):
     """Resolve configuration, generate a draft, and validate its content."""
     request = resolve_generation_request(
@@ -29,6 +32,9 @@ def generate_content(
         format_id=format_id,
         platform_id=platform_id,
         brief=brief,
+        category_id=category_id,
+        comedy_subtype=comedy_subtype,
+        qa_subtype=qa_subtype,
     )
     agent = ContentAgent(
         profile_id=request.profile.id,
@@ -39,6 +45,9 @@ def generate_content(
         brief=request.brief,
         brand_identity_explicit=request.brand_identity_explicit,
         brand_selected=request.brand is not None,
+        category_id=request.category_id,
+        comedy_subtype=request.comedy_subtype,
+        qa_subtype=request.qa_subtype,
     )
     raw_content = agent.generate_content()
     try:

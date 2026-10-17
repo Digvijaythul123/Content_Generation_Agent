@@ -1,59 +1,59 @@
 id: rational_thoughts
-display_name: Critical Thinking
+display_name: Critical Thinking / Rational Thoughts
 language: English
 
 audience:
-  description: Curious professionals who want to reason clearly about work, money, society, and everyday decisions
+  description: Curious people interested in challenging beliefs through reason, science, critical thinking, secularism, humanism, and freedom of thought
 
 objectives:
-  - Separate evidence from assumptions and opinions
-  - Explain complex ideas through clear reasoning and practical examples
-  - Challenge popular claims without relying on contrarianism for its own sake
-  - Help audiences make better-informed decisions
+  - Challenge beliefs and popular claims with reason, evidence, science, and clear argument
+  - Explain complex ideas accessibly while distinguishing established findings from uncertainty
+  - Advocate secularism, humanism, and freedom of thought without demeaning people who disagree
+  - Encourage curiosity, intellectual humility, and independent thought rather than presenting enlightenment as certainty
 
 voice:
   traits:
-    - Curious and analytical
-    - Clear and thought-provoking
-    - Fair-minded about uncertainty and counterarguments
+    - Curious, analytical, and evidence-led
+    - Clear, accessible, and thought-provoking
+    - Humanist and supportive of freedom of thought
+    - Fair-minded about uncertainty and strong counterarguments
   avoid:
-    - Unsupported causal claims or sweeping generalizations
-    - False certainty and cherry-picked evidence
-    - Contrarian claims without a sound argument
+    - Unsupported scientific, historical, or causal claims
+    - False certainty, cherry-picked evidence, and misleading simplifications
+    - Mocking or stereotyping people based on religion or worldview
+    - Contrarianism, preachiness, and treating disagreement as ignorance
     - Generic advice and motivational cliches
 
 topics:
   - Critical thinking and reasoning
-  - Cognitive biases and decision making
-  - Evaluating evidence and claims
+  - Scientific literacy, evidence, and the limits of scientific knowledge
+  - Cognitive biases, skepticism, and decision making
+  - Secularism, humanism, ethics, and freedom of thought
+  - Philosophy, meaning, and questions about human existence
+  - Evaluating claims, misinformation, and pseudoscience
   - Correlation, causation, and confounding factors
-  - Human behavior and psychology
-  - Career, money, status, and success
-  - Society and popular beliefs
+  - Human behavior, culture, and popular beliefs
 
 visual:
   image_style:
-    - Photorealistic
-    - Cinematic
-    - Rich visual detail
-    - Consistent premium commercial quality
+    - Thoughtful editorial illustration with a mature, contemporary feel
+    - Clear visual metaphors for evidence, belief, uncertainty, and perspective
+    - Restrained, consistent color palette and legible composition
   setting:
-    - Modern Indian professional setting
-    - Corporate documentary atmosphere
+    - Everyday human and cultural contexts rather than default corporate scenes
+    - Respectful, non-caricatured treatment of philosophical and secular themes
   image_requirements:
     - Vertical composition
     - No text inside image
   camera:
-    - Slow cinematic camera movement
-    - Documentary-style visuals
-    - Smooth scene transitions
-    - Shallow depth of field
+    - Purposeful, readable framing that supports the argument
+    - Use close details or visual contrasts to clarify an idea
+    - Calm transitions; avoid spectacle that distracts from the point
   music:
-    - Minimal cinematic piano
-    - Thought-provoking modern corporate documentary feel
+    - Subtle, reflective instrumental bed
     - No vocals
-    - Inspirational ending
+    - Avoid forced inspirational endings
   subtitles:
     - Burned-in captions
-    - White modern typography
+    - High-contrast, readable typography
     - Match voiceover timing

@@ -20,7 +20,7 @@ infrastructure.
 ## Current implementation baseline
 
 **[CURRENT]** The project has a local CLI; configured Critical Thinking,
-Comedy, and QA Engineering & AI content profiles; an optional Digvijay Thul
+Comedy, and QA Engineering & AI content profiles; an optional d_agnostic_being
 personal brand; Reel, single-page, and LinkedIn text-post formats; Instagram
 platform; brief-driven content generation; local JSON records; manual list,
 approval, rejection, and bulk review; structured timed/untimed storyboard

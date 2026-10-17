@@ -24,11 +24,21 @@ future scope explicitly; they do not imply unbuilt features exist.
 
 - Profile-aware content generation for configured profiles, currently
   Critical Thinking, Comedy, and QA Engineering & AI.
+- Optional QA Engineering & AI topic-pillar guidance for testing strategy,
+  automation architecture, test boundaries, CI reliability, exploratory
+  testing, AI-assisted QA, LLM evaluation, and QA communication. Multi-draft
+  batches can rotate across these pillars.
+- Optional cross-format Comedy category with ten subtypes, Life Is a Glitch
+  branding, and format-specific guidance for Reel, single-page, and explicitly
+  requested LinkedIn content. Comedy batches can create up to ten separate
+  drafts, rotating across subtypes when none is specified. The selected
+  category/subtype is stored only on opted-in drafts.
 - Single-page social post generation with a format-specific design prompt
   containing exact copy and explicit optional visual labels.
 - CLI brief input and JSON draft storage.
 - Brand, profile, format, and platform configuration loading; the personal
-  brand is Digvijay Thul, and generation supports no brand.
+  brands are d_agnostic_being and Life Is a Glitch, and generation supports no
+  brand.
 - Human review commands for listing, approving, rejecting, and bulk reviewing
   saved content.
 - Structured timed/untimed storyboard generation from a saved Reel, with a
@@ -54,14 +64,18 @@ and rendered video generation are not implemented.
 - **Source / idea / brief:** input to a generation run. Initially a text brief;
   later it may include a transcript or referenced source with provenance.
 - **Brand:** optional publishing identity: name, brand voice, reusable
-  branding, defaults, and (later) account references. Example: Digvijay Thul.
-- **Content profile:** editorial mode, such as Critical Thinking, Comedy,
+  branding, defaults, and (later) account references. Example: d_agnostic_being.
+- **Content profile:** editorial mode, such as Critical Thinking / Rational Thoughts, Comedy,
   Storytelling, Motivation, Finance, Career, Fitness, Education, Relationships,
   or a future profile. It defines audience, objectives, voice, constraints,
   and relevant prompt/visual guidance.
+- **Content category:** optional cross-format generation guidance, currently
+  Comedy. It can include a subtype without changing the selected format or its
+  output contract.
 - **Format:** output shape and requirements. Examples include Instagram Reel,
   YouTube Short, TikTok Video, Carousel, LinkedIn Post, Thread, and Blog
-  Article. Only Reel is currently configured.
+  Article. Instagram Reel, single-page post, and LinkedIn text post are
+  currently configured.
 - **Platform:** destination capabilities, media limits, and (eventually)
   publishing rules. Instagram is the current configured platform.
 - **Content item:** generated draft plus selected brand, profile, format,
@@ -91,6 +105,11 @@ formats subject to its configured capabilities.
    responses fail.
 9. Generate single-page posts with their own required fields and save them
    separately from Reel records, including a reusable design prompt.
+10. Apply optional Comedy category/subtype guidance to supported formats
+    without changing their required content fields or normal non-comedy
+    behavior.
+11. Generate up to ten separate drafts in a batch; when Comedy is selected
+    without a subtype, rotate across its configured subtypes.
 
 ### [NEXT] Configurable content and production planning
 
@@ -150,7 +169,7 @@ Status at each stage:
 | Brand/profile/format/platform selection | [CURRENT] | Basic YAML resolution exists; broader catalogs and brand independence are [NEXT]. |
 | Content generation and review | [CURRENT] | Reel draft generation and local review workflow exist. |
 | Scene planning | [CURRENT] | Basic timed/untimed storyboard beats can be generated; richer intent/continuity is [NEXT]. |
-| Visual planning | [CURRENT] | Profile visual guidance informs image and master prompt text. More complete planning is [NEXT]. |
+| Visual planning | [CURRENT] | Profile guidance informs image/master prompts; opted-in Comedy drafts add joke-driven visual and timing guidance. More complete planning is [NEXT]. |
 | Storyboard | [NEXT] | Define editable scene-to-shot plans, timing, intent, and continuity. |
 | Character/environment/camera/voice/music plans | [NEXT] | Begin as optional structured plans; do not require 3D. |
 | Master video prompt | [CURRENT] | Text prompt composition exists; versioning and richer contracts are [NEXT]. |

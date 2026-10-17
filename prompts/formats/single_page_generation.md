@@ -32,14 +32,10 @@ describe plausible shared causes and confounders carefully.
 In seasonal examples, describe the shared context as a possible explanation,
 not proof; do not imply that warmer weather alone causes drowning.
 
-Write a detailed design prompt for the visual composition that supports this
-exact idea. Describe a coherent editorial graphic, visual metaphor, hierarchy,
-palette, and placement of the headline/supporting copy. If a diagram would
-help, provide every required node or diagram label verbatim in Visual_labels.
-Do not request diagram labels that are not listed in Visual_labels. If no
-diagram labels are needed, write "None". Keep the prompt usable for a
-vector/SVG layout or an image tool; do not assume an image model can render
-typography accurately.
+Write a concise design prompt (maximum 70 words) with one visual metaphor,
+layout, palette, and copy placement. If a diagram helps, list all exact node
+labels in Visual_labels; otherwise write "None". Do not ask the image model to
+render text accurately.
 
 Output exactly in this format:
 

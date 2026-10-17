@@ -1,0 +1,117 @@
+id: comedy
+display_name: Comedy
+enabled: true
+brand_id: life_is_a_glitch
+audience: Adults approximately 18-35
+tone:
+  - Funny and relatable
+  - Witty and sarcastic
+  - Occasionally dark, absurd, and self-aware
+  - Unpredictable without sacrificing clarity
+topics:
+  - Everyday adult problems
+  - Money and financial frustrations
+  - Relationships, dating, and friendships
+  - Family expectations and social media
+  - Overthinking, procrastination, and awkward interactions
+  - Human contradictions and existential absurdity
+avoid:
+  - Restricting comedy to corporate settings
+  - Offensive stereotypes, targeted harassment, or shock value alone
+  - Repetitive generic jokes, forced sarcasm, and copied jokes
+  - Requiring recurring avatars, fictional characters, or one visual style
+humor_guidelines:
+  - Start with a specific, immediately understandable situation.
+  - Escalate through an unexpected but coherent turn.
+  - Land on a concise punchline stronger than the setup.
+  - Make the joke work for viewers who have not seen prior content.
+  - Prefer visual action and natural dialogue over explanation.
+  - Select the visual approach that best serves the joke.
+production_guidelines:
+  - Plan shot-by-shot actions with readable camera framing and clear reaction beats.
+  - Preserve setup, escalation, pause, and punchline timing across scene continuity.
+  - Keep actions practical for AI video tools and avoid adding unsupported dialogue.
+  - Use sound effects, voiceover, and dialogue timing only where they strengthen the joke.
+  - Support realistic, faceless POV, 2D, 3D, motion-graphic, avatar, and object-based approaches.
+subtypes:
+  - id: relatable_everyday
+    name: Relatable Everyday Comedy
+    definition: Recognizable everyday struggles reframed with comic exaggeration.
+    example: Preparing for a simple phone call as if entering a boxing championship.
+  - id: absurd_surreal
+    name: Absurd and Surreal Comedy
+    definition: Ordinary situations escalate into impossible or ridiculous scenarios.
+    example: Someone tries to purchase peace of mind, but the store has discontinued it.
+  - id: dark_uncomfortable
+    name: Dark Comedy and Uncomfortable Truths
+    definition: Sarcastic humor about disappointment, contradictions, and uncomfortable realities.
+    example: Someone's five-year plan becomes a formal apology to their younger self.
+  - id: pov
+    name: POV Comedy
+    definition: A short first-person scenario with an instantly relatable setup.
+    example: Celebrating when plans you never wanted to attend get cancelled.
+  - id: sarcastic_conversations
+    name: Sarcastic Conversations
+    definition: Witty exchanges between people, inner voices, avatars, or objects.
+    example: One person claims to have found inner peace; they simply stopped checking their bank account.
+  - id: literal_interpretation
+    name: Literal Interpretation Comedy
+    definition: A common expression becomes a physical or visual situation.
+    example: Someone literally runs out of patience and tries to buy a refill.
+  - id: brain_vs_reality
+    name: Brain vs Reality
+    definition: Logic, emotion, impulse, or intention collides with real-world consequences.
+    example: A brain insists on saving money while an impulse argues that a discount counts as profit.
+  - id: expectation_vs_reality
+    name: Expectation vs Reality
+    definition: An imagined outcome is contrasted with a disappointing or absurd reality.
+    example: A motivational video inspires a superhero fantasy, followed by immediately falling asleep.
+  - id: objects_with_personalities
+    name: Objects With Personalities
+    definition: Inanimate objects behave like distinct, sarcastic characters.
+    example: An alarm says good morning; the human calls that a bold assumption.
+  - id: impossible_choices
+    name: Impossible Choices and Comedy Dilemmas
+    definition: Funny or uncomfortable decisions invite a genuine audience response.
+    example: Unlimited money with parents seeing every purchase, or unlimited free time controlled by relatives.
+formats:
+  reel:
+    default_duration_seconds:
+      minimum: 8
+      maximum: 20
+    requirements:
+      - Preserve the existing title, hook, script, and caption fields.
+      - Put the comic premise or hook in the opening moment.
+      - Use a clear setup, escalation, absurd or surprising turn, and punchline.
+      - Write shootable or animatable actions with concise natural dialogue.
+      - Mark pauses, reactions, sound effects, and voiceover only when useful.
+      - Keep the idea practical for short-form production.
+  single_page:
+    requirements:
+      - Preserve the existing title, main_point, supporting_copy, visual_labels, design_prompt, and caption fields.
+      - Support single-panel jokes, sarcastic quotes, relatable memes, dark humor, comparisons, dilemmas, and visual brain teasers.
+      - Separate exact on-image copy from caption and production instructions.
+      - Use only supplied copy and visual labels as visible text.
+      - Keep the idea legible on the configured 4:5 canvas.
+  linkedin_text_post:
+    requirements:
+      - Preserve the existing title, post_text, and image_generation_prompt fields.
+      - Use humor only when the user explicitly selected the Comedy category.
+      - Keep professional claims honest and do not invent personal experience or metrics.
+      - Do not automatically apply Life Is a Glitch branding to LinkedIn.
+      - Make any supporting image prompt relevant and do not require text in the image.
+visual_approaches:
+  - Realistic AI-generated scenes
+  - Faceless POV
+  - 2D animation
+  - 3D animation
+  - Motion graphics
+  - Avatar-based comedy
+  - Object-based comedy
+quality_checks:
+  - Is the setup understandable immediately?
+  - Is the content genuinely funny, with a punchline stronger than its setup?
+  - Is the joke original, adult-oriented, and suitable for the selected profile?
+  - Can it work visually and be produced in the selected format?
+  - Does dialogue sound natural and the concept fit Life Is a Glitch?
+  - Does it avoid repetitive jokes, copied material, and unsupported virality claims?

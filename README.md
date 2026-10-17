@@ -19,13 +19,15 @@ work:
 
 | Capability | Status | What that means today |
 |---|---|---|
-| Profile-based content generation | [CURRENT] | YAML profiles include Critical Thinking, Comedy, and QA Engineering & AI. |
-| Optional publisher brand | [CURRENT] | The personal brand is Digvijay Thul; generation can also explicitly omit a brand. |
+| Profile-based content generation | [CURRENT] | YAML profiles include Critical Thinking / Rational Thoughts, Comedy, and QA Engineering & AI. |
+| Optional publisher brand | [CURRENT] | d_agnostic_being and Life Is a Glitch are configured; generation can also explicitly omit a brand. |
 | Brief input and JSON content records | [CURRENT] | The CLI accepts a brief and saves a local JSON draft. |
 | Draft review and approval | [CURRENT] | The local workspace reviews posts and Reels; CLI commands also remain available. |
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |
 | Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed or LinkedIn post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
 | LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish post copy and a topic-specific image-generation prompt to copy into an image tool; it does not generate the image file. |
+| QA topic pillars | [CURRENT] | Optionally focus QA Engineering & AI drafts on one of eight pillars; multi-draft batches rotate through them when none is selected. |
+| Optional Comedy category | [CURRENT] | Select Comedy independently of format, optionally choose one of ten subtypes, and generate Reel, single-page, or explicitly requested LinkedIn drafts without changing their output fields. Comedy batches can create up to ten drafts and rotate across subtypes. |
 | Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but broader profile and platform coverage remains incomplete. |
 | Structured storyboard parsing | [CURRENT] | Timed or untimed scene beats are saved as JSON and readable text; richer review/edit flows remain [NEXT]. |
 | Character, environment, camera, and music plans | [NEXT] | Reusable, independently reviewable plans are not yet modeled. |
@@ -37,6 +39,7 @@ work:
 
 ```text
 Brief + Brand + Content Profile + Format + Platform
+    -> optional subtype guidance for the selected profile
     -> generated Reel, single-page post, or LinkedIn text post draft
     -> local JSON record
     -> human review / approval
@@ -53,17 +56,17 @@ under `generated_assets/`.
 
 ## Domain concepts
 
-- **Content profile**: editorial mode such as Comedy, Finance, or Rational
-  Thoughts. It defines audience, goals, voice, constraints, and profile visual
-  direction.
+- **Content profile**: editorial mode such as Comedy, Finance, or Critical
+  Thinking / Rational Thoughts. It defines audience, goals, voice, constraints,
+  and profile visual direction.
 - **Brand**: publisher identity, brand voice, reusable identity, and defaults.
   A brand can use multiple content profiles.
 - **Format**: output shape, such as Instagram Reel, YouTube Short, LinkedIn
   text post, single-page graphic, thread, or blog article.
 - **Platform**: destination and its capabilities or publishing constraints.
 
-**Format is not a content profile.** Critical Thinking and QA Engineering & AI
-are editorial profiles; Instagram Reel is a format; Instagram is a platform.
+**Format is not a content profile.** Critical Thinking / Rational Thoughts and
+QA Engineering & AI are editorial profiles; Instagram Reel is a format; Instagram is a platform.
 A brand is optional publisher identity, not an editorial category. A profile should work across
 compatible brands, formats, and platforms without niche-specific branches in
 the shared pipeline.
@@ -74,12 +77,24 @@ Run commands from the repository root using Python module invocation:
 
 ```bash
 python3 -m scripts.main --profile comedy \
+  --subtype pov \
+  --brief "Plans I hoped would be cancelled"
+python3 -m scripts.main --profile comedy \
   --brief "A relatable office mix-up with an unexpected punchline"
+python3 -m scripts.main --category comedy \
+  --comedy-subtype pov --brief "Plans I hoped would be cancelled"
+python3 -m scripts.main --category comedy --count 10 \
+  --brief "Ten unrelated modern-adult-life jokes"
+python3 -m scripts.main --category comedy \
+  --format single_page --platform instagram_feed \
+  --comedy-subtype dark_uncomfortable \
+  --brief "A funny visual about the five-year plan"
 python3 -m scripts.main --profile rational_thoughts \
   --format single_page --platform instagram_feed \
   --brief "Explain why confidence is not evidence."
 python3 -m scripts.main --profile qa_engineering_ai \
   --format linkedin_text_post --platform linkedin \
+  --subtype llm_testing \
   --brief "Explain how to investigate flaky tests."
 python3 -m scripts.main --profile qa_engineering_ai \
   --format single_page --platform linkedin \
@@ -104,7 +119,8 @@ for storyboard generation.
 `http://127.0.0.1:8765`. It lists saved Reels, single-page posts, and LinkedIn
 text posts with their
 statuses, provides dashboard counts and activity, and lets you generate
-drafts by brand, profile, format, platform, and optional brief. Select a
+drafts by brand, profile, optional profile-specific subtype, format, platform,
+and optional brief. Subtypes appear only for profiles that define them. Select a
 content item to review its details, approve/reject it, regenerate it as a new
 draft, inspect format-specific production stages, preview text artifacts inline
 with one-click copy and preview generated media,

@@ -19,7 +19,7 @@ assets, publishing, scheduling, or analytics.
 
 ## Phase 1 — Multi-profile content generation
 
-**Status: [CURRENT/NEXT]** Critical Thinking, Comedy, and QA Engineering & AI
+**Status: [CURRENT/NEXT]** Critical Thinking / Rational Thoughts, Comedy, and QA Engineering & AI
 are configured; broader catalog breadth and evaluation remain incomplete.
 
 - **Objectives:** make editorial modes genuinely configurable and keep the
@@ -36,7 +36,7 @@ are configured; broader catalog breadth and evaluation remain incomplete.
 
 ## Phase 2 — Multi-brand support
 
-**Status: [CURRENT/NEXT]** The Digvijay Thul personal brand is configured;
+**Status: [CURRENT/NEXT]** The d_agnostic_being personal brand is configured;
 brand catalog breadth and evaluation remain incomplete.
 
 - **Objectives:** separate publisher identity from editorial profile.

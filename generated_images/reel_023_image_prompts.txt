@@ -1,0 +1,21 @@
+**Visual Style Selection:** Realistic AI-generated scenes. 
+**Consistent Character:** A 28-year-old male with messy brown hair, wearing an oversized grey hoodie and navy lounge pants.
+**Environment:** A modern, cluttered bedroom with a large window and a simple wooden bed frame.
+
+SCENE S01 | 0:00-0:03
+A cinematic vertical shot of a man in a grey hoodie collapsing face-first onto a messy bed in a sun-drenched bedroom. He is holding a smartphone, his thumb pressing "Set Alarm" with a confident, smug smirk on his face. Bright, natural midday sunlight streaming through the window, high detail, 8k, photorealistic. --ar 9:16
+
+SCENE S02 | 0:03-0:06
+A jarring cut to a close-up of the man waking up abruptly in the same bed, but the room is now in pitch-black darkness. Only the harsh, cold blue light from the smartphone screen illuminates his panicked, wide-eyed expression. Heavy shadows, moody atmospheric lighting, photorealistic. --ar 9:16
+
+SCENE S03 | 0:06-0:09
+A tight macro shot of the man's face, half-lit by the phone screen. He has an expression of pure horror and existential dread, staring intently at the screen. His brow is furrowed, eyes squinting in confusion. Shallow depth of field, blurred bedroom background, high detail. --ar 9:16
+
+SCENE S04 | 0:09-0:12
+A medium shot of the man sitting up slowly in bed, looking completely disoriented. He is staring at the phone screen in his hand, his eyes widened in shock. The room is dim with a hint of early morning blue light creeping through the curtains. Photorealistic, cinematic framing. --ar 9:16
+
+SCENE S05 | 0:12-0:15
+An over-the-shoulder POV shot looking at the smartphone screen. The screen shows a calendar app with several months crossed out or skipped. The man's thumb is trembling slightly on the edge of the phone. Soft, cold morning light, high resolution, realistic textures. --ar 9:16
+
+SCENE S06 | 0:15-0:18
+A wide vertical shot of the man sitting perfectly still and frozen on the edge of the bed, staring blankly and lifelessly at a plain white wall. His posture is slumped, expression completely vacant and "soul-less." Natural morning light, minimalist composition, cinematic realism. --ar 9:16

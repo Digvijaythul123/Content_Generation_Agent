@@ -1,0 +1,17 @@
+id: life_is_a_glitch
+display_name: Life Is a Glitch
+default_profile_id: comedy
+default_format_id: reel
+default_platform_id: instagram
+voice:
+  traits:
+    - Funny
+    - Relatable
+    - Sarcastic
+    - Witty
+    - Occasionally dark and absurd
+    - Self-aware
+  avoid:
+    - Corporate-only humor
+    - Offensive stereotypes
+    - Generic motivational content

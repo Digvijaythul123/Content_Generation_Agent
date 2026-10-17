@@ -1,4 +1,6 @@
-def build_ready_design_prompt(fields, content_format, platform):
+def build_ready_design_prompt(
+    fields, content_format, platform, category_id=None
+):
     required_fields = (
         "title",
         "main_point",
@@ -30,6 +32,15 @@ def build_ready_design_prompt(fields, content_format, platform):
         if visual_labels.casefold() != "none"
         else ""
     )
+    comedy_direction = (
+        "\n\nCOMEDY VISUAL DIRECTION:\n"
+        "Make the visual reinforce the selected joke through a clear, "
+        "readable visual situation. Choose a visual approach that serves "
+        "the joke. Do not add any wording beyond the exact copy and labels "
+        "specified above."
+        if category_id == "comedy"
+        else ""
+    )
     return (
         f"Create one finished {platform.display_name} social media graphic.\n"
         f"Canvas: {aspect_ratio} portrait; {dimensions}.\n\n"
@@ -39,7 +50,7 @@ def build_ready_design_prompt(fields, content_format, platform):
         f"Headline: {fields['title'].strip()}\n"
         f"Main point: {fields['main_point'].strip()}\n"
         f"Supporting copy: {fields['supporting_copy'].strip()}"
-        f"{diagram_label_section}\n\n"
+        f"{diagram_label_section}{comedy_direction}\n\n"
         "Render the supplied copy verbatim: preserve spelling, punctuation, "
         "capitalization, and wording. Include only the exact diagram labels "
         "listed above when that section is present. Do not add, omit, repeat, "

@@ -12,10 +12,12 @@ from urllib.parse import parse_qs, quote, urlsplit
 from ai_service import AIServiceError
 from config_loader import (
     ConfigurationError,
+    load_comedy_config,
     load_brand,
     load_format,
     load_platform,
     load_profile_config,
+    load_profile_subtypes,
 )
 from content_models import ContentValidationError
 from content_pipeline import generate_content
@@ -73,6 +75,10 @@ class ReviewUIError(RuntimeError):
     """Raised when saved content cannot be read by the review UI."""
 
 
+class PartialGenerationError(ValueError):
+    """Raised when a batch stops after one or more drafts were saved."""
+
+
 def _read_record(path, content_type):
     try:
         with path.open(encoding="utf-8") as content_file:
@@ -114,6 +120,9 @@ def list_content_items():
                     "status": status.strip() or "UNKNOWN",
                     "brand_id": record.get("brand_id") or "",
                     "profile_id": record.get("profile_id", ""),
+                    "category_id": record.get("category_id", ""),
+                    "comedy_subtype": record.get("comedy_subtype", ""),
+                    "qa_subtype": record.get("qa_subtype", ""),
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
                     ),
@@ -631,7 +640,10 @@ def run_production_stage(content_type, content_id, stage):
                     f"Stage is not supported for {content_type}: {stage}"
                 )
             prompt = build_ready_design_prompt(
-                record, load_format(format_id), load_platform(platform_id)
+                record,
+                load_format(format_id),
+                load_platform(platform_id),
+                record.get("category_id"),
             )
             output = output_paths[stage]
             GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -673,6 +685,9 @@ def regenerate_content(content_type, content_id):
             "format_id": record.get("format_id"),
             "platform_id": record.get("platform_id"),
             "brief": record.get("brief"),
+            "category_id": record.get("category_id"),
+            "comedy_subtype": record.get("comedy_subtype"),
+            "qa_subtype": record.get("qa_subtype"),
         }
     )
     _append_history(
@@ -731,6 +746,52 @@ def get_generation_options():
                     }
                 )
             options[kind].append(option)
+    try:
+        comedy = load_comedy_config()
+    except ConfigurationError as error:
+        options["categories"] = []
+        options["comedy_subtypes"] = []
+        options["category_error"] = str(error)
+    else:
+        options["categories"] = (
+            [{"id": comedy["id"], "name": comedy["display_name"]}]
+            if comedy.get("enabled", True)
+            else []
+        )
+        options["comedy_subtypes"] = (
+            [
+                {"id": item["id"], "name": item["name"]}
+                for item in comedy["subtypes"]
+            ]
+            if comedy.get("enabled", True)
+            else []
+        )
+        options["category_error"] = (
+            "Comedy category is currently disabled."
+            if not comedy.get("enabled", True)
+            else ""
+        )
+    try:
+        options["qa_subtypes"] = [
+            {"id": item["id"], "name": item["name"]}
+            for item in load_profile_subtypes("qa_engineering_ai")
+        ]
+        options["qa_subtype_error"] = ""
+    except ConfigurationError as error:
+        options["qa_subtypes"] = []
+        options["qa_subtype_error"] = str(error)
+    options["profile_subtypes"] = {
+        "comedy": options["comedy_subtypes"],
+        "qa_engineering_ai": options["qa_subtypes"],
+    }
+    options["subtype_error"] = "; ".join(
+        error
+        for error in (
+            options.get("category_error", ""),
+            options.get("qa_subtype_error", ""),
+        )
+        if error
+    )
     return options
 
 
@@ -743,12 +804,32 @@ def generate_and_save(payload):
     if brief is not None and not brief.strip():
         raise ValueError("Brief must not be empty.")
 
+    profile_id = payload.get("profile_id")
+    category_id = payload.get("category_id")
+    comedy_subtype = payload.get("comedy_subtype")
+    qa_subtype = payload.get("qa_subtype")
+    content_subtype = payload.get("content_subtype")
+    if content_subtype:
+        if profile_id == "comedy":
+            category_id = "comedy"
+            comedy_subtype = content_subtype
+        elif profile_id == "qa_engineering_ai":
+            qa_subtype = content_subtype
+        else:
+            raise ValueError(
+                "Content subtypes are only configured for Comedy and "
+                "QA Engineering & AI."
+            )
+
     result = generate_content(
         brand_id=payload.get("brand_id"),
         profile_id=payload.get("profile_id"),
         format_id=payload.get("format_id"),
         platform_id=payload.get("platform_id"),
         brief=brief.strip() if brief else None,
+        category_id=category_id,
+        comedy_subtype=comedy_subtype,
+        qa_subtype=qa_subtype,
     )
     data = {
         "brand_id": (
@@ -761,6 +842,12 @@ def generate_and_save(payload):
         **result.content.to_legacy_mapping(),
         "status": "Draft",
     }
+    if result.request.category_id:
+        data["category_id"] = result.request.category_id
+        if result.request.comedy_subtype:
+            data["comedy_subtype"] = result.request.comedy_subtype
+    if result.request.qa_subtype:
+        data["qa_subtype"] = result.request.qa_subtype
 
     if result.request.content_format.content_kind == "post":
         content_id, file_path = create_post(data)
@@ -770,6 +857,7 @@ def generate_and_save(payload):
                 result.content.fields,
                 result.request.content_format,
                 result.request.platform,
+                result.request.category_id,
             )
             prompt_path = GENERATED_ASSETS_DIRECTORY / (
                 f"{content_id}_design_prompt.txt"
@@ -796,6 +884,72 @@ def generate_and_save(payload):
         "path": str(file_path),
         "design_prompt_path": str(prompt_path) if prompt_path else None,
     }
+
+
+def generate_batch_and_save(payload):
+    count = payload.get("count", 1)
+    if not isinstance(count, int) or isinstance(count, bool) or not 1 <= count <= 10:
+        raise ValueError("Draft count must be an integer between 1 and 10.")
+    subtype_ids = ()
+    if (
+        count > 1
+        and (
+            payload.get("profile_id") == "comedy"
+            or payload.get("category_id") == "comedy"
+        )
+        and not (
+            payload.get("content_subtype")
+            or payload.get("comedy_subtype")
+        )
+    ):
+        subtype_ids = tuple(
+            subtype["id"] for subtype in load_comedy_config()["subtypes"]
+        )
+    qa_subtype_ids = ()
+    if (
+        count > 1
+        and payload.get("profile_id") == "qa_engineering_ai"
+        and not (payload.get("content_subtype") or payload.get("qa_subtype"))
+    ):
+        qa_subtype_ids = tuple(
+            subtype["id"]
+            for subtype in load_profile_subtypes("qa_engineering_ai")
+        )
+
+    items = []
+    for index in range(count):
+        request = dict(payload)
+        if subtype_ids:
+            if request.get("profile_id") == "comedy":
+                request["content_subtype"] = subtype_ids[
+                    index % len(subtype_ids)
+                ]
+            else:
+                request["comedy_subtype"] = subtype_ids[
+                    index % len(subtype_ids)
+                ]
+        if qa_subtype_ids:
+            request["content_subtype"] = qa_subtype_ids[
+                index % len(qa_subtype_ids)
+            ]
+        try:
+            items.append(generate_and_save(request))
+        except (
+            AIServiceError,
+            ConfigurationError,
+            ContentValidationError,
+            PostStorageError,
+            ReelStorageError,
+            ReviewUIError,
+            ValueError,
+        ) as error:
+            if items:
+                raise PartialGenerationError(
+                    f"Batch stopped after saving {len(items)} of {count} "
+                    f"drafts: {error}. The saved drafts remain in the library."
+                ) from error
+            raise
+    return items
 
 
 class ReviewRequestHandler(BaseHTTPRequestHandler):
@@ -931,13 +1085,14 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             return
         if request.path == "/api/generate":
             try:
-                result = generate_and_save(payload)
-                _append_history(
-                    result["type"],
-                    result["id"],
-                    "content_generated",
-                    title=result["title"],
-                )
+                results = generate_batch_and_save(payload)
+                for result in results:
+                    _append_history(
+                        result["type"],
+                        result["id"],
+                        "content_generated",
+                        title=result["title"],
+                    )
             except AIServiceError as error:
                 self._send_json({"error": str(error)}, 502)
                 return
@@ -955,7 +1110,10 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             ) as error:
                 self._send_json({"error": str(error)}, 400)
                 return
-            self._send_json({"item": result}, status=201)
+            if len(results) == 1:
+                self._send_json({"item": results[0]}, status=201)
+            else:
+                self._send_json({"items": results}, status=201)
             return
         path_parts = request.path.strip("/").split("/")
         if (

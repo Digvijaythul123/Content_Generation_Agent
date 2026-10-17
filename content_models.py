@@ -362,6 +362,9 @@ class GenerationRequest:
     platform: Platform
     brief: Optional[str] = None
     brand_identity_explicit: bool = False
+    category_id: Optional[str] = None
+    comedy_subtype: Optional[str] = None
+    qa_subtype: Optional[str] = None
 
 
 @dataclass(frozen=True)

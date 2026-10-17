@@ -49,6 +49,7 @@
     .hint { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
     .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
     label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    [hidden] { display: none !important; }
     input, select, textarea {
       width: 100%;
       border: 1px solid var(--line);
@@ -243,10 +244,13 @@
         <div class="form-grid">
           <label>Brand<select id="brand" name="brand_id"></select></label>
           <label>Content profile<select id="profile" name="profile_id" required></select></label>
+          <label id="content-subtype-field" hidden>Content subtype<select id="content-subtype" name="content_subtype"></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
+          <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
         </div>
+        <p class="message error" id="subtype-error" hidden></p>
         <div class="form-actions">
           <button class="primary" id="generate-button" type="submit">Generate draft</button>
           <div class="message" id="generate-message" role="status" aria-live="polite"></div>
@@ -330,18 +334,45 @@
       const options = state.options;
       const brandSelect = $("brand");
       const profileSelect = $("profile");
+      const subtypeSelect = $("content-subtype");
       const formatSelect = $("format");
       brandSelect.replaceChildren();
       profileSelect.replaceChildren();
+      subtypeSelect.replaceChildren(new Option("Choose automatically", ""));
       formatSelect.replaceChildren();
       brandSelect.append(new Option("No brand", ""));
       options.brands.forEach((option) => addOption(brandSelect, option, ""));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
       options.formats.forEach((option) => addOption(formatSelect, option, "reel"));
+      const subtypeError = $("subtype-error");
+      subtypeError.textContent = options.subtype_error || "";
+      subtypeError.hidden = !options.subtype_error;
       updateProfilesFromBrand();
       updatePlatforms();
       brandSelect.addEventListener("change", updateProfilesFromBrand);
       formatSelect.addEventListener("change", updatePlatforms);
+      profileSelect.addEventListener("change", updateProfileSubtypeOptions);
+      updateProfileSubtypeOptions();
+    }
+
+    function updateProfileSubtypeOptions() {
+      const profileId = $("profile").value;
+      const subtypes = state.options.profile_subtypes?.[profileId] || [];
+      const select = $("content-subtype");
+      const previous = select.value;
+      select.replaceChildren(new Option("Choose automatically", ""));
+      subtypes.forEach((option) => addOption(select, option, ""));
+      select.value = subtypes.some((option) => option.id === previous)
+        ? previous
+        : "";
+      $("content-subtype-field").hidden = subtypes.length === 0;
+      const brandSelect = $("brand");
+      if (profileId === "comedy" && !brandSelect.value) {
+        const comedyBrand = state.options.brands.find(
+          (option) => option.id === "life_is_a_glitch"
+        );
+        if (comedyBrand) brandSelect.value = comedyBrand.id;
+      }
     }
 
     function updateProfilesFromBrand() {
@@ -357,6 +388,7 @@
       if (brand && format && format.id === brand.default_format_id && !hasPrevious) {
         $("profile").value = brand.default_profile_id;
       }
+      updateProfileSubtypeOptions();
     }
 
     function updatePlatforms() {
@@ -466,7 +498,7 @@
         (!profile || item.profile_id === profile) &&
         (!format || item.format_id === format) &&
         (!platform || item.platform_id === platform) &&
-        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id} ${item.search_text || ""}`.toLowerCase().includes(term))
+        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id} ${item.qa_subtype || ""} ${item.search_text || ""}`.toLowerCase().includes(term))
       );
       const list = $("items");
       list.replaceChildren();
@@ -497,7 +529,11 @@
         title.textContent = item.title;
         const meta = document.createElement("span");
         meta.className = "item-meta";
-        meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}`;
+        const category = item.category_id
+          ? ` · ${item.category_id}${item.comedy_subtype ? ` / ${item.comedy_subtype}` : ""}`
+          : "";
+        const qaPillar = item.qa_subtype ? ` · ${item.qa_subtype}` : "";
+        meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}${category}${qaPillar}`;
         button.append(top, title, meta);
         button.addEventListener("click", () => openItem(item));
         list.append(button);
@@ -846,7 +882,7 @@
       title.textContent = state.record.title || "Untitled";
       const meta = document.createElement("div");
       meta.className = "detail-meta";
-      [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.format_id, state.record.platform_id]
+      [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.category_id, state.record.comedy_subtype, state.record.qa_subtype, state.record.format_id, state.record.platform_id]
         .filter(Boolean).forEach((value) => {
           const tag = document.createElement("span");
           tag.className = `badge ${badgeClass(value)}`;
@@ -1004,8 +1040,10 @@
       const payload = {
         brand_id: $("brand").value,
         profile_id: $("profile").value,
+        content_subtype: $("content-subtype").value || null,
         format_id: $("format").value,
         platform_id: $("platform").value,
+        count: Number($("count").value),
         brief: $("brief").value.trim() || null
       };
       try {
@@ -1014,8 +1052,11 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        message.textContent = `Saved ${result.item.id} as ${result.item.status}.`;
-        await refreshItems(result.item);
+        const createdItems = result.items || [result.item];
+        message.textContent = createdItems.length === 1
+          ? `Saved ${createdItems[0].id} as ${createdItems[0].status}.`
+          : `Saved ${createdItems.length} drafts: ${createdItems.map((item) => item.id).join(", ")}.`;
+        await refreshItems(createdItems[createdItems.length - 1]);
         location.hash = "library";
       } catch (error) {
         message.className = "message error";

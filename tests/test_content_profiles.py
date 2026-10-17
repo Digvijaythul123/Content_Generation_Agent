@@ -7,8 +7,10 @@ import pytest
 import content_agent
 from config_loader import (
     load_brand,
+    load_comedy_config,
     load_format,
     load_platform,
+    load_profile_subtypes,
     resolve_generation_request,
 )
 from scripts import main
@@ -20,11 +22,39 @@ def test_loads_rational_thoughts_profile():
     profile = load_profile("rational_thoughts")
 
     assert profile["id"] == "rational_thoughts"
-    assert profile["display_name"] == "Critical Thinking"
+    assert profile["display_name"] == "Critical Thinking / Rational Thoughts"
     assert profile["audience"]["description"] == (
-        "Curious professionals who want to reason clearly about work, money, "
-        "society, and everyday decisions"
+        "Curious people interested in challenging beliefs through reason, "
+        "science, critical thinking, secularism, humanism, and freedom of thought"
     )
+    assert any("secularism" in topic.lower() for topic in profile["topics"])
+    assert any("humanism" in topic.lower() for topic in profile["topics"])
+    assert any("freedom of thought" in topic.lower() for topic in profile["topics"])
+
+
+def test_rational_thoughts_prompt_uses_instagram_bio_guidance():
+    request = resolve_generation_request(
+        profile_id="rational_thoughts",
+        format_id="reel",
+        platform_id="instagram",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "challenging beliefs through reason, science, critical thinking" in prompt
+    assert "Advocate secularism, humanism, and freedom of thought" in prompt
+    assert "Mocking or stereotyping people based on religion or worldview" in prompt
 
 
 def test_loads_comedy_profile():
@@ -33,6 +63,179 @@ def test_loads_comedy_profile():
     assert profile["id"] == "comedy"
     assert profile["display_name"] == "Comedy"
     assert "Entertain" in profile["objectives"]
+
+
+def test_comedy_category_defines_ten_stable_subtypes():
+    comedy = load_comedy_config()
+
+    assert comedy["brand_id"] == "life_is_a_glitch"
+    assert len(comedy["subtypes"]) == 10
+    assert {item["id"] for item in comedy["subtypes"]} == {
+        "relatable_everyday",
+        "absurd_surreal",
+        "dark_uncomfortable",
+        "pov",
+        "sarcastic_conversations",
+        "literal_interpretation",
+        "brain_vs_reality",
+        "expectation_vs_reality",
+        "objects_with_personalities",
+        "impossible_choices",
+    }
+
+
+@pytest.mark.parametrize(
+    ("format_id", "platform_id", "expected_fields"),
+    [
+        ("reel", "instagram", ("title", "hook", "script", "caption")),
+        (
+            "single_page",
+            "instagram_feed",
+            (
+                "title",
+                "main_point",
+                "supporting_copy",
+                "visual_labels",
+                "design_prompt",
+                "caption",
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "subtype",
+    [
+        "relatable_everyday",
+        "absurd_surreal",
+        "dark_uncomfortable",
+        "pov",
+        "sarcastic_conversations",
+        "literal_interpretation",
+        "brain_vs_reality",
+        "expectation_vs_reality",
+        "objects_with_personalities",
+        "impossible_choices",
+    ],
+)
+def test_comedy_subtypes_support_reels_and_single_page_posts(
+    subtype, format_id, platform_id, expected_fields
+):
+    request = resolve_generation_request(
+        category_id="comedy",
+        comedy_subtype=subtype,
+        format_id=format_id,
+        platform_id=platform_id,
+    )
+
+    assert request.category_id == "comedy"
+    assert request.comedy_subtype == subtype
+    assert request.brand.display_name == "Life Is a Glitch"
+    assert request.profile.id == "comedy"
+    assert request.content_format.content_fields == expected_fields
+
+
+def test_explicit_comedy_category_is_supported_for_linkedin_without_liag_brand():
+    request = resolve_generation_request(
+        category_id="comedy",
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+
+    assert request.profile.id == "qa_engineering_ai"
+    assert request.brand.display_name == "d_agnostic_being"
+    assert request.content_format.content_fields == (
+        "title",
+        "post_text",
+        "image_generation_prompt",
+    )
+
+
+def test_explicit_comedy_linkedin_prompt_does_not_inject_liag_brand():
+    request = resolve_generation_request(
+        category_id="comedy",
+        profile_id="qa_engineering_ai",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            category_id=request.category_id,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "COMEDY (" in prompt
+    assert "do not apply Life Is a Glitch branding" in prompt
+    assert "Publishing brand: Life Is a Glitch" not in prompt
+
+
+def test_selected_comedy_subtype_prompt_omits_other_subtype_definitions():
+    request = resolve_generation_request(
+        category_id="comedy",
+        comedy_subtype="objects_with_personalities",
+        format_id="reel",
+        platform_id="instagram",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            category_id=request.category_id,
+            comedy_subtype=request.comedy_subtype,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    subtypes = load_comedy_config()["subtypes"]
+    selected = next(
+        item for item in subtypes if item["id"] == "objects_with_personalities"
+    )
+    other_definitions = [
+        item["definition"] for item in subtypes if item is not selected
+    ]
+
+    assert selected["definition"] in prompt
+    assert all(definition not in prompt for definition in other_definitions)
+
+
+def test_comedy_rejects_unknown_subtype():
+    from config_loader import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match="Unknown Comedy subtype"):
+        resolve_generation_request(
+            category_id="comedy",
+            comedy_subtype="made_up",
+            format_id="reel",
+            platform_id="instagram",
+        )
+
+
+def test_comedy_category_without_subtype_uses_appropriate_default_brand():
+    request = resolve_generation_request(
+        category_id="comedy",
+        format_id="reel",
+        platform_id="instagram",
+    )
+
+    assert request.category_id == "comedy"
+    assert request.comedy_subtype is None
+    assert request.profile.id == "comedy"
+    assert request.brand.id == "life_is_a_glitch"
 
 
 def test_single_page_format_and_instagram_feed_platform_are_configured():
@@ -76,6 +279,95 @@ def test_qa_engineering_profile_and_linkedin_formats_are_configured():
     assert visual_post.id in linkedin.supported_format_ids
 
 
+def test_qa_profile_defines_selectable_topic_pillars():
+    subtypes = load_profile_subtypes("qa_engineering_ai")
+
+    assert len(subtypes) == 8
+    assert {item["id"] for item in subtypes} == {
+        "testing_strategy",
+        "automation_architecture",
+        "ui_api_integration_testing",
+        "ci_flaky_tests",
+        "exploratory_debugging",
+        "ai_assisted_qa",
+        "llm_testing",
+        "qa_communication",
+    }
+
+
+def test_qa_subtype_is_validated_and_resolved_for_profile():
+    request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        qa_subtype="llm_testing",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+    )
+
+    assert request.qa_subtype == "llm_testing"
+
+    from config_loader import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match="Unknown QA subtype"):
+        resolve_generation_request(
+            profile_id="qa_engineering_ai",
+            qa_subtype="made_up",
+        )
+    with pytest.raises(ConfigurationError, match="only available"):
+        resolve_generation_request(
+            profile_id="rational_thoughts",
+            qa_subtype="llm_testing",
+        )
+
+
+def test_selected_qa_subtype_guides_linkedin_prompt():
+    request = resolve_generation_request(
+        profile_id="qa_engineering_ai",
+        qa_subtype="llm_testing",
+        format_id="linkedin_text_post",
+        platform_id="linkedin",
+        brief="Explain a useful way to evaluate model responses.",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            brief=request.brief,
+            qa_subtype=request.qa_subtype,
+        )
+        agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Selected QA topic pillar: LLM Testing & Evaluation" in prompt
+    assert "representative datasets, explicit criteria, and repeatable checks" in prompt
+
+
+def test_content_pipeline_passes_qa_subtype_to_agent():
+    import content_pipeline
+
+    generated = (
+        "Title: QA insight\n"
+        "Hook: A clear test signal matters.\n"
+        "Script: Start by investigating the signal.\n"
+        "Caption: Keep the feedback useful."
+    )
+    agent = Mock()
+    agent.generate_content.return_value = generated
+    with patch("content_pipeline.ContentAgent", return_value=agent) as agent_class:
+        result = content_pipeline.generate_content(
+            profile_id="qa_engineering_ai",
+            qa_subtype="ci_flaky_tests",
+        )
+
+    assert result.request.qa_subtype == "ci_flaky_tests"
+    assert agent_class.call_args.kwargs["qa_subtype"] == "ci_flaky_tests"
+
+
 def test_linkedin_request_accepts_qa_text_and_visual_posts():
     text_request = resolve_generation_request(
         profile_id="qa_engineering_ai",
@@ -104,7 +396,7 @@ def test_personal_brand_name_and_explicit_no_brand_request():
         platform_id="linkedin",
     )
 
-    assert load_brand("default").display_name == "Digvijay Thul"
+    assert load_brand("default").display_name == "d_agnostic_being"
     assert no_brand_request.brand is None
     assert no_brand_request.profile.id == "qa_engineering_ai"
     assert no_brand_request.content_format.id == "linkedin_text_post"
@@ -136,7 +428,7 @@ def test_no_brand_request_does_not_add_brand_identity_to_prompt():
 
     prompt = service.generate_reel.call_args.args[0]
     assert "Publishing brand:" not in prompt
-    assert "Digvijay Thul" not in prompt
+    assert "d_agnostic_being" not in prompt
 
 
 def test_linkedin_single_page_prompt_uses_linkedin_and_exact_copy():
@@ -197,7 +489,7 @@ def test_linkedin_text_post_uses_profile_and_format_prompt():
     assert "AI-assisted test design and maintenance" in prompt
     assert "Post_text:" in prompt
     assert "Image_generation_prompt:" in prompt
-    assert "specific to this post" in prompt
+    assert "post-specific" in prompt
 
 
 
@@ -302,6 +594,36 @@ def test_previous_titles_include_saved_single_page_posts(tmp_path, monkeypatch):
     assert agent.get_previous_titles() == ["Prior post"]
 
 
+def test_generation_prompt_limits_previous_title_context(tmp_path, monkeypatch):
+    reels_directory = tmp_path / "generated_reels"
+    posts_directory = tmp_path / "generated_posts"
+    reels_directory.mkdir()
+    posts_directory.mkdir()
+    for index in range(12):
+        (reels_directory / f"reel_{index:03}.json").write_text(
+            json.dumps(
+                {
+                    "profile_id": "rational_thoughts",
+                    "brand_id": "default",
+                    "title": f"Prior idea {index:02}",
+                }
+            ),
+            encoding="utf-8",
+        )
+    monkeypatch.setattr(
+        content_agent, "GENERATED_REELS_DIRECTORY", reels_directory
+    )
+    monkeypatch.setattr(
+        content_agent, "GENERATED_POSTS_DIRECTORY", posts_directory
+    )
+
+    agent = content_agent.ContentAgent(profile_id="rational_thoughts")
+
+    assert agent.get_previous_titles() == [
+        f"Prior idea {index:02}" for index in range(2, 12)
+    ]
+
+
 def test_single_page_generation_uses_its_format_prompt_template():
     request = resolve_generation_request(
         profile_id="rational_thoughts",
@@ -361,9 +683,24 @@ def test_main_saves_selected_profile_id(
             )
 
     def fake_generate_content(
-        profile_id, brand_id, format_id, platform_id, brief=None
+        profile_id,
+        brand_id,
+        format_id,
+        platform_id,
+        brief=None,
+        category_id=None,
+        comedy_subtype=None,
+        qa_subtype=None,
     ):
-        del brand_id, format_id, platform_id, brief
+        del (
+            brand_id,
+            format_id,
+            platform_id,
+            brief,
+            category_id,
+            comedy_subtype,
+            qa_subtype,
+        )
         agent = FakeContentAgent(profile_id or "rational_thoughts")
         from config_loader import resolve_generation_request
         from content_models import GeneratedContent
@@ -378,3 +715,146 @@ def test_main_saves_selected_profile_id(
         (reels_dir / "reel_001.json").read_text(encoding="utf-8")
     )
     assert saved_record["profile_id"] == expected_profile
+    assert "category_id" not in saved_record
+    assert "comedy_subtype" not in saved_record
+
+
+def test_main_saves_comedy_category_and_selected_subtype(
+    tmp_path, monkeypatch
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+
+    reels_dir = tmp_path / "generated_reels"
+    reels_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", reels_dir)
+    request = resolve_generation_request(
+        category_id="comedy",
+        comedy_subtype="pov",
+        format_id="reel",
+        platform_id="instagram",
+    )
+    result = GenerationResult(
+        request=request,
+        content=GeneratedContent.from_text(
+            "Title: Cancelled\n"
+            "Hook: The best plan is no plan.\n"
+            "Script: A plan gets cancelled.\n"
+            "Caption: Finally."
+        ),
+    )
+    monkeypatch.setattr(
+        main,
+        "generate_content",
+        lambda **kwargs: result,
+    )
+
+    assert (
+        main.main(
+            ["--category", "comedy", "--comedy-subtype", "pov"]
+        )
+        == 0
+    )
+
+    saved = json.loads(
+        (reels_dir / "reel_001.json").read_text(encoding="utf-8")
+    )
+    assert saved["category_id"] == "comedy"
+    assert saved["comedy_subtype"] == "pov"
+    assert saved["brand_id"] == "life_is_a_glitch"
+    assert saved["format_id"] == "reel"
+
+
+def test_main_comedy_batch_rotates_subtypes_and_saves_each_draft(
+    tmp_path, monkeypatch
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+
+    reels_dir = tmp_path / "generated_reels"
+    reels_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", reels_dir)
+    requested_subtypes = []
+
+    def fake_generate_content(**kwargs):
+        subtype = kwargs["comedy_subtype"]
+        requested_subtypes.append(subtype)
+        request = resolve_generation_request(
+            category_id=kwargs["category_id"],
+            comedy_subtype=subtype,
+            format_id=kwargs["format_id"],
+            platform_id=kwargs["platform_id"],
+        )
+        return GenerationResult(
+            request=request,
+            content=GeneratedContent.from_text(
+                f"Title: Draft {len(requested_subtypes)}\n"
+                "Hook: A setup.\n"
+                "Script: A punchline.\n"
+                "Caption: Funny."
+            ),
+        )
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+    assert main.main(["--category", "comedy", "--count", "10"]) == 0
+
+    saved_records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(reels_dir.glob("*.json"))
+    ]
+    assert len(saved_records) == 10
+    assert [record["comedy_subtype"] for record in saved_records] == (
+        requested_subtypes
+    )
+    assert len(set(requested_subtypes)) == 10
+
+
+def test_main_qa_batch_rotates_pillars_and_saves_each_draft(
+    tmp_path, monkeypatch
+):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+
+    reels_dir = tmp_path / "generated_reels"
+    reels_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", reels_dir)
+    requested_subtypes = []
+
+    def fake_generate_content(**kwargs):
+        subtype = kwargs["qa_subtype"]
+        requested_subtypes.append(subtype)
+        request = resolve_generation_request(
+            profile_id=kwargs["profile_id"],
+            qa_subtype=subtype,
+            format_id=kwargs["format_id"],
+            platform_id=kwargs["platform_id"],
+        )
+        return GenerationResult(
+            request=request,
+            content=GeneratedContent.from_text(
+                f"Title: QA Draft {len(requested_subtypes)}\n"
+                "Hook: A testing problem.\n"
+                "Script: A useful point.\n"
+                "Caption: QA insight."
+            ),
+        )
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+    assert (
+        main.main(
+            ["--profile", "qa_engineering_ai", "--count", "8"]
+        )
+        == 0
+    )
+
+    saved_records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(reels_dir.glob("*.json"))
+    ]
+    assert [record["qa_subtype"] for record in saved_records] == (
+        requested_subtypes
+    )
+    assert len(set(requested_subtypes)) == 8

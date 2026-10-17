@@ -2,6 +2,7 @@ import sys
 
 from config_loader import (
     ConfigurationError,
+    load_comedy_config,
     load_format,
     load_platform,
     load_profile_config,
@@ -13,15 +14,29 @@ from scripts.storyboard_generator import (
     StoryboardValidationError,
     format_timecode,
     read_storyboard,
-    render_storyboard,
 )
 
 
-def _bullet_section(title, items, fallback=()):
-    values = items or fallback
-    if not values:
-        return ""
-    return f"{title}:\n" + "\n".join(f"- {value}" for value in values)
+def _render_timing_cues(storyboard):
+    lines = []
+    for scene in storyboard.scenes:
+        timing = (
+            "UNTIMED"
+            if scene.start_seconds is None
+            else (
+                f"{format_timecode(scene.start_seconds)}-"
+                f"{format_timecode(scene.end_seconds)}"
+            )
+        )
+        lines.append(f"{scene.id} | {timing}")
+        for label, cues in (
+            ("SFX", scene.sound_cues),
+            ("CAMERA", scene.camera_notes),
+            ("CUT", (scene.transition,) if scene.transition else ()),
+            ("CONTINUITY", scene.continuity),
+        ):
+            lines.extend(f"  {label}: {cue}" for cue in cues)
+    return "\n".join(lines)
 
 
 def generate_master_prompt(reel_id):
@@ -29,6 +44,11 @@ def generate_master_prompt(reel_id):
     reel = load_reel(reel_id)
     profile = load_profile_config(
         reel.get("profile_id", "rational_thoughts")
+    )
+    comedy = (
+        load_comedy_config()
+        if reel.get("category_id") == "comedy"
+        else None
     )
     content_format = load_format(reel.get("format_id", "reel"))
     platform = load_platform(reel.get("platform_id", "instagram"))
@@ -64,7 +84,7 @@ def generate_master_prompt(reel_id):
             )
             if value
         )
-        storyboard_text = ""
+        timing_cues = ""
     else:
         voiceover_lines = []
         for scene in storyboard.scenes:
@@ -80,103 +100,90 @@ def generate_master_prompt(reel_id):
             for line in scene.dialogue:
                 voiceover_lines.append(f"[{timing}] DIALOGUE: {line}")
         voiceover = "\n".join(voiceover_lines) or "No voiceover specified."
-        storyboard_text = render_storyboard(storyboard)
+        timing_cues = _render_timing_cues(storyboard)
+    if storyboard is None:
+        timing_cues = ""
     aspect_ratio = (
         content_format.aspect_ratio
         or platform.aspect_ratio
         or "unspecified"
     )
-    resolution = (
-        f"- Resolution: {content_format.resolution}"
-        if content_format.resolution
-        else ""
-    )
     duration = []
-    if content_format.duration_min_seconds is not None:
+    comedy_duration = (
+        comedy["formats"].get("reel", {}).get("default_duration_seconds")
+        if comedy
+        else None
+    )
+    if comedy_duration:
+        duration.append(
+            "Recommended duration: "
+            f"{comedy_duration['minimum']}-"
+            f"{comedy_duration['maximum']} seconds"
+        )
+    elif content_format.duration_min_seconds is not None:
         duration.append(f"Minimum duration: {content_format.duration_min_seconds} seconds")
-    if content_format.duration_max_seconds is not None:
+    if not comedy_duration and content_format.duration_max_seconds is not None:
         duration.append(f"Maximum duration: {content_format.duration_max_seconds} seconds")
-    if platform.max_video_duration_seconds is not None:
+    if (
+        not comedy_duration
+        and platform.max_video_duration_seconds is not None
+    ):
         duration.append(
             f"Platform maximum duration: {platform.max_video_duration_seconds} seconds"
         )
-    camera = _bullet_section(
-        "CAMERA STYLE",
-        profile.visual.camera,
-        (
-            "Slow cinematic camera movement",
-            "Documentary-style visuals",
-            "Smooth scene transitions",
-            "Shallow depth of field",
-        ),
-    )
-    music = _bullet_section(
-        "BACKGROUND MUSIC",
-        profile.visual.music,
-        (
-            "Minimal cinematic instrumental music",
-            "No vocals",
-        ),
-    )
-    subtitles = _bullet_section(
-        "SUBTITLES",
-        profile.visual.subtitles,
-        (
-            "Burned-in captions",
-            "High-contrast readable typography",
-            "Match voiceover timing",
-        ),
-    )
-    visual_style = _bullet_section(
-        "VISUAL STYLE",
+    camera = "; ".join(profile.visual.camera) or "purposeful, readable framing"
+    music = "; ".join(profile.visual.music) or "subtle instrumental, no vocals"
+    subtitles = "; ".join(profile.visual.subtitles) or "readable, timed captions"
+    visual_style = "; ".join(
         profile.visual.image_style + profile.visual.setting
-        + profile.visual.image_requirements,
-        (
-            "Consistent visual style",
-            "Realistic lighting",
-            "No text inside visuals",
-        ),
+        + profile.visual.image_requirements
+    ) or "consistent visual style, realistic lighting, no text in visuals"
+    comedy_direction = ""
+    if comedy:
+        selected = next(
+            (
+                subtype
+                for subtype in comedy["subtypes"]
+                if subtype["id"] == reel.get("comedy_subtype")
+            ),
+            None,
+        )
+        subtype_direction = (
+            f"Selected subtype: {selected['name']} — {selected['definition']}"
+            if selected
+            else "Choose a visual approach that serves the joke."
+        )
+        comedy_direction = (
+            f"Comedy: {subtype_direction}; time reactions and pauses for "
+            "the punchline, using the visual medium that best serves the joke."
+        )
+
+    prompt_lines = [
+        f"Create {content_format.display_name} for {platform.display_name}: "
+        f"{aspect_ratio}, {content_format.resolution or 'configured resolution'}"
+        f"{'; ' + '; '.join(duration) if duration else ''}.",
+        f"Title: {reel.get('title', '')}",
+        "Premise (context, not additional voiceover): "
+        f"{storyboard.premise if storyboard is not None else reel.get('hook', '').strip()}",
+        f"Visual style: {visual_style}",
+    ]
+    if comedy_direction:
+        prompt_lines.append(comedy_direction)
+    prompt_lines.extend(
+        [
+            f"Voiceover/dialogue:\n{voiceover}",
+            f"Timing and production cues:\n{timing_cues}"
+            if timing_cues
+            else "",
+            f"Image prompts (authoritative scene visuals):\n{visual_prompts}",
+            f"Camera: {camera}",
+            f"Music: {music}",
+            f"Subtitles: {subtitles}",
+            "Keep scene order, continuity, and punchline timing. No added "
+            "dialogue or text.",
+        ]
     )
-
-    master_prompt = f"""
-Create a polished video for the selected content profile.
-
-TITLE:
-{reel.get("title", "")}
-
-HOOK / PREMISE (context, not voiceover unless repeated below):
-{storyboard.premise if storyboard is not None else reel.get("hook", "").strip()}
-
-FORMAT:
-- {content_format.display_name}
-- Destination platform: {platform.display_name}
-- Aspect ratio: {aspect_ratio}
-{resolution}
-{_bullet_section("DURATION", duration)}
-
-{visual_style}
-
-VOICEOVER:
-
-{voiceover}
-
-VISUAL STORYBOARD:
-
-{storyboard_text or visual_prompts}
-
-IMAGE GENERATION PROMPTS:
-
-{visual_prompts}
-
-{camera}
-
-{music}
-
-{subtitles}
-
-OUTPUT:
-Create a complete video suitable for the selected format and destination.
-"""
+    master_prompt = "\n".join(line for line in prompt_lines if line)
 
     GENERATED_VIDEOS_DIRECTORY.mkdir(parents=True, exist_ok=True)
     output_file = GENERATED_VIDEOS_DIRECTORY / f"{reel_id}_master_prompt.txt"

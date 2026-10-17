@@ -3,6 +3,7 @@ import sys
 from ai_service import AIService, AIServiceError
 from config_loader import (
     ConfigurationError,
+    load_comedy_config,
     load_format,
     load_platform,
     load_profile_config,
@@ -54,6 +55,26 @@ def generate_image_prompts(reel_id, ai_service=None):
     content_format = load_format(reel.get("format_id", "reel"))
     platform = load_platform(reel.get("platform_id", "instagram"))
     visual = profile.visual
+    comedy_direction = ""
+    if reel.get("category_id") == "comedy":
+        comedy = load_comedy_config()
+        selected = next(
+            (
+                subtype
+                for subtype in comedy["subtypes"]
+                if subtype["id"] == reel.get("comedy_subtype")
+            ),
+            None,
+        )
+        comedy_direction = (
+            "Comedy: choose a visual approach that makes the joke readable; "
+            "keep the setup/reaction/punchline clear. "
+            + (
+                f"Subtype: {selected['name']} — {selected['definition']}"
+                if selected
+                else "Choose the most fitting subtype."
+            )
+        )
 
     aspect_ratio = (
         content_format.aspect_ratio
@@ -68,30 +89,18 @@ def generate_image_prompts(reel_id, ai_service=None):
             f"Resolution: {content_format.resolution}"
         )
 
-    prompt = f"""
-You are an expert visual storyteller creating assets for {profile.display_name}.
-
-Create exactly one professional AI image prompt for each storyboard scene.
-
-CONTENT FORMAT:
-- {content_format.display_name}
-- Destination platform: {platform.display_name}
-
-PROFILE VISUAL DIRECTION:
-{_bullets(visual_requirements)}
-
-REQUIREMENTS:
-- Return every scene exactly once, using its exact scene ID and time range.
-- Use the format "SCENE S01 | 0:00-0:05" followed by one image prompt.
-- Never merge multiple scene IDs into one prompt.
-- Keep characters, wardrobe, environment, lighting, and visual style consistent.
-- Depict only the visual beats; do not put narration or readable text in images.
-- Keep sound cues, dialogue, and narration out of the image itself.
-
-Storyboard:
-
-{scene_content}
-"""
+    prompt = (
+        f"Create one still-image prompt per scene for {profile.display_name}, "
+        f"{content_format.display_name} on {platform.display_name} "
+        f"({'; '.join(visual_requirements)}).\n"
+        f"{comedy_direction}\n"
+        "Keep each image prompt to one concise paragraph of at most 60 words. "
+        "Return every scene once, preserving its exact ID/time, as "
+        "`SCENE S01 | 0:00-0:05: [prompt]`. Keep character, wardrobe, setting, "
+        "and style consistent. Show visual beats only: no readable text, "
+        "dialogue, narration, or sound cues.\n\n"
+        f"{scene_content}"
+    )
 
     result = (ai_service or AIService()).generate_reel(prompt)
     GENERATED_IMAGES_DIRECTORY.mkdir(parents=True, exist_ok=True)

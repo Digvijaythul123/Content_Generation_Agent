@@ -1,0 +1,24 @@
+STORYBOARD
+==================================================
+
+TITLE: The "Quick Nap" Gamble
+
+PREMISE / HOOK (context, not voiceover): That dangerous moment you decide to take a "20-minute power nap."
+
+SCENE S01 | UNTIMED
+VISUAL: Realistic AI scene. A person collapses onto a bed in broad daylight, wearing a hoodie. They set a phone alarm for 20 minutes with a confident smirk. NARRATION:
+
+SCENE S02 | UNTIMED
+NARRATION: (Action: Cut to the person waking up in total darkness. They look panicked. They check the phone.)
+
+SCENE S03 | UNTIMED
+NARRATION: (Dialogue - Voiceover, whispered and horrified): "Wait... is it 6:00 PM or 6:00 AM?
+
+SCENE S04 | UNTIMED
+NARRATION: (Action: They sit up slowly. A single, distant bird chirps. They check the date on the phone. Their eyes widen.)
+
+SCENE S05 | UNTIMED
+NARRATION: (Dialogue - Voiceover): "I've slept through an entire fiscal quarter.
+
+SCENE S06 | UNTIMED
+VISUAL: Cut to a shot of the person staring blankly at the wall while the "Windows Shutdown" sound plays. NARRATION:

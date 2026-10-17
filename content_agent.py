@@ -1,4 +1,5 @@
 from ai_service import AIService
+from config_loader import load_comedy_config, load_profile_subtypes
 import json
 from string import Template
 import warnings
@@ -26,6 +27,9 @@ class ContentAgent:
         brief=None,
         brand_identity_explicit=False,
         brand_selected=True,
+        category_id=None,
+        comedy_subtype=None,
+        qa_subtype=None,
     ):
         self.ai_service = AIService()
         self.profile = profile or load_profile(profile_id)
@@ -35,6 +39,9 @@ class ContentAgent:
         self.brief = brief
         self.brand_identity_explicit = brand_identity_explicit
         self.brand_selected = brand_selected
+        self.category_id = category_id
+        self.comedy_subtype = comedy_subtype
+        self.qa_subtype = qa_subtype
 
     def get_previous_titles(self, profile_id=None, brand_id=None):
 
@@ -88,7 +95,7 @@ class ContentAgent:
             ):
                 titles.append(title)
 
-        return titles
+        return titles[-10:]
 
     def generate_content(self):
 
@@ -145,6 +152,95 @@ class ContentAgent:
             prompt = (
                 f"Selected format requirements:\n{instructions}\n\n" + prompt
             )
+
+        if self.qa_subtype:
+            selected_subtype = next(
+                (
+                    subtype
+                    for subtype in load_profile_subtypes(profile["id"])
+                    if subtype["id"] == self.qa_subtype
+                ),
+                None,
+            )
+            if selected_subtype is None:
+                raise ValueError(
+                    f"Unknown QA subtype {self.qa_subtype!r} for "
+                    f"profile {profile['id']!r}."
+                )
+            prompt = (
+                f"Selected QA topic pillar: {selected_subtype['name']} — "
+                f"{selected_subtype['definition']}\n"
+                "Focus the content on this pillar while preserving the "
+                "selected format's fields and the profile's accuracy safeguards.\n\n"
+                + prompt
+            )
+
+        if self.category_id == "comedy":
+            comedy = load_comedy_config()
+            subtypes = comedy["subtypes"]
+            selected_subtype = next(
+                (
+                    subtype
+                    for subtype in subtypes
+                    if subtype["id"] == self.comedy_subtype
+                ),
+                None,
+            )
+            subtype_guidance = (
+                f"Subtype: {selected_subtype['name']} — "
+                f"{selected_subtype['definition']}\n"
+                if selected_subtype
+                else (
+                    "Choose one subtype for the brief: "
+                    + ", ".join(subtype["name"] for subtype in subtypes)
+                    + ".\n"
+                )
+            )
+            format_id = getattr(self.content_format, "id", "reel")
+            brand_id = getattr(self.brand, "id", None)
+            brand_name = getattr(self.brand, "display_name", None)
+            publishing_identity = (
+                f"Publishing brand: {brand_name}\n"
+                if brand_id == comedy["brand_id"]
+                and format_id != "linkedin_text_post"
+                and brand_name
+                else ""
+            )
+            format_config = comedy["formats"][format_id]
+            duration = format_config.get("default_duration_seconds", {})
+            duration_guidance = (
+                f"Recommended duration: {duration['minimum']}-"
+                f"{duration['maximum']} seconds.\n"
+                if duration
+                else ""
+            )
+            if format_id == "reel":
+                format_guidance = (
+                    "Reel: immediate hook, visual setup, escalation, "
+                    "surprise, concise punchline. Preserve existing fields."
+                )
+            elif format_id == "single_page":
+                format_guidance = (
+                    "Single page: one glance-readable visual joke on the "
+                    "configured 4:5 canvas. Use only supplied copy and labels."
+                )
+            else:
+                format_guidance = (
+                    "LinkedIn: preserve professional accuracy and the existing "
+                    "fields; do not apply Life Is a Glitch branding."
+                )
+            comedy_guidance = (
+                f"COMEDY ({comedy['audience']}): "
+                f"{', '.join(comedy['tone'])}. "
+                f"{subtype_guidance}"
+                f"Topics: {', '.join(comedy['topics'])}. "
+                f"Avoid: {', '.join(comedy['avoid'])}. "
+                f"{format_guidance}\n"
+                f"{duration_guidance}"
+                "Quality check: clear setup, original joke, strong punchline, "
+                "visually practical. Return only the selected format's fields.\n\n"
+            )
+            prompt = comedy_guidance + prompt
 
         if self.brief:
             prompt = (

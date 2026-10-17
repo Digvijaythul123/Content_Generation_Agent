@@ -17,11 +17,12 @@ implementation; **[FUTURE]** longer-term capability.
 
 ```text
 CLI scripts/
-   -> content_pipeline.py
+   -> content_pipeline.py (optional category/subtype context)
       -> config_loader.py + YAML config/
       -> content_agent.py + prompts/
          -> ai_service.py (fixed Ollama-compatible endpoint/model)
       -> content_models.py validation
+      -> comedy.yaml when Comedy is explicitly selected
    -> reel_storage.py + generated_reels/*.json
 
 review CLI -> reel_storage.py -> generated_reels/*.json
@@ -46,10 +47,14 @@ local review UI -> draft generation, shared review decisions, and local history
 - `scripts/` contains the canonical CLI commands.
 - Root Python modules provide configuration models/loading, generation,
   prompt composition, JSON file operations, and model communication.
-- YAML configures Critical Thinking, Comedy, and QA Engineering & AI profiles;
-  the Digvijay Thul personal brand with optional no-brand generation; Reel,
-  single-page, and LinkedIn text-post formats; and
+- YAML configures Critical Thinking / Rational Thoughts, Comedy, and QA Engineering & AI profiles;
+  an optional Comedy category with ten subtypes; the d_agnostic_being and Life Is
+  a Glitch brands with optional no-brand generation; Reel, single-page, and
+  LinkedIn text-post formats; and
   Instagram and LinkedIn platform compatibility.
+- The QA Engineering & AI profile can optionally select a profile-specific
+  topic pillar; this guidance is separate from content categories and format
+  contracts.
 - Review is local and human-operated. Saved status values are Draft, Approved,
   and Rejected.
 - The local browser UI supports review decisions for Reels and single-page
@@ -77,8 +82,11 @@ Source / Brief
 
 - **Content Profile** owns audience, objective, voice, exclusions, and
   editorial/visual guidance. Examples: Comedy, Finance, Education.
+- **Content Category** adds optional generation guidance across formats.
+  Comedy is currently the only category and can specify one of ten subtypes.
+  It does not replace the content profile or format.
 - **Brand** owns optional publisher identity, reusable branding, voice
-  overlays, and defaults. Example: Digvijay Thul.
+  overlays, and defaults. Example: d_agnostic_being.
 - **Format** owns output fields and production constraints. Examples:
   Instagram Reel, YouTube Short, single-page graphic, LinkedIn text post,
   Thread, Blog Article.
@@ -86,8 +94,10 @@ Source / Brief
 - **Source** is input material, not an editorial category.
 
 Core code resolves validated context; it should not infer brand identity from
-a profile or make profile-specific branches in the shared pipeline. A blank
-brand selection means no publisher identity is included or saved.
+a profile or make profile-specific branches in the shared pipeline. An
+explicit Comedy category with no brand argument defaults to Life Is a Glitch;
+an explicit blank brand selection still means no publisher identity is
+included or saved. Category metadata is stored only on opted-in drafts.
 
 ## 4. Target modular-monolith organization
 
@@ -98,6 +108,7 @@ when contracts become concrete.
 ```text
 config/
   brands/
+  comedy.yaml                     # optional cross-format category guidance
   content_profiles/
   formats/
   platforms/
@@ -133,10 +144,10 @@ to empty architectural layers.
 |---|---|---|
 | Brief/source | [CURRENT] | Text brief enters generation and is saved; structured source references are [NEXT]. |
 | Brand/profile/format/platform resolution | [CURRENT] | YAML resolution exists; fuller profile/brand/format support is [NEXT]. |
-| Content generation | [CURRENT] | Reel fields are generated via configured prompt and fixed model client. |
+| Content generation | [CURRENT] | Configured Reel, single-page, and LinkedIn fields are generated; Comedy guidance is opt-in and keeps those output contracts. |
 | Human review | [CURRENT] | The local UI and CLI can review saved records; UI actions are recorded in local history. |
 | Scene planning | [CURRENT] | Timed beats are parsed and untimed legacy scripts remain explicitly untimed; richer intent/continuity is [NEXT]. |
-| Visual planning | [CURRENT] | Profile visual guidance informs image and master prompt text. |
+| Visual planning | [CURRENT] | Profile guidance informs image/master prompts; opted-in Comedy adds joke-driven framing, reactions, and timing guidance. |
 | Storyboard | [CURRENT] | JSON records preserve timing, visual beats, narration/dialogue, sound, and camera notes; UI exposes the output and stage action. |
 | Character/environment/camera/voice/music plans | [NEXT] | Start with optional plan fields/config; avoid assuming 3D. |
 | Master video prompt | [CURRENT] | A composed text prompt is saved; registry/version provenance is [NEXT]. |

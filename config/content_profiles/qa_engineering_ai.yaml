@@ -35,6 +35,32 @@ topics:
   - Large language models in QA workflows
   - Human review, privacy, and limits of AI testing
 
+subtypes:
+  - id: testing_strategy
+    name: Testing Strategy & Risk
+    definition: Prioritizing testing by product risk, user impact, change scope, and the cost of failure.
+  - id: automation_architecture
+    name: Automation Architecture
+    definition: Designing test automation that is maintainable, appropriately layered, and useful as the product evolves.
+  - id: ui_api_integration_testing
+    name: UI, API & Integration Testing
+    definition: Choosing the right test boundary and explaining what UI, API, and integration checks each prove.
+  - id: ci_flaky_tests
+    name: CI Reliability & Flaky Tests
+    definition: Diagnosing unreliable test signals, reducing flakiness, and improving feedback in continuous integration.
+  - id: exploratory_debugging
+    name: Exploratory Testing & Debugging
+    definition: Using structured exploration, failure evidence, and debugging to uncover behavior scripted tests may miss.
+  - id: ai_assisted_qa
+    name: AI-Assisted Test Design & Maintenance
+    definition: Applying AI to test ideas, test data, and maintenance with human review and clear limits.
+  - id: llm_testing
+    name: LLM Testing & Evaluation
+    definition: Evaluating variable model outputs with representative datasets, explicit criteria, and repeatable checks.
+  - id: qa_communication
+    name: QA Communication & Collaboration
+    definition: Communicating quality risks, evidence, and trade-offs constructively across engineering teams.
+
 visual:
   image_style:
     - Clean technical editorial design

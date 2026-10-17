@@ -192,6 +192,75 @@ def test_generation_brief_is_included_in_model_prompt(tmp_path, monkeypatch):
     assert f"Generation brief:\n{brief}" in model_prompt
 
 
+def test_comedy_generation_adds_selected_subtype_without_changing_reel_contract():
+    from content_models import GeneratedContent
+
+    request = resolve_generation_request(
+        category_id="comedy",
+        comedy_subtype="pov",
+        format_id="reel",
+        platform_id="instagram",
+        brief="You are relieved when an unwanted plan gets cancelled.",
+    )
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Title: Plans cancelled\n"
+        "Hook: POV: your calendar finally apologizes.\n"
+        "Script: You celebrate the cancellation.\n"
+        "Caption: The best plan was no plan."
+    )
+
+    with patch("content_agent.AIService", return_value=service):
+        agent = ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            brief=request.brief,
+            brand_identity_explicit=request.brand_identity_explicit,
+            category_id=request.category_id,
+            comedy_subtype=request.comedy_subtype,
+        )
+        raw_content = agent.generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    content = GeneratedContent.from_text(
+        raw_content, request.content_format.content_fields
+    )
+    assert "Subtype: POV Comedy" in prompt
+    assert "Recommended duration: 8-20 seconds." in prompt
+    assert "Return only the selected format's fields." in prompt
+    assert tuple(content.fields) == ("title", "hook", "script", "caption")
+
+
+def test_single_page_comedy_design_prompt_preserves_copy_and_comedy_direction():
+    from post_prompt import build_ready_design_prompt
+
+    request = resolve_generation_request(
+        category_id="comedy",
+        comedy_subtype="dark_uncomfortable",
+        format_id="single_page",
+        platform_id="instagram_feed",
+    )
+    prompt = build_ready_design_prompt(
+        {
+            "title": "My five-year plan",
+            "main_point": "An apology to my younger self.",
+            "supporting_copy": "We both made confident predictions.",
+            "visual_labels": "None",
+            "design_prompt": "Use one clear visual metaphor.",
+        },
+        request.content_format,
+        request.platform,
+        request.category_id,
+    )
+
+    assert "COMEDY VISUAL DIRECTION" in prompt
+    assert "Headline: My five-year plan" in prompt
+    assert "Do not add, omit, repeat, paraphrase, or invent any other text" in prompt
+
+
 def test_generation_request_tracks_explicit_brand_selection():
     default_brand = resolve_generation_request(profile_id="comedy")
     explicit_brand = resolve_generation_request(
@@ -406,6 +475,7 @@ def test_review_ui_saves_explicitly_unbranded_content(
     request = resolve_generation_request(
         brand_id="",
         profile_id="qa_engineering_ai",
+        qa_subtype="testing_strategy",
         format_id="linkedin_text_post",
         platform_id="linkedin",
     )
@@ -425,6 +495,7 @@ def test_review_ui_saves_explicitly_unbranded_content(
         {
             "brand_id": "",
             "profile_id": "qa_engineering_ai",
+            "content_subtype": "testing_strategy",
             "format_id": "linkedin_text_post",
             "platform_id": "linkedin",
         }
@@ -434,6 +505,7 @@ def test_review_ui_saves_explicitly_unbranded_content(
         (posts_directory / f"{saved['id']}.json").read_text(encoding="utf-8")
     )
     assert record["brand_id"] is None
+    assert record["qa_subtype"] == "testing_strategy"
     assert record["image_generation_prompt"].startswith("A clear editorial")
     assert saved["type"] == "post"
 
@@ -507,16 +579,25 @@ def test_review_ui_generation_options_expose_type_platform_and_profiles():
     )
     assert any(
         item["id"] == "rational_thoughts"
-        and item["name"] == "Critical Thinking"
+        and item["name"] == "Critical Thinking / Rational Thoughts"
         for item in options["profiles"]
     )
     assert any(
-        item["id"] == "default" and item["name"] == "Digvijay Thul"
+        item["id"] == "default" and item["name"] == "d_agnostic_being"
         for item in options["brands"]
     )
     assert any(
+        item["id"] == "life_is_a_glitch"
+        and item["name"] == "Life Is a Glitch"
+        for item in options["brands"]
+    )
+    assert options["categories"] == [{"id": "comedy", "name": "Comedy"}]
+    assert len(options["comedy_subtypes"]) == 10
+    assert any(
         item["id"] == "qa_engineering_ai" for item in options["profiles"]
     )
+    assert len(options["qa_subtypes"]) == 8
+    assert options["qa_subtype_error"] == ""
     assert any(
         item["id"] == "linkedin"
         and {"linkedin_text_post", "single_page"}.issubset(
@@ -528,6 +609,106 @@ def test_review_ui_generation_options_expose_type_platform_and_profiles():
         item["id"] == "linkedin_text_post" and item["content_kind"] == "post"
         for item in options["formats"]
     )
+
+
+def test_review_ui_keeps_existing_options_when_comedy_module_is_unavailable(
+    monkeypatch,
+):
+    from config_loader import ConfigurationError
+    from scripts import review_ui
+
+    def fail_comedy_load():
+        raise ConfigurationError("Comedy category config is invalid.")
+
+    monkeypatch.setattr(review_ui, "load_comedy_config", fail_comedy_load)
+    options = review_ui.get_generation_options()
+
+    assert options["categories"] == []
+    assert options["comedy_subtypes"] == []
+    assert options["category_error"] == "Comedy category config is invalid."
+    assert {item["id"] for item in options["formats"]} >= {
+        "reel",
+        "single_page",
+        "linkedin_text_post",
+    }
+
+
+def test_review_ui_comedy_batch_rotates_through_subtypes(monkeypatch):
+    from scripts import review_ui
+
+    generated = []
+
+    def fake_generate_and_save(payload):
+        generated.append(payload["comedy_subtype"])
+        return {"id": f"reel_{len(generated):03}", "type": "reel", "title": "Draft"}
+
+    monkeypatch.setattr(review_ui, "generate_and_save", fake_generate_and_save)
+    results = review_ui.generate_batch_and_save(
+        {"category_id": "comedy", "count": 10}
+    )
+
+    assert len(results) == 10
+    assert generated == [
+        "relatable_everyday",
+        "absurd_surreal",
+        "dark_uncomfortable",
+        "pov",
+        "sarcastic_conversations",
+        "literal_interpretation",
+        "brain_vs_reality",
+        "expectation_vs_reality",
+        "objects_with_personalities",
+        "impossible_choices",
+    ]
+
+
+def test_review_ui_qa_batch_rotates_topic_pillars(monkeypatch):
+    from scripts import review_ui
+
+    generated = []
+
+    def fake_generate_and_save(payload):
+        generated.append(payload["content_subtype"])
+        return {"id": f"reel_{len(generated):03}", "type": "reel", "title": "Draft"}
+
+    monkeypatch.setattr(review_ui, "generate_and_save", fake_generate_and_save)
+    results = review_ui.generate_batch_and_save(
+        {"profile_id": "qa_engineering_ai", "count": 8}
+    )
+
+    assert len(results) == 8
+    assert generated == [
+        "testing_strategy",
+        "automation_architecture",
+        "ui_api_integration_testing",
+        "ci_flaky_tests",
+        "exploratory_debugging",
+        "ai_assisted_qa",
+        "llm_testing",
+        "qa_communication",
+    ]
+
+
+def test_review_ui_reports_partial_batch_saves(monkeypatch):
+    from scripts import review_ui
+
+    attempts = []
+
+    def fake_generate_and_save(payload):
+        attempts.append(payload)
+        if len(attempts) == 2:
+            raise ValueError("provider rejected the request")
+        return {"id": "reel_001", "type": "reel", "title": "Draft"}
+
+    monkeypatch.setattr(review_ui, "generate_and_save", fake_generate_and_save)
+
+    with pytest.raises(
+        review_ui.PartialGenerationError,
+        match="saving 1 of 3 drafts.*remain in the library",
+    ):
+        review_ui.generate_batch_and_save(
+            {"category_id": "comedy", "count": 3}
+        )
 
 
 def test_review_ui_text_post_has_no_visual_production_stage(
@@ -1049,16 +1230,137 @@ def test_master_prompt_uses_storyboard_timing_and_separates_visuals(
     storyboard_generator.generate_storyboard("reel_018")
     prompt_file = video_prompt_generator.generate_master_prompt("reel_018")
     master_prompt = prompt_file.read_text(encoding="utf-8")
-    voiceover = master_prompt.split("VOICEOVER:\n", 1)[1].split(
-        "VISUAL STORYBOARD:", 1
+    voiceover = master_prompt.split("Voiceover/dialogue:\n", 1)[1].split(
+        "Timing and production cues:", 1
     )[0]
 
     assert "[0:00-0:05] Yes, I completely agree." in voiceover
     assert "Meeting adjourned." in voiceover
     assert "[Medium shot]" not in voiceover
     assert "nodding seriously" not in voiceover
-    assert "SCENE S01 | 0:00-0:05" in master_prompt
+    assert "Timing and production cues:" in master_prompt
+    assert "CAMERA:" in master_prompt
+    assert "SFX:" in master_prompt
+    assert "asdfghjkl" in master_prompt
+    assert master_prompt.count("SCENE S01 | 0:00-0:05: image prompt") == 1
+    assert "Visual storyboard:" not in master_prompt
     assert "SCENE S01 | 0:00-0:05: image prompt" in master_prompt
+
+
+def test_master_prompt_timing_cues_keep_storyboard_continuity():
+    from scripts.storyboard_generator import build_storyboard
+    from scripts.video_prompt_generator import _render_timing_cues
+
+    storyboard = build_storyboard(
+        {
+            "script": (
+                "(0:00-0:05) Visual: Alex enters. "
+                "Continuity: Keep the blue jacket. "
+                "Transition: Cut to the door."
+            )
+        }
+    )
+
+    cues = _render_timing_cues(storyboard)
+
+    assert "CONTINUITY: Keep the blue jacket." in cues
+    assert "CUT: Cut to the door." in cues
+
+
+def test_comedy_master_video_prompt_uses_comedy_duration_and_timing_guidance(
+    tmp_path, monkeypatch
+):
+    from scripts import video_prompt_generator
+
+    videos_directory = tmp_path / "generated_videos"
+    images_directory = tmp_path / "generated_images"
+    videos_directory.mkdir()
+    images_directory.mkdir()
+    (images_directory / "reel_001_image_prompts.txt").write_text(
+        "SCENE S01 | UNTIMED: A person celebrates cancelled plans.",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        video_prompt_generator,
+        "load_reel",
+        lambda reel_id: {
+            "id": reel_id,
+            "title": "Cancelled plans",
+            "hook": "Plans cancelled.",
+            "script": "A person celebrates.",
+            "profile_id": "comedy",
+            "format_id": "reel",
+            "platform_id": "instagram",
+            "category_id": "comedy",
+            "comedy_subtype": "pov",
+        },
+    )
+
+    prompt_file = video_prompt_generator.generate_master_prompt("reel_001")
+    prompt = prompt_file.read_text(encoding="utf-8")
+
+    assert "Recommended duration: 8-20 seconds" in prompt
+    assert "Comedy: Selected subtype: POV Comedy" in prompt
+    assert "time reactions and pauses for the punchline" in prompt
+
+
+def test_comedy_image_prompt_chooses_visual_approach_for_the_joke(
+    tmp_path, monkeypatch
+):
+    from scripts import image_prompt_generator
+
+    videos_directory = tmp_path / "generated_videos"
+    images_directory = tmp_path / "generated_images"
+    videos_directory.mkdir()
+    images_directory.mkdir()
+    (videos_directory / "reel_001_storyboard.json").write_text(
+        "{}", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        image_prompt_generator, "GENERATED_VIDEOS_DIRECTORY", videos_directory
+    )
+    monkeypatch.setattr(
+        image_prompt_generator, "GENERATED_IMAGES_DIRECTORY", images_directory
+    )
+    monkeypatch.setattr(
+        image_prompt_generator,
+        "load_reel",
+        lambda reel_id: {
+            "id": reel_id,
+            "hook": "My alarm says good morning.",
+            "script": "I disagree.",
+            "profile_id": "comedy",
+            "format_id": "reel",
+            "platform_id": "instagram",
+            "category_id": "comedy",
+            "comedy_subtype": "objects_with_personalities",
+        },
+    )
+    monkeypatch.setattr(
+        image_prompt_generator, "read_storyboard", lambda path: object()
+    )
+    monkeypatch.setattr(
+        image_prompt_generator,
+        "render_storyboard",
+        lambda storyboard: "SCENE S01 | 0:00-0:05\nVisual: A person reacts.",
+    )
+    model = Mock()
+    model.generate_reel.return_value = "Image prompts"
+
+    image_prompt_generator.generate_image_prompts("reel_001", ai_service=model)
+
+    prompt = model.generate_reel.call_args.args[0]
+    assert "Objects With Personalities" in prompt
+    assert "one concise paragraph of at most 60 words" in prompt
+    assert "preserving its exact ID/time" in prompt
+    assert "SCENE S01 | 0:00-0:05" in prompt
+    assert "Supported approaches:" not in prompt
 
 
 def test_image_prompts_save_in_generated_images_and_video_reads_them(
@@ -1121,7 +1423,7 @@ def test_image_prompts_save_in_generated_images_and_video_reads_them(
     prompt_file = images_directory / "reel_001_image_prompts.txt"
     assert prompt_file.read_text(encoding="utf-8") == "Storyboard prompts"
     generation_prompt = model.generate_reel.call_args.args[0]
-    assert "lively visual storytelling" in generation_prompt
+    assert "one concise paragraph of at most 60 words" in generation_prompt
     assert "Relatable everyday environments" in generation_prompt
     assert "Instagram Reel" in generation_prompt
     assert "Aspect ratio: 9:16" in generation_prompt
