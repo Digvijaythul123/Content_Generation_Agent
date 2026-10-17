@@ -4,10 +4,11 @@ import ipaddress
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import os
 from pathlib import Path
 import re
 import threading
-from urllib.parse import parse_qs, quote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 from ai_service import AIServiceError
 from config_loader import (
@@ -19,7 +20,24 @@ from config_loader import (
     load_profile_config,
     load_profile_subtypes,
 )
-from content_models import ContentValidationError
+from content_models import ContentValidationError, validate_instagram_caption
+from instagram_publisher import InstagramPublishError, InstagramPublisher
+from media_host import MediaHostError, R2MediaHost
+from art_generator import (
+    MAX_ARTWORK_BYTES,
+    ArtGenerationError,
+    artwork_path,
+    build_art_prompt,
+    generate_post_artwork,
+    save_post_artwork,
+)
+from content_text import strip_highlights
+from media_renderer import (
+    MediaRenderError,
+    layout_for,
+    post_image_path,
+    render_post_image,
+)
 from content_pipeline import generate_content
 from post_prompt import build_ready_design_prompt
 from post_storage import (
@@ -28,7 +46,9 @@ from post_storage import (
     load_post,
     save_post,
 )
+from app_settings import get_setting
 from project_paths import (
+    PROJECT_ROOT,
     CONFIG_DIRECTORY,
     GENERATED_ASSETS_DIRECTORY,
     GENERATED_IMAGES_DIRECTORY,
@@ -66,6 +86,11 @@ _STAGE_ACTION_ERRORS = (
     PostStorageError,
     ReelStorageError,
     StoryboardValidationError,
+    MediaRenderError,
+    ArtGenerationError,
+    MediaHostError,
+    InstagramPublishError,
+    ContentValidationError,
     OSError,
     ValueError,
 )
@@ -237,6 +262,34 @@ def get_recent_activity(limit=12):
     )[:limit]
 
 
+def _is_instagram_post(record):
+    return str(record.get("platform_id") or "").startswith("instagram") and (
+        record.get("format_id", "single_page") == "single_page"
+    )
+
+
+def _post_brand(record):
+    brand_id = record.get("brand_id")
+    if not brand_id:
+        return None
+    try:
+        return load_brand(brand_id)
+    except ConfigurationError:
+        return None
+
+
+def _needs_artwork(record):
+    return _is_instagram_post(record) and (
+        layout_for(_post_brand(record)) == "quote_painting"
+    )
+
+
+def _artwork_output(content_id):
+    return artwork_path(content_id) or (
+        GENERATED_ASSETS_DIRECTORY / f"{content_id}_art.png"
+    )
+
+
 def _asset_paths(content_type, content_id):
     if content_type == "post":
         return [
@@ -246,7 +299,19 @@ def _asset_paths(content_type, content_id):
                 "Image prompt",
                 GENERATED_ASSETS_DIRECTORY
                 / f"{content_id}_design_prompt.txt",
-            )
+            ),
+            (
+                "artwork",
+                "Background artwork",
+                "Generated image",
+                _artwork_output(content_id),
+            ),
+            (
+                "instagram_image",
+                "Instagram image",
+                "Generated image",
+                post_image_path(content_id),
+            ),
         ]
     if content_type != "reel":
         raise KeyError(f"Unknown content type: {content_type}")
@@ -377,10 +442,16 @@ def read_asset(content_type, content_id, asset_key):
 
 def _stage_output_paths(content_type, content_id, record=None):
     if content_type == "post":
-        if record is not None and "design_prompt" not in record:
-            return {}
-        return {"design_prompt": GENERATED_ASSETS_DIRECTORY
-                / f"{content_id}_design_prompt.txt"}
+        paths = {}
+        if record is None or "design_prompt" in record:
+            paths["design_prompt"] = (
+                GENERATED_ASSETS_DIRECTORY / f"{content_id}_design_prompt.txt"
+            )
+        if record is None or _needs_artwork(record):
+            paths["artwork"] = _artwork_output(content_id)
+        if record is None or _is_instagram_post(record):
+            paths["instagram_image"] = post_image_path(content_id)
+        return paths
     image_prompts = GENERATED_IMAGES_DIRECTORY / f"{content_id}_image_prompts.txt"
     legacy_image_prompts = (
         GENERATED_VIDEOS_DIRECTORY / f"{content_id}_image_prompts.txt"
@@ -420,7 +491,7 @@ def get_pipeline(content_type, content_id):
             "label": "Reviewed",
             "status": (
                 "ready"
-                if record.get("status") in ("Approved", "Rejected")
+                if record.get("status") in ("Approved", "Rejected", "Published")
                 else "not_started"
             ),
             "available": True,
@@ -430,7 +501,7 @@ def get_pipeline(content_type, content_id):
             "label": "Approved",
             "status": (
                 "ready"
-                if record.get("status") == "Approved"
+                if record.get("status") in ("Approved", "Published")
                 else (
                     "rejected"
                     if record.get("status") == "Rejected"
@@ -441,7 +512,15 @@ def get_pipeline(content_type, content_id):
         },
     ]
     production = (
-        ([("design_prompt", "Design prompt")] if "design_prompt" in record else [])
+        (
+            ([("design_prompt", "Design prompt")] if "design_prompt" in record else [])
+            + ([("artwork", "Artwork")] if _needs_artwork(record) else [])
+            + (
+                [("instagram_image", "Instagram image")]
+                if _is_instagram_post(record)
+                else []
+            )
+        )
         if content_type == "post"
         else [
             ("storyboard", "Storyboard"),
@@ -452,6 +531,11 @@ def get_pipeline(content_type, content_id):
     )
     for stage, label in production:
         output = files[stage]
+        needs_art_first = (
+            stage == "instagram_image"
+            and "artwork" in files
+            and not files["artwork"].is_file()
+        )
         last_event = last_stage_events.get(stage)
         stage_key = (content_type, content_id, stage)
         if last_event and last_event.get("event") == "stage_started":
@@ -465,6 +549,8 @@ def get_pipeline(content_type, content_id):
             status = "failed"
         elif output.is_file():
             status = "ready"
+        elif record.get("status") == "Published":
+            status = "not_applicable"
         elif record.get("status") != "Approved":
             status = "blocked"
         else:
@@ -477,6 +563,7 @@ def get_pipeline(content_type, content_id):
                 "available": True,
                 "can_run": (
                     record.get("status") == "Approved"
+                    and not needs_art_first
                     and not (
                         content_type == "reel"
                         and stage == "image_prompts"
@@ -492,7 +579,9 @@ def get_pipeline(content_type, content_id):
                     )
                 ),
                 "reason": (
-                    "Generate a storyboard first."
+                    "Generate the artwork first."
+                    if needs_art_first and record.get("status") == "Approved"
+                    else "Generate a storyboard first."
                     if content_type == "reel"
                     and stage == "image_prompts"
                     and not (
@@ -526,16 +615,52 @@ def get_pipeline(content_type, content_id):
                     else "Video rendering is not integrated yet."
                 ),
             },
-            {
-                "id": "publishing",
-                "label": "Published",
-                "status": "future",
-                "available": False,
-                "reason": "Publishing is not integrated yet.",
-            },
+            _publishing_stage(content_type, content_id, record, files, last_stage_events),
         ]
     )
     return {"stages": common}
+
+
+def _publishing_stage(content_type, content_id, record, files, last_stage_events):
+    if content_type != "post" or not _is_instagram_post(record):
+        return {
+            "id": "publishing",
+            "label": "Published",
+            "status": "future",
+            "available": False,
+            "reason": "Publishing is available for Instagram Feed posts only.",
+        }
+    last_event = last_stage_events.get("publishing")
+    with _STAGE_LOCK:
+        running = (content_type, content_id, "publishing") in _ACTIVE_STAGES
+    image_ready = files["instagram_image"].is_file()
+    if record.get("status") == "Published":
+        status = "ready"
+    elif running:
+        status = "running"
+    elif last_event and last_event.get("event") in ("stage_failed", "stage_started"):
+        status = "failed"
+    elif record.get("status") != "Approved":
+        status = "blocked"
+    else:
+        status = "not_started"
+    if record.get("status") == "Published":
+        reason = "Already published to Instagram."
+    elif record.get("status") != "Approved":
+        reason = "Approve this content before publishing."
+    elif not image_ready:
+        reason = "Render the Instagram image and review it first."
+    else:
+        reason = ""
+    return {
+        "id": "publishing",
+        "label": "Published",
+        "status": status,
+        "available": True,
+        "can_run": not reason and not running,
+        "reason": reason,
+        "permalink": record.get("instagram_permalink"),
+    }
 
 
 def get_dashboard_summary():
@@ -545,6 +670,7 @@ def get_dashboard_summary():
         "drafts": sum(item["status"] == "Draft" for item in items),
         "approved": sum(item["status"] == "Approved" for item in items),
         "rejected": sum(item["status"] == "Rejected" for item in items),
+        "published": sum(item["status"] == "Published" for item in items),
         "ready_for_production": 0,
         "failed_stages": 0,
     }
@@ -632,6 +758,17 @@ def run_production_stage(content_type, content_id, stage):
                 output = generate_image_prompts(content_id)
             else:
                 output = generate_master_prompt(content_id)
+        elif stage == "artwork":
+            brand = _post_brand(record)
+            output = generate_post_artwork(
+                content_id, art_style=brand.template.art_style if brand else None
+            )
+            # A new painting makes the previous render stale.
+            post_image_path(content_id).unlink(missing_ok=True)
+        elif stage == "instagram_image":
+            if "artwork" in output_paths and not artwork_path(content_id):
+                raise ValueError("Generate the artwork before rendering the image.")
+            output = render_post_image(content_id)
         else:
             format_id = record.get("format_id", "single_page")
             platform_id = record.get("platform_id", "instagram_feed")
@@ -663,6 +800,177 @@ def run_production_stage(content_type, content_id, stage):
             "stage_failed",
             stage=stage,
             error=str(error),
+        )
+        raise
+    finally:
+        with _STAGE_LOCK:
+            _ACTIVE_STAGES.discard(stage_key)
+
+
+def _artwork_record(content_type, content_id):
+    if content_type != "post":
+        raise ValueError("Artwork applies to single-page posts only.")
+    record = load_post(content_id)
+    if not _needs_artwork(record):
+        raise ValueError("This post's brand layout does not use background artwork.")
+    return record
+
+
+def get_art_prompt(content_type, content_id):
+    """Return the text-free art prompt to paste into an image tool by hand."""
+    record = _artwork_record(content_type, content_id)
+    brand = _post_brand(record)
+    return build_art_prompt(record, brand.template.art_style if brand else None)
+
+
+def upload_artwork(content_type, content_id, image_bytes):
+    """Store artwork made outside the app (e.g. the Gemini app) for a post."""
+    record = _artwork_record(content_type, content_id)
+    if record.get("status") != "Approved":
+        raise ValueError("Approve this content before adding artwork.")
+    output = save_post_artwork(content_id, image_bytes)
+    post_image_path(content_id).unlink(missing_ok=True)
+    _append_history(
+        content_type, content_id, "stage_ready",
+        stage="artwork", source="upload", output=str(output),
+    )
+    return {"stage": "artwork", "status": "ready"}
+
+
+_IMPORTABLE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
+
+
+def _import_directories():
+    """Folders offered for picking artwork without a browser file dialog."""
+    configured = get_setting("ARTWORK_IMPORT_DIRS")
+    if configured:
+        candidates = [Path(item).expanduser() for item in configured.split(os.pathsep)]
+    else:
+        candidates = [Path.home() / "Downloads", PROJECT_ROOT / "creative_assets"]
+    return [path for path in candidates if path.is_dir()]
+
+
+def list_importable_images(limit=12):
+    """Return the most recent images in the import folders, newest first."""
+    found = []
+    for index, directory in enumerate(_import_directories()):
+        try:
+            entries = list(directory.iterdir())
+        except OSError:
+            continue
+        for path in entries:
+            try:
+                if not (
+                    path.is_file()
+                    and path.suffix.lower() in _IMPORTABLE_SUFFIXES
+                    and path.stat().st_size <= MAX_ARTWORK_BYTES
+                ):
+                    continue
+                modified = path.stat().st_mtime
+            except OSError:
+                continue
+            found.append((modified, index, directory, path))
+    found.sort(key=lambda item: item[0], reverse=True)
+    return [
+        {
+            "id": f"{index}:{path.name}",
+            "name": path.name,
+            "folder": directory.name,
+            "modified": datetime.fromtimestamp(modified, timezone.utc).isoformat(),
+            "url": "/api/artwork_sources/" + quote(f"{index}:{path.name}", safe=""),
+        }
+        for modified, index, directory, path in found[:limit]
+    ]
+
+
+def _importable_image_path(image_id):
+    index_text, separator, name = str(image_id).partition(":")
+    directories = _import_directories()
+    if (
+        not separator
+        or not index_text.isdigit()
+        or int(index_text) >= len(directories)
+        or not name
+        or name != Path(name).name
+        or name.startswith(".")
+    ):
+        raise KeyError(f"Image not found: {image_id}")
+    path = directories[int(index_text)] / name
+    if not path.is_file() or path.suffix.lower() not in _IMPORTABLE_SUFFIXES:
+        raise KeyError(f"Image not found: {image_id}")
+    return path
+
+
+def import_artwork(content_type, content_id, image_id):
+    """Attach a recent image from an import folder as the post's artwork."""
+    path = _importable_image_path(image_id)
+    try:
+        image_bytes = path.read_bytes()
+    except OSError as error:
+        raise ReviewUIError(f"Could not read {path.name}: {error}") from error
+    return upload_artwork(content_type, content_id, image_bytes)
+
+
+def publish_content(
+    content_type, content_id, dry_run=False, host=None, publisher=None
+):
+    """Upload an approved, rendered post and publish it to Instagram.
+
+    The image is uploaded only now, after human review; with dry_run the
+    upload happens but nothing is posted to Instagram.
+    """
+    if content_type != "post":
+        raise ValueError("Only single-page posts can be published to Instagram.")
+    record = load_post(content_id)
+    if not _is_instagram_post(record):
+        raise ValueError("Only Instagram Feed posts can be published to Instagram.")
+    if record.get("status") != "Approved" or record.get("instagram_media_id"):
+        raise ValueError("Only Approved, unpublished posts can be published.")
+    image_path = post_image_path(content_id)
+    if not image_path.is_file():
+        raise ValueError("Render and review the Instagram image before publishing.")
+    caption = validate_instagram_caption(strip_highlights(record.get("caption") or ""))
+    stage_key = (content_type, content_id, "publishing")
+    with _STAGE_LOCK:
+        if stage_key in _ACTIVE_STAGES:
+            raise ValueError("This post is already being published.")
+        _ACTIVE_STAGES.add(stage_key)
+    try:
+        _append_history(
+            content_type, content_id, "stage_started",
+            stage="publishing", dry_run=dry_run,
+        )
+        host = host or R2MediaHost()
+        key, media_url = host.upload(image_path, content_id)
+        if dry_run:
+            _append_history(
+                content_type, content_id, "publish_dry_run",
+                stage="publishing", media_url=media_url,
+            )
+            return {"dry_run": True, "media_url": media_url}
+        publisher = publisher or InstagramPublisher()
+        result = publisher.publish_image(media_url, caption)
+        record = load_post(content_id)
+        record.update(
+            status="Published",
+            instagram_media_id=result["media_id"],
+            instagram_permalink=result["permalink"],
+            published_at=datetime.now(timezone.utc).isoformat(),
+        )
+        save_post(content_id, record)
+        _append_history(
+            content_type, content_id, "stage_ready",
+            stage="publishing", permalink=result["permalink"],
+        )
+        try:
+            host.delete(key)  # Instagram keeps its own copy once published.
+        except MediaHostError:
+            pass
+        return {"dry_run": False, **result}
+    except _STAGE_ACTION_ERRORS as error:
+        _append_history(
+            content_type, content_id, "stage_failed",
+            stage="publishing", error=str(error),
         )
         raise
     finally:
@@ -972,6 +1280,25 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             except ReviewUIError as error:
                 self._send_json({"error": str(error)}, status=500)
             return
+        if request.path == "/api/artwork_sources":
+            self._send_json({"items": list_importable_images()})
+            return
+        if request.path.startswith("/api/artwork_sources/"):
+            try:
+                path = _importable_image_path(
+                    unquote(request.path[len("/api/artwork_sources/"):])
+                )
+                body = path.read_bytes()
+            except KeyError as error:
+                self._send_json({"error": str(error)}, 404)
+                return
+            except OSError as error:
+                self._send_json({"error": str(error)}, 500)
+                return
+            self._send_bytes(
+                body, mimetypes.guess_type(path.name)[0] or "image/png", 200
+            )
+            return
         if request.path == "/api/activity":
             try:
                 self._send_json({"items": get_recent_activity()})
@@ -982,7 +1309,7 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[0:2] == ["api", "content"]
-            and path_parts[4] in ("pipeline", "assets", "history")
+            and path_parts[4] in ("pipeline", "assets", "history", "art_prompt")
         ):
             content_type, content_id, resource = (
                 path_parts[2],
@@ -992,16 +1319,22 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             try:
                 if resource == "pipeline":
                     self._send_json(get_pipeline(content_type, content_id))
+                elif resource == "art_prompt":
+                    self._send_json(
+                        {"prompt": get_art_prompt(content_type, content_id)}
+                    )
                 elif resource == "assets":
                     self._send_json({"items": list_assets(content_type, content_id)})
                 else:
                     self._send_json(
                         {"items": get_history(content_type, content_id)}
                     )
-            except KeyError as error:
+            except (KeyError, FileNotFoundError) as error:
                 self._send_json({"error": str(error)}, status=404)
             except (ReviewUIError, PostStorageError, ReelStorageError) as error:
                 self._send_json({"error": str(error)}, status=500)
+            except (ArtGenerationError, ValueError) as error:
+                self._send_json({"error": str(error)}, status=400)
             return
         if len(path_parts) == 5 and path_parts[:2] == ["api", "assets"]:
             try:
@@ -1063,6 +1396,14 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         request = urlsplit(self.path)
         if not self._is_same_origin_loopback_request():
             self._send_json({"error": "Local same-origin request required."}, 403)
+            return
+        path_parts = request.path.strip("/").split("/")
+        if (
+            len(path_parts) == 5
+            and path_parts[:2] == ["api", "content"]
+            and path_parts[4] == "artwork"
+        ):
+            self._handle_artwork_upload(path_parts[2], path_parts[3])
             return
         if self.headers.get_content_type() != "application/json":
             self._send_json({"error": "Content-Type must be application/json."}, 415)
@@ -1162,6 +1503,45 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(error)}, status=400)
             return
         if (
+            len(path_parts) == 5
+            and path_parts[:2] == ["api", "content"]
+            and path_parts[4] == "artwork_import"
+        ):
+            try:
+                result = import_artwork(
+                    path_parts[2], path_parts[3], payload.get("image_id")
+                )
+                self._send_json(result)
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except (PostStorageError, OSError, ReviewUIError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except (ArtGenerationError, ConfigurationError, ValueError) as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:2] == ["api", "content"]
+            and path_parts[4] == "publish"
+        ):
+            if payload.get("confirm") is not True:
+                self._send_json(
+                    {"error": "Publishing requires explicit confirmation."}, 400
+                )
+                return
+            try:
+                result = publish_content(path_parts[2], path_parts[3])
+                self._send_json(result)
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except (InstagramPublishError, MediaHostError) as error:
+                self._send_json({"error": str(error)}, 502)
+            except (PostStorageError, OSError, ReviewUIError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
             len(path_parts) == 7
             and path_parts[:2] == ["api", "content"]
             and path_parts[4] == "stages"
@@ -1174,15 +1554,44 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(result)
             except (KeyError, FileNotFoundError) as error:
                 self._send_json({"error": str(error)}, 404)
-            except AIServiceError as error:
+            except (AIServiceError, ArtGenerationError) as error:
                 self._send_json({"error": str(error)}, 502)
-            except (PostStorageError, ReelStorageError, OSError, ReviewUIError) as error:
+            except (
+                PostStorageError, ReelStorageError, OSError, ReviewUIError,
+                MediaRenderError,
+            ) as error:
                 self._send_json({"error": str(error)}, 500)
             except (ConfigurationError, StoryboardValidationError, ValueError) as error:
                 self._send_json({"error": str(error)}, 400)
             return
         self.send_error(404, "Not found")
 
+
+    def _handle_artwork_upload(self, content_type, content_id):
+        if self.headers.get_content_type() not in (
+            "image/png", "image/jpeg", "image/webp"
+        ):
+            self._send_json({"error": "Upload a PNG, JPEG, or WebP image."}, 415)
+            return
+        try:
+            content_length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            self._send_json({"error": "Invalid Content-Length."}, 400)
+            return
+        if not 0 < content_length <= MAX_ARTWORK_BYTES:
+            self._send_json({"error": "Artwork must be 15 MB or smaller."}, 413)
+            return
+        try:
+            result = upload_artwork(
+                content_type, content_id, self.rfile.read(content_length)
+            )
+            self._send_json(result)
+        except (KeyError, FileNotFoundError) as error:
+            self._send_json({"error": str(error)}, 404)
+        except (PostStorageError, OSError, ReviewUIError) as error:
+            self._send_json({"error": str(error)}, 500)
+        except (ArtGenerationError, ConfigurationError, ValueError) as error:
+            self._send_json({"error": str(error)}, 400)
 
     def _is_same_origin_loopback_request(self):
         try:
@@ -1222,7 +1631,8 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         self.send_header(
             "Content-Security-Policy",
             "default-src 'none'; style-src 'unsafe-inline'; "
-            "script-src 'unsafe-inline'; connect-src 'self'",
+            "script-src 'unsafe-inline'; connect-src 'self'; "
+            "img-src 'self'; media-src 'self'",
         )
         for name, value in (extra_headers or {}).items():
             self.send_header(name, value)

@@ -12,6 +12,7 @@ from config_loader import resolve_generation_request
 from profile_loader import load_profile
 import reel_storage
 from reel_storage import ReelStorageError, create_reel, load_reel, save_reel
+from scripts import review_ui
 
 
 def test_create_reel_uses_first_available_filename_and_does_not_overwrite(
@@ -88,6 +89,9 @@ def test_review_commands_preserve_other_record_fields(
     monkeypatch.setattr(
         reel_storage, "GENERATED_REELS_DIRECTORY", data_directory
     )
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", tmp_path / "assets"
+    )
     monkeypatch.chdir(other_directory)
     monkeypatch.setattr(sys, "argv", [f"{command}.py", "reel_001"])
 
@@ -97,6 +101,28 @@ def test_review_commands_preserve_other_record_fields(
         (data_directory / "reel_001.json").read_text(encoding="utf-8")
     )
     assert saved_record == {**record, "status": status}
+    history = (tmp_path / "assets" / "reel_001_history.jsonl").read_text(
+        encoding="utf-8"
+    )
+    assert f'"decision": "{status}"' in history
+
+
+@pytest.mark.parametrize("command", ["approve_reel", "reject_reel"])
+def test_review_commands_only_change_draft_reels(
+    tmp_path, monkeypatch, command
+):
+    record = {"id": "reel_001", "title": "Done", "status": "Approved"}
+    (tmp_path / "reel_001.json").write_text(json.dumps(record), encoding="utf-8")
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", tmp_path)
+    monkeypatch.setattr(
+        review_ui, "GENERATED_ASSETS_DIRECTORY", tmp_path / "assets"
+    )
+    monkeypatch.setattr(sys, "argv", [f"{command}.py", "reel_001"])
+
+    assert importlib.import_module(f"scripts.{command}").main() == 1
+    assert json.loads(
+        (tmp_path / "reel_001.json").read_text(encoding="utf-8")
+    ) == record
 
 
 def test_ai_service_validates_http_status_and_response_shape():

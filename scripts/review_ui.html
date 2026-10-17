@@ -103,6 +103,21 @@
     .badge.approved { background: #244733; color: #b5e4c2; }
     .badge.rejected { background: #512e2b; color: #ffc0b7; }
     .badge.reel { background: #293c4b; color: #b6d9f1; }
+    .badge.published { background: #3b2d55; color: #d9c6ff; }
+    .manual-art { margin: 6px 0 14px; }
+    .manual-art details { margin: 8px 0; }
+    .manual-art summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+    .art-prompt { width: 100%; margin-top: 8px; font-size: 12px; }
+    .recent-images { margin: 10px 0 14px; }
+    .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .recent-image { display: grid; gap: 6px; padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: #11181e; color: var(--muted); font-size: 11px; text-align: left; cursor: pointer; }
+    .recent-image:hover:not(:disabled) { border-color: var(--accent); }
+    .recent-image:disabled { cursor: not-allowed; opacity: .6; }
+    .recent-image img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; background: #000; }
+    .recent-image span { overflow-wrap: anywhere; }
+    .drop-zone { display: grid; gap: 10px; padding: 16px; border: 2px dashed var(--line); border-radius: 10px; cursor: pointer; font-size: 13px; }
+    .drop-zone.dragging { border-color: var(--accent); background: #efb46a14; }
+    .instagram-preview { display: block; width: min(100%, 432px); aspect-ratio: 4 / 5; margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; object-fit: cover; }
     .detail-empty { display: grid; min-height: 390px; place-items: center; color: var(--muted); text-align: center; }
     .detail-title { margin: 14px 0 8px; font-size: clamp(24px, 3vw, 34px); line-height: 1.15; letter-spacing: -.035em; }
     .detail-meta { color: var(--muted); font-size: 12px; }
@@ -280,6 +295,7 @@
             <option>Draft</option>
             <option>Approved</option>
             <option>Rejected</option>
+            <option>Published</option>
             <option>UNKNOWN</option>
           </select>
           <select id="brand-filter" aria-label="Filter by brand"><option value="">All brands</option></select>
@@ -293,7 +309,7 @@
         <div class="detail-empty">Choose a generated item to review its content, pipeline, and assets.</div>
       </section>
     </section>
-    <p class="notice">Video rendering and publishing are future capabilities. Review decisions and production stages are recorded locally.</p>
+    <p class="notice">Approved Instagram Feed posts can be rendered, reviewed, and published from the Instagram tab. Video rendering is a future capability. Review decisions and production stages are recorded locally.</p>
   </main>
   <script>
     const state = {
@@ -407,7 +423,7 @@
     }
 
     function badgeClass(value) {
-      const known = ["draft", "approved", "rejected", "reel"];
+      const known = ["draft", "approved", "rejected", "published", "reel"];
       return known.includes(String(value).toLowerCase()) ? String(value).toLowerCase() : "";
     }
 
@@ -451,6 +467,7 @@
         ["drafts", "Drafts"],
         ["approved", "Approved"],
         ["rejected", "Rejected"],
+        ["published", "Published"],
         ["ready_for_production", "Ready for production"],
         ["failed_stages", "Failed stages"]
       ];
@@ -605,6 +622,7 @@
         ["scene_plan", "Scene Plan"],
         ["image_prompts", "Image Prompts"],
         ["video_prompt", "Video Prompt"],
+        ["instagram", "Instagram"],
         ["assets", "Assets"],
         ["history", "History"]
       ];
@@ -612,8 +630,9 @@
         ? tabNames.filter(([id]) =>
           ["overview", "content", "assets", "history"].includes(id)
           || (id === "image_prompts" && Object.hasOwn(state.record, "design_prompt"))
+          || (id === "instagram" && isInstagramPost())
         )
-        : tabNames;
+        : tabNames.filter(([id]) => id !== "instagram");
       const tabBar = document.createElement("div");
       tabBar.className = "detail-tabs";
       tabBar.setAttribute("role", "tablist");
@@ -784,7 +803,8 @@
           entry.stage,
           entry.reason,
           entry.error,
-          entry.new_content_id
+          entry.new_content_id,
+          entry.permalink
         ].filter(Boolean).join(" · ");
         details.textContent = detailsText;
         summary.append(event, details);
@@ -811,7 +831,8 @@
           "content",
           "assets",
           "history",
-          ...(Object.hasOwn(state.record, "design_prompt") ? ["image_prompts"] : [])
+          ...(Object.hasOwn(state.record, "design_prompt") ? ["image_prompts"] : []),
+          ...(isInstagramPost() ? ["instagram"] : [])
         ]
         : ["overview", "content", "storyboard", "scene_plan", "image_prompts", "video_prompt", "assets", "history"];
       if (!applicableTabs.includes(state.activeTab)) {
@@ -820,6 +841,8 @@
         renderAssets(tab, state.assets);
       } else if (state.activeTab === "history") {
         renderHistory(tab);
+      } else if (state.activeTab === "instagram") {
+        renderInstagram(tab);
       } else if (state.activeTab === "overview") {
         const next = state.pipeline.find((stage) =>
           stage.can_run && ["not_started", "failed"].includes(stage.status)
@@ -871,6 +894,248 @@
       container.append(tab);
     }
 
+    function isInstagramPost() {
+      return state.selected?.type === "post"
+        && String(state.record?.platform_id || "").startsWith("instagram")
+        && (state.record?.format_id || "single_page") === "single_page";
+    }
+
+    function renderInstagram(container) {
+      const hint = document.createElement("p");
+      hint.className = "hint";
+      hint.textContent = "Generate the artwork (if your brand uses one), render the image, check it and the caption below, then publish. "
+        + "Nothing leaves this computer until you confirm Publish.";
+      container.append(hint);
+      if (state.pipeline.some((stage) => stage.id === "artwork")) {
+        stageButton("artwork", "artwork", container);
+        container.append(manualArtworkControls());
+      }
+      stageButton("instagram_image", "Instagram image", container);
+      const image = state.assets.find((asset) => asset.key === "instagram_image");
+      if (image) {
+        const preview = document.createElement("img");
+        preview.className = "instagram-preview";
+        preview.src = `${image.url}?v=${Date.now()}`;
+        preview.alt = "Rendered Instagram post";
+        container.append(preview);
+      }
+      if (state.record.caption) container.append(createField("caption", state.record.caption));
+      const publishing = state.pipeline.find((stage) => stage.id === "publishing");
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      if (state.record.status === "Published") {
+        const done = document.createElement("span");
+        done.className = "message";
+        done.textContent = "Published to Instagram. ";
+        if (publishing?.permalink) {
+          const link = document.createElement("a");
+          link.href = publishing.permalink;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "View post";
+          done.append(link);
+        }
+        actions.append(done);
+      } else if (publishing) {
+        const button = makeAction("Publish to Instagram", () => publishItem(button));
+        button.disabled = !publishing.can_run;
+        if (publishing.status === "running") {
+          button.disabled = true;
+          button.textContent = "Publishing…";
+        }
+        actions.append(button);
+        if (publishing.reason) {
+          const reason = document.createElement("span");
+          reason.className = "message";
+          reason.textContent = publishing.reason;
+          actions.append(reason);
+        }
+        if (publishing.status === "failed") {
+          const failed = document.createElement("span");
+          failed.className = "message error";
+          failed.textContent = "The last publish attempt failed. Review the error in History and retry.";
+          actions.append(failed);
+        }
+      }
+      container.append(actions);
+    }
+
+    function manualArtworkControls() {
+      const box = document.createElement("div");
+      box.className = "manual-art";
+      const message = document.createElement("p");
+      message.className = "message";
+      message.setAttribute("aria-live", "polite");
+
+      const promptDetails = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Make the artwork yourself (free): art prompt";
+      const promptText = document.createElement("textarea");
+      promptText.readOnly = true;
+      promptText.rows = 7;
+      promptText.className = "art-prompt";
+      promptText.value = "Loading…";
+      promptDetails.addEventListener("toggle", async () => {
+        if (!promptDetails.open || promptText.dataset.loaded) return;
+        try {
+          const result = await requestJson(contentUrl(state.selected, "art_prompt"));
+          promptText.value = result.prompt;
+          promptText.dataset.loaded = "true";
+        } catch (error) {
+          promptText.value = `Could not load the prompt: ${error.message}`;
+        }
+      });
+      const copy = makeAction("Copy art prompt", async () => {
+        promptDetails.open = true;
+        try {
+          const result = await requestJson(contentUrl(state.selected, "art_prompt"));
+          promptText.value = result.prompt;
+          promptText.dataset.loaded = "true";
+          await navigator.clipboard.writeText(result.prompt);
+          message.className = "message";
+          message.textContent = "Copied. Paste it into the Gemini or ChatGPT app, download the image, then add it below.";
+        } catch (error) {
+          promptText.select();
+          message.className = "message";
+          message.textContent = "Select the prompt below and press Cmd+C to copy it.";
+        }
+      }, "secondary");
+      promptDetails.append(summary, promptText);
+
+      const approved = state.record.status === "Approved";
+      const zone = document.createElement("label");
+      zone.className = "drop-zone";
+      const zoneText = document.createElement("span");
+      zoneText.textContent = approved
+        ? "Or drop a PNG, JPEG, or WebP here, or choose a file (works in Chrome or Safari)"
+        : "Approve this content before adding artwork.";
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp";
+      input.disabled = !approved;
+      zone.append(zoneText, input);
+
+      async function send(file) {
+        if (!file || !approved) return;
+        const byExtension = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp" };
+        const type = file.type || byExtension[file.name.split(".").pop().toLowerCase()] || "";
+        if (!Object.values(byExtension).includes(type)) {
+          message.className = "message error";
+          message.textContent = `${file.name} is not a PNG, JPEG, or WebP image.`;
+          return;
+        }
+        input.disabled = true;
+        message.className = "message";
+        message.textContent = `Uploading ${file.name}…`;
+        try {
+          await requestJson(contentUrl(state.selected, "artwork"), {
+            method: "POST",
+            headers: { "Content-Type": type },
+            body: file
+          });
+          await refreshItems(state.selected);
+        } catch (error) {
+          message.className = "message error";
+          message.textContent = `Upload failed: ${error.message}`;
+          input.disabled = false;
+        }
+      }
+      input.addEventListener("change", () => send(input.files[0]));
+      ["dragenter", "dragover"].forEach((name) => zone.addEventListener(name, (event) => {
+        event.preventDefault();
+        zone.classList.add("dragging");
+      }));
+      ["dragleave", "drop"].forEach((name) => zone.addEventListener(name, (event) => {
+        event.preventDefault();
+        zone.classList.remove("dragging");
+      }));
+      zone.addEventListener("drop", (event) => send(event.dataTransfer.files[0]));
+
+      const picker = document.createElement("div");
+      picker.className = "recent-images";
+      const pickerHeading = document.createElement("div");
+      pickerHeading.className = "inline-actions";
+      const pickerLabel = document.createElement("strong");
+      pickerLabel.textContent = "Pick a recent image (Downloads or creative_assets)";
+      const grid = document.createElement("div");
+      grid.className = "recent-grid";
+      async function loadRecent() {
+        grid.replaceChildren();
+        try {
+          const result = await requestJson("/api/artwork_sources");
+          if (!result.items.length) {
+            const empty = document.createElement("p");
+            empty.className = "hint";
+            empty.textContent = "No PNG, JPEG, or WebP images found in Downloads or creative_assets.";
+            grid.append(empty);
+          }
+          result.items.forEach((item) => {
+            const option = document.createElement("button");
+            option.type = "button";
+            option.className = "recent-image";
+            option.disabled = !approved;
+            option.title = approved ? `Use ${item.name} as the artwork` : "Approve this content before adding artwork.";
+            const thumb = document.createElement("img");
+            thumb.src = item.url;
+            thumb.alt = "";
+            thumb.loading = "lazy";
+            const caption = document.createElement("span");
+            caption.textContent = `${item.name} · ${new Date(item.modified).toLocaleString()}`;
+            option.append(thumb, caption);
+            option.addEventListener("click", async () => {
+              if (!window.confirm(`Use ${item.name} as the artwork for this post?`)) return;
+              grid.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+              message.className = "message";
+              message.textContent = `Using ${item.name}…`;
+              try {
+                await requestJson(contentUrl(state.selected, "artwork_import"), {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ image_id: item.id })
+                });
+                await refreshItems(state.selected);
+              } catch (error) {
+                message.className = "message error";
+                message.textContent = `Could not use ${item.name}: ${error.message}`;
+                grid.querySelectorAll("button").forEach((button) => { button.disabled = !approved; });
+              }
+            });
+            grid.append(option);
+          });
+        } catch (error) {
+          grid.textContent = `Could not list recent images: ${error.message}`;
+        }
+      }
+      const refreshRecent = makeAction("Refresh list", loadRecent, "secondary");
+      pickerHeading.append(pickerLabel, refreshRecent);
+      picker.append(pickerHeading, grid);
+      loadRecent();
+
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      actions.append(copy);
+      box.append(actions, promptDetails, picker, zone, message);
+      return box;
+    }
+
+    async function publishItem(button) {
+      if (!window.confirm(
+        "Publish this image and caption to your Instagram account now? This cannot be undone from here."
+      )) return;
+      button.disabled = true;
+      button.textContent = "Publishing…";
+      try {
+        await requestJson(contentUrl(state.selected, "publish"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm: true })
+        });
+      } catch (error) {
+        window.alert(error.message);
+      }
+      await refreshItems(state.selected);
+    }
+
     function renderDetail() {
       if (!state.record || !state.selected) return;
       const detail = $("detail");
@@ -909,7 +1174,9 @@
         );
         if (next) {
           actions.append(makeAction(`Continue: ${next.label}`, () => {
-            state.activeTab = next.id === "design_prompt" ? "image_prompts" : next.id;
+            state.activeTab = next.id === "design_prompt"
+              ? "image_prompts"
+              : (["artwork", "instagram_image", "publishing"].includes(next.id) ? "instagram" : next.id);
             history.replaceState(null, "", `#${state.selected.type}/${state.selected.id}/${state.activeTab}`);
             renderDetail();
           }));

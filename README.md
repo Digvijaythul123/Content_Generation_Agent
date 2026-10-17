@@ -33,7 +33,8 @@ work:
 | Character, environment, camera, and music plans | [NEXT] | Reusable, independently reviewable plans are not yet modeled. |
 | AI video rendering | [FUTURE] | No video provider integration or rendered video output exists. |
 | Recurring 3D characters and reusable asset library | [FUTURE] | Not implemented. |
-| Social publishing and analytics | [FUTURE] | No scheduler, publisher, or analytics integration exists. |
+| Instagram Feed publishing | [CURRENT] | Approved Instagram Feed posts render to a 1080×1350 JPEG for review, then publish through the Instagram API after explicit confirmation. |
+| Reels publishing, scheduling, and analytics | [FUTURE] | Needs rendered video; no scheduler or analytics integration exists. |
 
 ## Current workflow
 
@@ -127,9 +128,70 @@ with one-click copy and preview generated media,
 and review its local activity history. Approved Reels can run storyboard,
 scene-plan, image-prompt, and master video-prompt stages individually;
 approved single-page posts can refresh their design prompt. LinkedIn text posts
-show ready-to-publish copy without image-prompt actions. Video rendering and
-publishing are not integrated. Generation and AI-backed production stages use
+show ready-to-publish copy without image-prompt actions. Approved Instagram
+Feed posts gain an Instagram tab: render the image, review it with the caption,
+then publish (see below). Video rendering is not integrated. Generation and AI-backed production stages use
 the same configured model service as the CLI.
+
+## Publishing to Instagram
+
+**[CURRENT]** Single-page posts on the `instagram_feed` platform can be
+published from the review UI's Instagram tab or the CLI:
+
+```bash
+python3 -m scripts.publish_post post_008 --render-only  # render for review
+python3 -m scripts.publish_post post_008 --dry-run      # upload, print URL, do not post
+python3 -m scripts.publish_post post_008                # confirm, then publish
+python3 -m scripts.publish_post post_008 --new-art      # repaint artwork (paid) and re-render
+python3 -m scripts.publish_post --check                 # verify the Instagram connection
+python3 -m scripts.publish_post --refresh-token         # extend the 60-day token
+```
+
+**Layouts.** Each brand's `template.layout` picks the look: `classic` is a
+text-only card; `quote_painting` (the `default` brand) first has Gemini paint
+background artwork from the post's design prompt and the brand's `art_style`
+(no text in the art), then overlays the exact copy on the left. Wrap key words
+in `**double asterisks**` to highlight them in the accent colour; the
+generation prompt asks the model to do this. Artwork is its own review stage,
+so you can repaint it without changing the copy; repainting clears the stale
+render.
+
+Artwork sources (`ART_PROVIDER` in `.env`):
+
+- `cloudflare` (default): Flux Schnell on Cloudflare Workers AI, inside the
+  free daily allowance. Needs `CLOUDFLARE_AI_TOKEN` (Workers AI permission)
+  and your account ID (`R2_ACCOUNT_ID` is reused).
+- `gemini`: Nano Banana; needs `GEMINI_API_KEY` on a project with billing
+  enabled (the free tier allows no image generation).
+- Manual, free: in the Instagram tab use **Copy art prompt**, generate the
+  image in the Gemini or ChatGPT app, then **Upload artwork**. CLI:
+  `--art-prompt` and `--art-file PATH`.
+
+Flow: Approved → render `generated_assets/<post_id>_instagram.jpg` from
+`templates/instagram_feed.html` (brand colours from the brand YAML `template`
+section) → **you review it locally** → on confirmation, upload to Cloudflare R2
+→ Instagram fetches it → publish → the hosted copy is deleted. The record
+becomes `Published` with `instagram_media_id`, `instagram_permalink`, and
+`published_at`. Nothing leaves your computer before you confirm.
+
+One-time setup:
+
+1. Add `GEMINI_API_KEY` from https://aistudio.google.com/apikey if your brand
+   uses the `quote_painting` layout.
+2. `python3 -m pip install -r requirements.txt` and
+   `python3 -m playwright install chromium`.
+3. Instagram account must be Creator or Business.
+4. At developers.facebook.com create an app, add the **Instagram** product,
+   and choose *API setup with Instagram login*. Add your account as an
+   Instagram tester and accept the invite in the Instagram app.
+5. Generate a token with `instagram_business_basic` and
+   `instagram_business_content_publish`. Copy the token and the Instagram
+   account ID into `.env` (see `.env.example`).
+6. Create a Cloudflare R2 bucket, enable its public `r2.dev` URL, create an
+   API token with Object Read & Write, and add the R2 values to `.env`.
+
+Limits: JPEG images only, captions ≤ 2,200 characters and ≤ 30 hashtags, and
+100 API-published posts per rolling 24 hours.
 
 ## Configuration and storage
 

@@ -4,6 +4,7 @@ from content_models import (
     ContentValidationError,
     GeneratedContent,
     GenerationRequest,
+    validate_instagram_caption,
 )
 from config_loader import resolve_generation_request
 from content_agent import ContentAgent
@@ -59,4 +60,6 @@ def generate_content(
             f"Generated content does not satisfy format "
             f"{request.content_format.id!r}: {error}"
         ) from error
+    if request.platform.id.startswith("instagram") and "caption" in content.fields:
+        validate_instagram_caption(content.fields["caption"])
     return GenerationResult(request=request, content=content)

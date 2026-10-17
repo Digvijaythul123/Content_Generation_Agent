@@ -151,6 +151,67 @@ class ContentProfile:
 
 
 @dataclass(frozen=True)
+class BrandTemplate:
+    """Colours and type used when rendering finished post images."""
+
+    background: str = "#F4EFE6"
+    text: str = "#1D1B19"
+    accent: str = "#B5532E"
+    font_family: str = "Georgia, 'Times New Roman', serif"
+    handle: Optional[str] = None
+    layout: str = "classic"
+    art_style: Optional[str] = None
+
+    @classmethod
+    def from_mapping(cls, data, brand_id):
+        if not isinstance(data, Mapping):
+            raise ContentValidationError(
+                f"Brand {brand_id!r} 'template' must be a mapping."
+            )
+        values = {}
+        for key in ("background", "text", "accent"):
+            if key in data:
+                value = data[key]
+                if not isinstance(value, str) or not _HEX_COLOR_PATTERN.fullmatch(
+                    value
+                ):
+                    raise ContentValidationError(
+                        f"Brand {brand_id!r} template.{key} must be a hex "
+                        "colour such as '#1D1B19'."
+                    )
+                values[key] = value
+        for key in ("font_family", "handle"):
+            if key in data:
+                value = data[key]
+                if not isinstance(value, str) or not value.strip() or any(
+                    character in value for character in "<>{};"
+                ):
+                    raise ContentValidationError(
+                        f"Brand {brand_id!r} template.{key} must be plain text."
+                    )
+                values[key] = value.strip()
+        if "layout" in data:
+            if data["layout"] not in BRAND_TEMPLATE_LAYOUTS:
+                raise ContentValidationError(
+                    f"Brand {brand_id!r} template.layout must be one of: "
+                    + ", ".join(BRAND_TEMPLATE_LAYOUTS)
+                )
+            values["layout"] = data["layout"]
+        if "art_style" in data:
+            if not isinstance(data["art_style"], str) or not data["art_style"].strip():
+                raise ContentValidationError(
+                    f"Brand {brand_id!r} template.art_style must be text."
+                )
+            values["art_style"] = " ".join(data["art_style"].split())
+        return cls(**values)
+
+
+_HEX_COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
+# classic: typographic card. quote_painting: copy over AI background artwork.
+BRAND_TEMPLATE_LAYOUTS = ("classic", "quote_painting")
+
+
+@dataclass(frozen=True)
 class Brand:
     id: str
     display_name: str
@@ -159,6 +220,7 @@ class Brand:
     default_platform_id: str
     voice_traits: Tuple[str, ...] = ()
     voice_avoid: Tuple[str, ...] = ()
+    template: BrandTemplate = BrandTemplate()
 
     @classmethod
     def from_mapping(cls, data):
@@ -190,6 +252,9 @@ class Brand:
             ),
             voice_traits=_optional_string_list(voice, "traits", identifier),
             voice_avoid=_optional_string_list(voice, "avoid", identifier),
+            template=BrandTemplate.from_mapping(
+                data.get("template", {}), identifier
+            ),
         )
 
 
@@ -480,3 +545,27 @@ def _optional_string_list(data: Mapping[str, Any], key: str, brand_id: str):
             f"Brand {brand_id!r} voice.{key} must be a list of non-empty strings."
         )
     return tuple(item.strip() for item in value)
+
+
+INSTAGRAM_CAPTION_MAX_CHARACTERS = 2200
+INSTAGRAM_MAX_HASHTAGS = 30
+_HASHTAG_PATTERN = re.compile(r"(?<!\w)#\w+")
+
+
+def validate_instagram_caption(caption):
+    """Raise when a caption breaks Instagram's publishing limits."""
+    if not isinstance(caption, str) or not caption.strip():
+        raise ContentValidationError("Instagram posts require a caption.")
+    if len(caption) > INSTAGRAM_CAPTION_MAX_CHARACTERS:
+        raise ContentValidationError(
+            f"Instagram captions are limited to "
+            f"{INSTAGRAM_CAPTION_MAX_CHARACTERS} characters; this caption "
+            f"has {len(caption)}."
+        )
+    hashtag_count = len(_HASHTAG_PATTERN.findall(caption))
+    if hashtag_count > INSTAGRAM_MAX_HASHTAGS:
+        raise ContentValidationError(
+            f"Instagram captions are limited to {INSTAGRAM_MAX_HASHTAGS} "
+            f"hashtags; this caption has {hashtag_count}."
+        )
+    return caption.strip()

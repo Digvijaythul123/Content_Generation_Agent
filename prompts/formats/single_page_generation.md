@@ -37,6 +37,18 @@ layout, palette, and copy placement. If a diagram helps, list all exact node
 labels in Visual_labels; otherwise write "None". Do not ask the image model to
 render text accurately.
 
+In Title, Main_point, and Supporting_copy, wrap the one to three most
+important words in **double asterisks** so they can be highlighted, for example
+"What you **don't maintain**, you eventually lose." Never mark whole sentences.
+Make the design prompt a description of artwork that contains no words: the
+main subject, setting, medium, light, and palette, with the subject on the
+right and calm, uncluttered space on the left for the copy.
+
+Write the caption for the selected platform: open with a one-line hook that
+makes people stop scrolling, add one or two short lines of context, and end
+with 5-10 relevant hashtags. Keep the caption under 2,200 characters and never
+use more than 30 hashtags.
+
 Output exactly in this format:
 
 Title:

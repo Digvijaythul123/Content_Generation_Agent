@@ -1,6 +1,10 @@
 import sys
 
-from reel_storage import ReelStorageError, list_reel_paths, load_reel, save_reel
+from reel_storage import ReelStorageError, list_reel_paths, load_reel
+from scripts.review_ui import ReviewUIError, review_content
+
+
+_DECISIONS = {"a": "Approved", "r": "Rejected"}
 
 
 def main():
@@ -11,29 +15,29 @@ def main():
         except (FileNotFoundError, ReelStorageError) as error:
             print(error, file=sys.stderr)
             return 1
+        if reel.get("status", "Draft") != "Draft":
+            continue
 
         print("\n" + "=" * 80)
         print(f"ID: {reel.get('id', 'NO_ID')}")
-        print(f"Status: {reel.get('status', 'UNKNOWN')}")
+        print(f"Status: {reel.get('status', 'Draft')}")
         print(f"Title: {reel.get('title', 'NO_TITLE')}")
         print(f"Hook: {reel.get('hook', '')}")
 
         choice = input("\n[A]pprove / [R]eject / [S]kip ? ").strip().lower()
-
-        if choice == "a":
-            reel["status"] = "Approved"
-        elif choice == "r":
-            reel["status"] = "Rejected"
-        elif choice == "s":
+        if choice == "s":
+            continue
+        if choice not in _DECISIONS:
+            print(f"Unrecognized choice {choice!r}; {reel_id} was not changed.")
             continue
 
         try:
-            save_reel(reel_id, reel)
-        except ReelStorageError as error:
+            review_content("reel", reel_id, _DECISIONS[choice])
+        except (ReelStorageError, ReviewUIError, ValueError) as error:
             print(error, file=sys.stderr)
             return 1
 
-        print("Updated.")
+        print(f"{reel_id} marked {_DECISIONS[choice]}.")
 
     return 0
 

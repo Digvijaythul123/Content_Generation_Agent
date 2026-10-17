@@ -15,3 +15,8 @@ voice:
     - Corporate-only humor
     - Offensive stereotypes
     - Generic motivational content
+template:
+  background: "#111318"
+  text: "#F5F5F0"
+  accent: "#3DDC97"
+  font_family: "'Helvetica Neue', Arial, sans-serif"

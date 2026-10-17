@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1350px; overflow: hidden; }
+  body {
+    background: $background;
+    color: $text;
+    font-family: $font_family;
+    -webkit-font-smoothing: antialiased;
+  }
+  .canvas {
+    width: 1080px; height: 1350px;
+    padding: 110px 100px 90px;
+    display: flex; flex-direction: column;
+  }
+  .rule { width: 120px; height: 10px; background: $accent; margin-bottom: 48px; }
+  .title {
+    color: $accent; font-size: 46px; font-weight: 700;
+    letter-spacing: .02em; line-height: 1.2; margin-bottom: 44px;
+  }
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: safe center; }
+  .body > * { flex-shrink: 0; }
+  .main-point {
+    font-size: 76px; font-weight: 700; line-height: 1.16;
+    margin-bottom: 48px;
+  }
+  .supporting {
+    font-size: 38px; line-height: 1.45; opacity: .82;
+  }
+  .hl { color: $accent; }
+  .labels { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 44px; }
+  .labels span {
+    border: 3px solid $accent; border-radius: 999px;
+    padding: 10px 26px; font-size: 28px; font-weight: 600;
+  }
+  .footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 40px; padding-top: 36px; border-top: 2px solid $accent;
+    font-size: 28px; opacity: .75;
+  }
+</style>
+</head>
+<body>
+<main class="canvas">
+  <div class="rule"></div>
+  <div class="title">$title</div>
+  <div class="body">
+    <div class="main-point" data-fit="44">$main_point</div>
+    <div class="supporting" data-fit="26">$supporting_copy</div>
+    $labels
+  </div>
+  <footer class="footer"><span>$brand_name</span><span>$handle</span></footer>
+</main>
+<script>
+  // Shrink long copy until the text block fits inside the canvas.
+  const body = document.querySelector(".body");
+  const fitted = [...document.querySelectorAll("[data-fit]")];
+  for (let step = 0; step < 60 && body.scrollHeight > body.clientHeight; step++) {
+    let changed = false;
+    for (const element of fitted) {
+      const size = parseFloat(getComputedStyle(element).fontSize);
+      if (size > Number(element.dataset.fit)) {
+        element.style.fontSize = (size - 2) + "px";
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  document.body.dataset.overflow = String(body.scrollHeight > body.clientHeight);
+</script>
+</body>
+</html>

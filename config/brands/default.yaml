@@ -6,3 +6,17 @@ default_platform_id: instagram
 voice:
   traits: []
   avoid: []
+template:
+  # quote_painting: Gemini paints the background art, then the exact copy is
+  # overlaid on the left. Use "classic" for a text-only card (no image cost).
+  layout: quote_painting
+  background: "#F3E6CF"
+  text: "#2B1D14"
+  accent: "#8E1F1B"
+  font_family: "Georgia, 'Times New Roman', serif"
+  # handle: "@your_instagram_handle"  # optional footer text
+  art_style: >-
+    Warm painterly illustration in the style of a classical Buddhist
+    devotional painting on aged cream parchment. Soft golden-hour light,
+    muted ochre, saffron, terracotta and sepia tones, gentle brush texture,
+    serene and contemplative mood, high detail on the figure, soft vignette.

@@ -1,6 +1,7 @@
 import sys
 
-from reel_storage import ReelStorageError, load_reel, save_reel
+from reel_storage import ReelStorageError
+from scripts.review_ui import ReviewUIError, review_content
 
 
 def main():
@@ -10,13 +11,11 @@ def main():
 
     reel_id = sys.argv[1]
     try:
-        reel = load_reel(reel_id)
-        reel["status"] = "Approved"
-        save_reel(reel_id, reel)
+        review_content("reel", reel_id, "Approved")
     except FileNotFoundError:
         print(f"Reel not found: {reel_id}")
         return 1
-    except ReelStorageError as error:
+    except (ReelStorageError, ReviewUIError, ValueError) as error:
         print(error, file=sys.stderr)
         return 1
 

@@ -17,7 +17,7 @@ _TIME_RANGE_PREFIX_PATTERN = re.compile(
     r"(?<![\d:])\d{1,2}:\d{2}(?::\d{2})?\s*[-–—]"
 )
 _DIRECTIVE_PATTERN = re.compile(
-    r"\b(VOICEOVER|VO|DIALOGUE|VISUAL|SFX|SOUND(?: EFFECT)?|"
+    r"\b(NARRATION|NARRATOR|VOICEOVER|VO|DIALOGUE|VISUAL|SFX|SOUND(?: EFFECT)?|"
     r"TRANSITION|CONTINUITY)\s*:",
     re.IGNORECASE,
 )
@@ -125,7 +125,7 @@ def _parse_scene_content(
     for index, fragment in enumerate(fragments):
         if index % 2:
             directive = fragment.upper()
-            if directive in ("VO", "VOICEOVER"):
+            if directive in ("NARRATION", "NARRATOR", "VO", "VOICEOVER"):
                 mode = "narration"
             elif directive == "DIALOGUE":
                 mode = "dialogue"

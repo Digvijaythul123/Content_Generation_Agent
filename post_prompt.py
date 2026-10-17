@@ -1,3 +1,6 @@
+from content_text import strip_highlights
+
+
 def build_ready_design_prompt(
     fields, content_format, platform, category_id=None
 ):
@@ -47,9 +50,9 @@ def build_ready_design_prompt(
         "VISUAL DESIGN DIRECTION:\n"
         f"{fields['design_prompt'].strip()}\n\n"
         "EXACT COPY TO INCLUDE IN THE IMAGE:\n"
-        f"Headline: {fields['title'].strip()}\n"
-        f"Main point: {fields['main_point'].strip()}\n"
-        f"Supporting copy: {fields['supporting_copy'].strip()}"
+        f"Headline: {strip_highlights(fields['title']).strip()}\n"
+        f"Main point: {strip_highlights(fields['main_point']).strip()}\n"
+        f"Supporting copy: {strip_highlights(fields['supporting_copy']).strip()}"
         f"{diagram_label_section}{comedy_direction}\n\n"
         "Render the supplied copy verbatim: preserve spelling, punctuation, "
         "capitalization, and wording. Include only the exact diagram labels "

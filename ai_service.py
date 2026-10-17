@@ -1,5 +1,11 @@
 import requests
 
+from app_settings import (
+    DEFAULT_MODEL_ENDPOINT,
+    DEFAULT_MODEL_NAME,
+    get_setting,
+)
+
 
 class AIServiceError(RuntimeError):
     """Raised when the configured model service fails or returns bad data."""
@@ -10,9 +16,9 @@ class AIService:
     def generate_reel(self, prompt):
         try:
             response = requests.post(
-                "http://localhost:11434/api/generate",
+                get_setting("MODEL_ENDPOINT", DEFAULT_MODEL_ENDPOINT),
                 json={
-                    "model": "gemma4:31b-cloud",
+                    "model": get_setting("MODEL_NAME", DEFAULT_MODEL_NAME),
                     "prompt": prompt,
                     "stream": False,
                 },
