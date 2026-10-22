@@ -244,6 +244,11 @@ _LIKENESS_STYLES = ("living_thinker", "thinker_statue", "painterly")
 
 
 def _thinker_likeness(record, style):
+    """Name the thinker so the image tool uses its own knowledge of them.
+
+    No written descriptions: the user can attach a reference photo in the
+    image tool when they want a closer likeness.
+    """
     if not style or style["id"] not in _LIKENESS_STYLES:
         return None
     thinker_id = record.get("thinker_id")
@@ -258,24 +263,12 @@ def _thinker_likeness(record, style):
     thinker = next((item for item in thinkers if item["id"] == thinker_id), None)
     if not thinker:
         return None
-    if style["id"] == "thinker_statue":
-        # Busts need a head-and-shoulders likeness, not a full scene.
-        face = thinker.get("statue") or thinker.get("appearance")
-        if not face:
-            return None
-        return (
-            f"The statue must portray {thinker['name']}: "
-            f"{' '.join(face.split())} Render that likeness in carved stone or bronze."
-        )
-    if not thinker.get("appearance"):
-        return None
-    likeness = f"{thinker['name']}: {' '.join(thinker['appearance'].split())}"
-    if thinker.get("portrait_style"):
-        likeness += (
-            " Paint a respectful tribute that captures these signature "
-            "features; do not copy any specific photograph."
-        )
-    return likeness
+    name = thinker["name"].split(" (")[0]
+    form = "as a statue or bust of " if style["id"] == "thinker_statue" else ""
+    return (
+        f"Depict {form}{name} the way they are widely recognised. If a "
+        "reference image is attached, match the face from it."
+    )
 
 
 def build_art_prompt(record, art_style=None):

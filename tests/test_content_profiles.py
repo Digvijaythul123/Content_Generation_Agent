@@ -993,7 +993,7 @@ def test_story_mode_picks_default_visual_style_for_posts_only():
         )
 
 
-def test_visual_style_and_appearance_reach_generation_prompt():
+def test_visual_style_and_thinker_name_reach_generation_prompt():
     request = resolve_generation_request(
         profile_id="rational_thoughts",
         format_id="image_reel",
@@ -1016,10 +1016,10 @@ def test_visual_style_and_appearance_reach_generation_prompt():
 
     prompt = service.generate_reel.call_args.args[0]
     assert "Visual style for the Design_prompt: Living thinker" in prompt
-    assert "ushnisha" in prompt
+    assert "name them in the Design_prompt subject" in prompt
+    assert "ushnisha" not in prompt  # no written face descriptions
     assert "anonymous stand-in" in prompt
     assert "Subject:" in prompt and "Lighting:" in prompt
-
 
 def test_hinglish_caption_option_reaches_prompt_and_rejects_unknown():
     request = resolve_generation_request(
@@ -1135,20 +1135,10 @@ def test_other_modes_may_only_quote_verified_lines():
     assert "Selected Story mode: Mirror" in prompt
 
 
-def test_modern_figures_default_to_painted_tributes():
-    auto = resolve_generation_request(
+def test_story_mode_style_is_not_overridden_by_thinker():
+    request = resolve_generation_request(
         profile_id="rational_thoughts", format_id="image_reel",
         platform_id="instagram", qa_subtype="thoughtful", thinker_id="osho",
     )
-    assert auto.visual_style == "painterly"
-    chosen = resolve_generation_request(
-        profile_id="rational_thoughts", format_id="image_reel",
-        platform_id="instagram", qa_subtype="thoughtful", thinker_id="osho",
-        visual_style="living_thinker",
-    )
-    assert chosen.visual_style == "living_thinker"  # an explicit choice wins
-    ancient = resolve_generation_request(
-        profile_id="rational_thoughts", format_id="image_reel",
-        platform_id="instagram", qa_subtype="thoughtful", thinker_id="seneca",
-    )
-    assert ancient.visual_style == "living_thinker"
+    assert request.visual_style == "living_thinker"
+

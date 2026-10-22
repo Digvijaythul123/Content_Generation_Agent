@@ -401,7 +401,6 @@ def resolve_generation_request(
         raise ConfigurationError("Visual style ID must be text.")
     if visual_style == "":
         visual_style = None
-    visual_style_chosen = visual_style is not None
     if comedy_subtype and not category_id:
         category_id = "comedy"
     if category_id not in (None, "comedy"):
@@ -528,22 +527,6 @@ def resolve_generation_request(
             ),
             None,
         )
-
-    if not visual_style_chosen and thinker_id and visual_style in (
-        "living_thinker",
-        "cinematic_photo",
-    ):
-        # Modern figures with real photographs get painted tributes rather
-        # than photoreal faces that could pass for fake photographs.
-        thinker = next(
-            (
-                item
-                for item in load_profile_thinkers(profile.id)
-                if item["id"] == thinker_id
-            ),
-            {},
-        )
-        visual_style = thinker.get("portrait_style") or visual_style
 
     return GenerationRequest(
         brand=brand,

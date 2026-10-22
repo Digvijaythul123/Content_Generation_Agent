@@ -227,11 +227,12 @@ class ContentAgent:
                 thinker_lines.append(f"Portrayal: {thinker['portrayal']}")
             if thinker.get("setting"):
                 thinker_lines.append(f"Period background: {thinker['setting']}")
-            if thinker.get("appearance"):
-                thinker_lines.append(
-                    "Visual appearance (describe these details whenever the "
-                    f"thinker appears in an image): {thinker['appearance']}"
-                )
+            thinker_lines.append(
+                "If the thinker appears in the image, name them in the "
+                "Design_prompt subject (for example "
+                f"'{thinker['name'].split(' (')[0]} in his later years') "
+                "instead of describing their face."
+            )
             thinker_lines.append(
                 "Paraphrase the idea instead of inventing quotations. Quote "
                 "only wording you are confident appears in a listed source. "

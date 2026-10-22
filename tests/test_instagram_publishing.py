@@ -881,15 +881,15 @@ def test_footer_source_line_handles_caption_variants(line, expected):
     assert media_renderer.source_line({"caption": f"Hook\n\n{line}\n\n#a"}) == expected
 
 
-def test_statue_and_portrait_styles_include_the_thinkers_likeness():
+def test_portrait_styles_name_the_thinker_and_invite_a_reference():
     base = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "epictetus"}
     statue = art_generator.build_art_prompt({**base, "visual_style": "thinker_statue"})
-    assert "The statue must portray Epictetus" in statue and "full beard" in statue
+    assert "Depict as a statue or bust of Epictetus" in statue
+    assert "If a reference image is attached, match the face" in statue
     portrait = art_generator.build_art_prompt({**base, "visual_style": "living_thinker"})
-    assert "Likeness: Epictetus:" in portrait
+    assert "Depict Epictetus the way they are widely recognised" in portrait
     other = art_generator.build_art_prompt({**base, "visual_style": "conceptual_metaphor"})
-    assert "Likeness" not in other
-
+    assert "Depict" not in other
 
 def test_footer_skips_source_already_in_the_attribution(tmp_path):
     art = tmp_path / "art.png"
@@ -919,9 +919,10 @@ def test_tidy_caption_splits_one_paragraph_into_parts():
     assert tidy_caption(already) == already
 
 
-def test_painted_tribute_prompt_has_signature_features_and_no_photo_copy():
+def test_osho_prompt_uses_his_short_name_without_descriptions():
     record = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "osho",
               "visual_style": "painterly"}
     prompt = art_generator.build_art_prompt(record)
-    assert "very long, wispy white beard" in prompt
-    assert "do not copy any specific photograph" in prompt
+    assert "Depict Osho the way they are widely recognised" in prompt
+    assert "beard" not in prompt.split("Likeness:")[-1]
+
