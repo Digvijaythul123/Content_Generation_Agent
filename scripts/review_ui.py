@@ -293,7 +293,10 @@ def _post_brand(record):
 def _needs_artwork(record):
     return _is_image_reel(record) or (
         _is_instagram_post(record)
-        and layout_for(_post_brand(record)) == "quote_painting"
+        and (
+            record.get("layout") == "poster"
+            or layout_for(_post_brand(record)) == "quote_painting"
+        )
     )
 
 
@@ -1012,11 +1015,21 @@ def _parse_schedule(value):
     return moment.astimezone(timezone.utc)
 
 
+# The words drawn on the image; editable until the post is published.
+ON_IMAGE_TEXT_FIELDS = ("title", "main_point", "supporting_copy")
+
+
 def update_post_settings(content_id, payload):
     """Save review-screen changes: caption, music track, and schedule."""
     record = load_post(content_id)
     if not _is_image_reel(record):
-        raise ValueError("These settings apply to one-image Reels only.")
+        # Feed posts only have a layout choice; music and schedules are Reels.
+        if not _is_instagram_post(record) or set(payload) - (
+            {"layout", "caption"} | set(ON_IMAGE_TEXT_FIELDS)
+        ):
+            raise ValueError(
+                "Only the layout, caption, and on-image text can be changed for feed posts."
+            )
     if record.get("status") == "Published":
         raise ValueError("This Reel is already published.")
     changed = []
@@ -1027,6 +1040,17 @@ def update_post_settings(content_id, payload):
         validate_instagram_caption(strip_highlights(caption))
         record["caption"] = caption.strip()
         changed.append("caption")
+    for field in ON_IMAGE_TEXT_FIELDS:
+        if field not in payload:
+            continue
+        text = payload[field]
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError(f"The {field.replace('_', ' ')} cannot be empty.")
+        record[field] = text.strip()
+        # The renders show the old words, so render them again.
+        post_image_path(content_id).unlink(missing_ok=True)
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append(field)
     if "music_track" in payload:
         track = payload["music_track"] or None
         names = {path.name for path in list_tracks()}
@@ -1043,7 +1067,7 @@ def update_post_settings(content_id, payload):
         if payload["layout"] not in ("poster", "panel"):
             raise ValueError("Layout must be 'poster' or 'panel'.")
         record["layout"] = payload["layout"]
-        # Both renders show the old layout, so render them again.
+        # Renders show the old layout, so render them again.
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("layout")
@@ -1072,6 +1096,37 @@ def update_post_settings(content_id, payload):
         "post", content_id, "settings_updated", fields=changed,
         scheduled_at=record.get("scheduled_at"),
     )
+    return record
+
+
+def convert_to_reel(content_id):
+    """Turn an unpublished feed post into a one-image Reel (video and music).
+
+    The copy and caption carry over; the 4:5 artwork is kept but usually
+    needs replacing with 9:16 art, and the art prompt is rewritten for it.
+    """
+    record = load_post(content_id)
+    if not _is_instagram_post(record):
+        raise ValueError("Only Instagram feed posts can be converted to a Reel.")
+    if record.get("status") == "Published":
+        raise ValueError("This post is published; it cannot be converted.")
+    record.update(format_id="image_reel", platform_id="instagram", layout="poster")
+    record.setdefault("music_cue", "Slow, reflective flute with a soft ambient drone.")
+    save_post(content_id, record)
+    post_image_path(content_id).unlink(missing_ok=True)
+    if record.get("design_prompt"):
+        brand = _post_brand(record)
+        prompt = build_post_prompt_file(
+            record,
+            load_format("image_reel"),
+            load_platform("instagram"),
+            record.get("category_id"),
+            brand.template.art_style if brand else None,
+        )
+        (GENERATED_ASSETS_DIRECTORY / f"{content_id}_design_prompt.txt").write_text(
+            prompt + "\n", encoding="utf-8"
+        )
+    _append_history("post", content_id, "converted_to_reel")
     return record
 
 

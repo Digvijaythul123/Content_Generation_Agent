@@ -1014,3 +1014,26 @@ def test_sparks_overlay_rises_under_the_text_and_can_be_toggled(tmp_path, worksp
     review_ui.update_post_settings("post_001", {"sparks": True})
     assert workspace.read()["sparks"] is True
     assert not video_renderer.reel_video_path("post_001").exists()
+
+
+def test_feed_post_poster_layout_and_conversion_to_reel(tmp_path, workspace, monkeypatch):
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    poster = build_post_html({**POST, "layout": "poster"}, artwork=art)
+    assert "height: 1350px" in poster and "Didot" in poster
+    prompt = art_generator.build_art_prompt({**POST, "layout": "poster", "design_prompt": "x"})
+    assert "4:5 portrait" in prompt and "upper 40% open" in prompt
+
+    monkeypatch.setattr(art_generator, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    workspace.write({**POST, "design_prompt": "A monk", "status": "Approved"})
+    review_ui.update_post_settings("post_001", {"layout": "poster"})
+    assert workspace.read()["layout"] == "poster"
+    with pytest.raises(ValueError, match="feed posts"):
+        review_ui.update_post_settings("post_001", {"music_track": None})
+    review_ui.update_post_settings("post_001", {"supporting_copy": " — The Buddha "})
+    assert workspace.read()["supporting_copy"] == "— The Buddha"
+    with pytest.raises(ValueError, match="cannot be empty"):
+        review_ui.update_post_settings("post_001", {"main_point": "  "})
+    record = review_ui.convert_to_reel("post_001")
+    assert record["format_id"] == "image_reel" and record["platform_id"] == "instagram"
+    assert record["music_cue"] and workspace.read()["layout"] == "poster"

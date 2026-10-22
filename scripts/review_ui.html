@@ -1000,6 +1000,8 @@
         stageButton("artwork", "artwork", container);
         container.append(manualArtworkControls());
       }
+      if (state.record.status !== "Published") container.append(onImageTextEditor());
+      if (!isImageReel() && state.record.status !== "Published") container.append(feedPostControls());
       stageButton("instagram_image", "Instagram image", container);
       const image = state.assets.find((asset) => asset.key === "instagram_image");
       if (image) {
@@ -1320,6 +1322,87 @@
       });
       if (message) window.alert(message);
       await refreshItems(state.selected);
+    }
+
+    function onImageTextEditor() {
+      const box = document.createElement("details");
+      box.className = "inline-actions";
+      const summary = document.createElement("summary");
+      summary.textContent = "Edit on-image text";
+      box.append(summary);
+      const hint = document.createElement("p");
+      hint.className = "hint";
+      hint.textContent = "Rendering draws exactly these words, so change them here and render again. "
+        + "Wrap one to three key words in **double asterisks** to highlight them. "
+        + "In the Poster layout the title is not shown; keep the main point short (about 14 words).";
+      box.append(hint);
+      const fields = [["title", "Title"], ["main_point", "Main point"], ["supporting_copy", "Supporting copy"]];
+      const inputs = {};
+      for (const [key, name] of fields) {
+        const label = document.createElement("label");
+        label.style.display = "block";
+        label.textContent = name;
+        const input = document.createElement("textarea");
+        input.rows = key === "title" ? 1 : 2;
+        input.style.width = "100%";
+        input.value = state.record[key] || "";
+        const count = document.createElement("small");
+        const update = () => { count.textContent = ` ${input.value.trim().split(/\s+/).filter(Boolean).length} words`; };
+        input.addEventListener("input", update);
+        update();
+        label.append(count, input);
+        inputs[key] = input;
+        box.append(label);
+      }
+      box.append(makeAction("Save text", async () => {
+        const changes = {};
+        for (const [key] of fields) {
+          if (inputs[key].value.trim() !== (state.record[key] || "").trim()) changes[key] = inputs[key].value;
+        }
+        if (!Object.keys(changes).length) return window.alert("Nothing changed.");
+        try {
+          await saveReelSettings(changes, "Text saved. Render the Instagram image again.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }));
+      return box;
+    }
+
+    function feedPostControls() {
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const label = document.createElement("label");
+      label.textContent = "Layout ";
+      const select = document.createElement("select");
+      select.append(new Option("Poster (text over open space)", "poster"));
+      select.append(new Option("Standard (brand layout)", "panel"));
+      select.value = state.record.layout === "poster" ? "poster" : "panel";
+      select.addEventListener("change", async () => {
+        try {
+          await saveReelSettings({ layout: select.value },
+            "Layout changed. Render the Instagram image again.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      label.append(select);
+      const convert = makeAction("Convert to Reel (video + music)", async () => {
+        if (!window.confirm("Turn this post into a one-image Reel? The copy and caption stay; add new 9:16 art for the best result.")) return;
+        try {
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/convert_to_reel`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+          });
+        } catch (error) {
+          window.alert(error.message);
+        }
+        await refreshItems(state.selected);
+      }, "secondary");
+      const note = document.createElement("span");
+      note.className = "message";
+      note.textContent = "Feed posts are still images. For video and music, convert to a Reel.";
+      box.append(label, convert, note);
+      return box;
     }
 
     function musicControls() {

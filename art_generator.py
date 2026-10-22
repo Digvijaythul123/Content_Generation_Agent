@@ -48,6 +48,14 @@ _IMAGE_REEL_ART_RULES = (
     "subject away from the edges. Absolutely no text, letters, numbers, "
     "captions, signatures, watermarks, logos, or frames anywhere in the image."
 )
+_FEED_POSTER_ART_RULES = (
+    "Background artwork for a 4:5 portrait Instagram post. Place the main "
+    "subject in the lower 55% of the frame, large and clear. Keep the upper "
+    "40% open, luminous, and uncluttered (open sky, soft mist, or a gentle "
+    "beam of light) so text can be overlaid there later. Absolutely no text, "
+    "letters, numbers, captions, signatures, watermarks, logos, or frames "
+    "anywhere in the image."
+)
 _POSTER_COMPOSITION = (
     "Place the main subject in the lower 55% of the frame, large and clear."
 )
@@ -336,6 +344,8 @@ def build_art_prompt(record, art_style=None):
                 composition=_PANEL_COMPOSITION, text_area=_TEXT_AREAS[palette]
             )
         parts = [rules, _CINEMATIC_QUALITY]
+    elif record.get("layout") == "poster":
+        parts = [_FEED_POSTER_ART_RULES, _CINEMATIC_QUALITY]
     else:
         parts = [_ART_RULES]
     if style:

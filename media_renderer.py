@@ -30,6 +30,7 @@ _LAYOUT_TEMPLATES = {
 }
 IMAGE_REEL_TEMPLATE = TEMPLATE_DIRECTORY / "image_reel.html"
 IMAGE_REEL_POSTER_TEMPLATE = TEMPLATE_DIRECTORY / "image_reel_poster.html"
+FEED_POSTER_TEMPLATE = TEMPLATE_DIRECTORY / "feed_poster.html"
 # "poster" puts the words over open sky in the top third; "panel" uses a
 # dark band at the bottom. Records without a layout keep the panel look.
 IMAGE_REEL_LAYOUTS = ("poster", "panel")
@@ -164,8 +165,13 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         if labels
         else ""
     )
-    layout = "image_reel" if is_image_reel(record) else layout_for(brand)
-    if layout in ("quote_painting", "image_reel") and artwork is None:
+    if is_image_reel(record):
+        layout = "image_reel"
+    elif record.get("layout") == "poster":
+        layout = "feed_poster"
+    else:
+        layout = layout_for(brand)
+    if layout in ("quote_painting", "image_reel", "feed_poster") and artwork is None:
         raise MediaRenderError(
             "This layout paints background artwork first; generate "
             "the artwork, then render the image."
@@ -176,6 +182,8 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             if reel_layout(record) == "poster"
             else IMAGE_REEL_TEMPLATE
         )
+    elif layout == "feed_poster":
+        template_path = FEED_POSTER_TEMPLATE
     else:
         template_path = _LAYOUT_TEMPLATES[layout]
     try:
@@ -194,7 +202,8 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         font_family=template.font_family,
         art=(
             _art_html(artwork)
-            if layout in ("quote_painting", "image_reel") and layer != "text"
+            if layout in ("quote_painting", "image_reel", "feed_poster")
+            and layer != "text"
             else ""
         ),
         layer=layer,
@@ -295,7 +304,9 @@ def render_post_image(post_id):
     brand = _brand_for(record)
     artwork = (
         artwork_path(post_id)
-        if is_image_reel(record) or layout_for(brand) == "quote_painting"
+        if is_image_reel(record)
+        or record.get("layout") == "poster"
+        or layout_for(brand) == "quote_painting"
         else None
     )
     with tempfile.TemporaryDirectory() as folder:

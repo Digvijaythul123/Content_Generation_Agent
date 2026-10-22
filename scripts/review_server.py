@@ -223,6 +223,21 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "convert_to_reel"
+        ):
+            try:
+                record = ui.convert_to_reel(path_parts[3])
+                self._send_json({"record": record})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except (ui.PostStorageError, ui.ReviewUIError, OSError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
             and path_parts[4] == "settings"
         ):
             try:
