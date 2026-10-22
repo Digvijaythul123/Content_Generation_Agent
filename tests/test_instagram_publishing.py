@@ -865,3 +865,17 @@ def test_generated_captions_are_trimmed_to_five_hashtags():
     assert trim_hashtags(caption) == "Hook.\n\nTeaching: X\n\n#a #b #c #d #e"
     with pytest.raises(ContentValidationError, match="5 hashtags"):
         validate_instagram_caption(caption)
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        ("Teaching: The mind leads (Dhammapada 1-2)", "Dhammapada 1-2"),
+        ("Teaching: Education as the root of freedom (Gulamgiri).", "Gulamgiri"),
+        ("Teaching: Certainty (Source: Discourses 2.17)", "Discourses 2.17"),
+        ("Teaching: Book learning (Reference: Kabir's dohas).", "Kabir's dohas"),
+        ("Source: Meditations 12.17", "Meditations 12.17"),
+    ],
+)
+def test_footer_source_line_handles_caption_variants(line, expected):
+    assert media_renderer.source_line({"caption": f"Hook\n\n{line}\n\n#a"}) == expected

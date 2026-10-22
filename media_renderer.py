@@ -79,9 +79,12 @@ def source_line(record):
     match = _SOURCE_PATTERN.search(str(record.get("caption") or ""))
     if not match:
         return ""
-    text = match.group(1).strip()
-    reference = re.search(r"\(([^()]+)\)\s*$", text)
-    return (reference.group(1) if reference else text).strip()
+    text = match.group(1).strip().rstrip(".;, ")
+    reference = re.search(r"\(([^()]+)\)$", text)
+    if reference:
+        text = reference.group(1)
+    # "(Source: Discourses 2.17)" and "(Reference: ...)" keep just the citation.
+    return re.sub(r"^(?:source|reference)s?:\s*", "", text.strip(), flags=re.I)
 
 
 def _brand_for(record):
