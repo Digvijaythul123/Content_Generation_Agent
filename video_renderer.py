@@ -481,8 +481,8 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             seconds,
             music,
             motion_clip=motion_clip,
-            # Posters crop the bottom strip where tools put watermarks.
-            clip_zoom=1.11 if poster else 1.0,
+            # Crop the bottom strip where tools put watermarks.
+            clip_zoom=1.11,
             effects=(
                 render_effect_layers(effect_for(record), Path(folder), seconds)
                 if effect_for(record)
