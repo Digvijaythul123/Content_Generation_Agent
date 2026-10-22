@@ -32,28 +32,35 @@ TEXT_FADE_SECONDS = 0.5
 LIGHT_BREATH = 0.025
 LIGHT_PERIOD = 4
 GRAIN = 6
-# Optional overlay effects. Each layer is drawn once as a tileable
-# transparent PNG and scrolled by ffmpeg so it loops seamlessly under the
-# text: (kind, seed, count, size range, alpha range, x and y speed in px/s;
-# positive y falls, negative y rises). For "meteor", count is the number of
-# shooting stars spread over the clip.
+# Optional overlay effects, after common compositing practice: depth layers
+# of differing size, speed, blur, and opacity; soft streaks rather than hard
+# lines; rays that fan out from one light source with dust catching the
+# light; meteors that flare and fade. Each layer is drawn once as a
+# transparent PNG and moved by ffmpeg, under the text.
+#
+# Layer: (kind, seed, count, size range, alpha range, motion). Motion is
+# ("scroll", x px/s, y px/s) for a seamless loop (positive y falls),
+# ("sway", px, seconds per sway, phase) for a gentle side-to-side drift,
+# ("still",), or ("flash",) for meteors spread over the clip.
 VIDEO_EFFECTS = {
     "sparks": (
-        ("spark", 7, 70, (0.8, 4.0), (0.25, 0.85), 0, -46),
-        ("spark", 19, 30, (0.8, 7.3), (0.25, 0.85), 0, -24),
+        ("spark", 7, 70, (0.8, 4.0), (0.25, 0.85), ("scroll", 0, -46)),
+        ("spark", 19, 30, (0.8, 7.3), (0.25, 0.85), ("scroll", 0, -24)),
     ),
     "meteors": (
-        ("star", 23, 160, (0.6, 1.8), (0.15, 0.6), 0, 0),
-        # Meteors are timed flashes across the sky, not a looping layer.
-        ("meteor", 5, 7, (260, 420), (0.7, 0.95), -900, 620),
+        ("star", 23, 220, (0.5, 1.6), (0.12, 0.55), ("still",)),
+        ("meteor", 5, 7, (240, 460), (0.75, 1.0), ("flash",)),
     ),
     "rain": (
-        ("rain", 3, 150, (40, 90), (0.18, 0.35), 0, 1500),
-        ("rain", 11, 60, (90, 170), (0.3, 0.5), 0, 2300),
+        ("mist", 1, 1, (0, 0), (0.22, 0.22), ("still",)),
+        ("rain", 3, 380, (22, 48), (0.22, 0.4), ("scroll", 0, 1150)),
+        ("rain", 11, 160, (60, 120), (0.32, 0.55), ("scroll", 0, 1750)),
+        ("raindrop", 17, 20, (180, 320), (0.14, 0.26), ("scroll", 0, 2600)),
     ),
     "sunlight": (
-        ("beam", 13, 4, (120, 260), (0.10, 0.20), 14, 0),
-        ("beam", 29, 3, (80, 180), (0.08, 0.16), -9, 0),
+        ("rays", 13, 16, (0.8, 3.0), (0.07, 0.19), ("sway", 34, 9, 0)),
+        ("rays", 29, 10, (0.6, 2.0), (0.05, 0.13), ("sway", 26, 6.5, 2)),
+        ("mote", 31, 90, (0.8, 2.6), (0.15, 0.55), ("scroll", -8, 14)),
     ),
 }
 EFFECT_NAMES = {
@@ -62,12 +69,25 @@ EFFECT_NAMES = {
     "rain": "Rain",
     "sunlight": "Sunlight rays",
 }
+# Rays fan out from a sun just above the top-right corner of the frame.
+_SUN = (1150, -260)
+_SWAY_MARGIN = 80
 _EFFECT_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
 html, body {{ margin: 0; width: {width}px; height: {height}px; background: transparent; }}
 </style></head><body><canvas id="c" width="{width}" height="{height}"></canvas><script>
 let seed = {seed};
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const ctx = document.getElementById("c").getContext("2d");
+const W = {width}, H = {height};
+// A soft streak: transparent at both ends, like a motion-blurred drop.
+function streak(x, y, dx, dy, width, colour, a) {{
+  const g = ctx.createLinearGradient(x, y, x + dx, y + dy);
+  g.addColorStop(0, `rgba(${{colour}}, 0)`);
+  g.addColorStop(0.5, `rgba(${{colour}}, ${{a}})`);
+  g.addColorStop(1, `rgba(${{colour}}, 0)`);
+  ctx.strokeStyle = g; ctx.lineWidth = width; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+}}
 const draw = {{
   spark(x, y, r, a) {{
     const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
@@ -77,50 +97,94 @@ const draw = {{
     ctx.beginPath(); ctx.arc(x, y, r * 3, 0, Math.PI * 2); ctx.fill();
   }},
   star(x, y, r, a) {{
-    if (y > 1100) return;  // stars only in the sky
-    ctx.fillStyle = `rgba(255, 250, 235, ${{a}})`;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    if (y > 1050) return;  // stars only in the sky
+    const tint = ["255, 250, 240", "225, 235, 255", "255, 238, 215"][Math.floor(rand() * 3)];
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
+    g.addColorStop(0, `rgba(${{tint}}, ${{a * (1.15 - y / 1050)}})`);
+    g.addColorStop(1, `rgba(${{tint}}, 0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
   }},
   meteor(x, y, len, a) {{
-    // The tail trails up and to the right of the head, against the motion.
-    const tx = x + 0.825 * len, ty = y - 0.565 * len;
-    const g = ctx.createLinearGradient(x, y, tx, ty);
-    g.addColorStop(0, `rgba(255, 248, 225, ${{a}})`);
-    g.addColorStop(0.15, `rgba(255, 220, 160, ${{a * 0.6}})`);
-    g.addColorStop(1, "rgba(255, 210, 150, 0)");
-    ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke();
-    const h = ctx.createRadialGradient(x, y, 0, x, y, 14);
-    h.addColorStop(0, `rgba(255, 255, 240, ${{a}})`);
-    h.addColorStop(1, "rgba(255, 255, 240, 0)");
-    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+    // Tapered tail, brightest at the head, trailing up and to the right.
+    const ux = 0.825, uy = -0.565, tx = x + ux * len, ty = y + uy * len;
+    const tint = ["255, 255, 250", "255, 255, 250", "215, 255, 225", "210, 230, 255"][Math.floor(rand() * 4)];
+    const tail = (width, alpha) => {{
+      const g = ctx.createLinearGradient(x, y, tx, ty);
+      g.addColorStop(0, `rgba(255, 255, 255, ${{alpha}})`);
+      g.addColorStop(0.12, `rgba(${{tint}}, ${{alpha * 0.8}})`);
+      g.addColorStop(0.5, `rgba(${{tint}}, ${{alpha * 0.25}})`);
+      g.addColorStop(1, `rgba(${{tint}}, 0)`);
+      ctx.fillStyle = g; ctx.beginPath();
+      ctx.moveTo(x - uy * width, y + ux * width);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(x + uy * width, y - ux * width);
+      ctx.arc(x, y, width, 0, Math.PI * 2);
+      ctx.fill();
+    }};
+    ctx.filter = "blur(5px)"; tail(5, a * 0.45);
+    ctx.filter = "none"; tail(1.6, a);
+    const h = ctx.createRadialGradient(x, y, 0, x, y, 18);
+    h.addColorStop(0, `rgba(255, 255, 255, ${{a}})`);
+    h.addColorStop(0.3, `rgba(${{tint}}, ${{a * 0.35}})`);
+    h.addColorStop(1, `rgba(${{tint}}, 0)`);
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill();
   }},
   rain(x, y, len, a) {{
-    ctx.strokeStyle = `rgba(215, 228, 255, ${{a}})`;
-    ctx.lineWidth = len > 90 ? 2.2 : 1.4; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - len * 0.06, y + len); ctx.stroke();
+    const angle = -0.07 + (rand() - 0.5) * 0.05;
+    streak(x, y, Math.sin(-angle) * len, len, len > 60 ? 1.7 : 1.1, "220, 230, 245", a);
   }},
-  beam(x, y, w, a) {{
-    // A soft shaft of light falling from above, leaning slightly.
+  raindrop(x, y, len, a) {{
+    // A few large, out-of-focus drops close to the lens.
+    ctx.filter = "blur(3px)";
+    streak(x, y, len * 0.07, len, 5, "230, 238, 250", a);
+    ctx.filter = "none";
+  }},
+  mist(x, y, s, a) {{
+    // Rain dims and cools the air, most of all near the ground.
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgba(18, 24, 34, ${{a * 0.8}})`);
+    g.addColorStop(1, `rgba(28, 36, 48, ${{a * 1.3}})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }},
+  rays(x, y, spread, a) {{
+    // One shaft fanning out from the sun, fading with distance.
+    const [sx, sy] = [{sun_x}, {sun_y}];
+    const angle = (98 + rand() * 56) * Math.PI / 180;
+    const half = spread * Math.PI / 360, reach = 2600;
     ctx.save();
-    ctx.filter = "blur(28px)";
-    ctx.globalCompositeOperation = "lighter";
-    ctx.translate(x, -120); ctx.rotate(-0.32);
-    const g = ctx.createLinearGradient(0, 0, 0, 2100);
-    g.addColorStop(0, `rgba(255, 228, 165, ${{a}})`);
-    g.addColorStop(0.55, `rgba(255, 220, 150, ${{a * 0.45}})`);
-    g.addColorStop(1, "rgba(255, 220, 150, 0)");
-    ctx.fillStyle = g; ctx.fillRect(-w / 2, 0, w, 2100);
+    ctx.filter = `blur(${{14 + spread * 8}}px)`; ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(sx, sy, 150, sx, sy, reach);
+    g.addColorStop(0, `rgba(255, 236, 190, ${{a}})`);
+    g.addColorStop(0.45, `rgba(255, 222, 160, ${{a * 0.5}})`);
+    g.addColorStop(1, "rgba(255, 215, 150, 0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(angle - half) * reach, sy + Math.sin(angle - half) * reach);
+    ctx.lineTo(sx + Math.cos(angle + half) * reach, sy + Math.sin(angle + half) * reach);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
+  }},
+  mote(x, y, r, a) {{
+    // Dust floating in the light, brighter nearer the sun.
+    const near = Math.max(0.25, 1 - Math.hypot(x - {sun_x}, y - {sun_y}) / 2000);
+    ctx.filter = r > 2 ? "blur(1.5px)" : "none";
+    ctx.fillStyle = `rgba(255, 240, 205, ${{a * near}})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.filter = "none";
   }},
 }};
 const items = [];
 for (let i = 0; i < {count}; i++) items.push([
-  rand() * 1080, rand() * 1920,
+  {x_base} + rand() * {x_range}, rand() * {y_range},
   {size_low} + rand() * ({size_high} - {size_low}),
   {alpha_low} + rand() * ({alpha_high} - {alpha_low}),
 ]);
-// Repeat the 1080x1920 tile along each moving axis so the scroll loops.
+if ("{kind}" === "rays") {{
+  const g = ctx.createRadialGradient({sun_x}, {sun_y}, 0, {sun_x}, {sun_y}, 900);
+  g.addColorStop(0, `rgba(255, 238, 200, {alpha_high})`);
+  g.addColorStop(1, "rgba(255, 238, 200, 0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}}
+// Repeat the 1080x1920 tile along each scrolling axis so the loop is seamless.
 for (const ox of {x_offsets}) for (const oy of {y_offsets})
   for (const [x, y, s, a] of items) draw.{kind}(x + ox, y + oy, s, a);
 </script></body></html>"""
@@ -143,60 +207,86 @@ def effect_for(record):
     return "sparks" if record.get("sparks") and effect is None else None
 
 
-METEOR_SECONDS = 0.6
-_METEOR_TILE = (480, 340)
+METEOR_SECONDS = 0.7
+METEOR_FADE_SECONDS = 0.18
+_METEOR_TILE = (500, 360)
+_METEOR_HEAD = (24, 336)
+_METEOR_VARIANTS = 3
 
 
-def _meteor_events(strip, seed, count, speed, seconds=DEFAULT_DURATION_SECONDS):
-    """Shooting stars: each crosses the upper sky once, then disappears."""
-    vx, vy = speed
+def _meteor_events(strips, seed, count, seconds=DEFAULT_DURATION_SECONDS):
+    """Shooting stars: each flares across the upper sky once, then fades."""
     rand = random.Random(seed)
     gap = seconds / count
     events = []
     for index in range(count):
         start = round(index * gap + rand.uniform(0.1, gap * 0.6), 2)
+        speed = rand.uniform(0.8, 1.25)
+        vx, vy = round(900 * speed), round(620 * speed)
         x = rand.randint(380, 1180)
         y = rand.randint(-260, 200)
         events.append((
-            strip,
-            f"{x}-{-vx}*(t-{start})",
+            strips[index % len(strips)],
+            f"{x}-{vx}*(t-{start})",
             f"{y}+{vy}*(t-{start})",
-            f"between(t,{start},{round(start + METEOR_SECONDS, 2)})",
+            (start, METEOR_SECONDS),
         ))
     return events
 
 
+def _layer_html(kind, seed, count, size, alpha, width, height, x_offsets, y_offsets, x_base=0):
+    # x_base shifts the scene (and the sun) right on canvases wider than the frame.
+    return _EFFECT_HTML.format(
+        width=width, height=height, seed=seed, count=count, kind=kind,
+        size_low=size[0], size_high=size[1],
+        alpha_low=alpha[0], alpha_high=alpha[1],
+        x_base=x_base, x_range=1080, y_range=1920,
+        x_offsets=x_offsets, y_offsets=y_offsets,
+        sun_x=_SUN[0] + x_base, sun_y=_SUN[1],
+    )
+
+
 def render_effect_layers(effect, folder, seconds=DEFAULT_DURATION_SECONDS):
-    """Draw an effect's layers as PNG strips: (path, x expr, y expr[, enable])."""
+    """Draw an effect's layers: (path, x expr, y expr[, (start, seconds)])."""
     layers = []
-    for index, (kind, seed, count, size, alpha, vx, vy) in enumerate(VIDEO_EFFECTS[effect]):
-        if kind == "meteor":
-            width, height = _METEOR_TILE
-            html = _EFFECT_HTML.format(
-                width=width, height=height, seed=seed, count=1, kind=kind,
-                size_low=size[1], size_high=size[1],
-                alpha_low=alpha[1], alpha_high=alpha[1],
-                x_offsets="[0]", y_offsets="[0]",
-            ).replace("rand() * 1080, rand() * 1920,", "16, 324,")
-            strip = render_html_to_png(
-                html, folder / f"{effect}_{index}.png", (width, height)
-            )
-            layers += _meteor_events(strip, seed, count, (vx, vy), seconds)
+    for index, (kind, seed, count, size, alpha, motion) in enumerate(VIDEO_EFFECTS[effect]):
+        name = folder / f"{effect}_{index}"
+        if motion[0] == "flash":
+            strips = []
+            for variant in range(_METEOR_VARIANTS):
+                width, height = _METEOR_TILE
+                length = size[0] + (size[1] - size[0]) * variant / max(_METEOR_VARIANTS - 1, 1)
+                html = _layer_html(
+                    kind, seed + variant, 1, (length, length), (alpha[1], alpha[1]),
+                    width, height, "[0]", "[0]",
+                ).replace(
+                    "rand() * 1080, rand() * 1920,",
+                    f"{_METEOR_HEAD[0]}, {_METEOR_HEAD[1]},",
+                )
+                strips.append(render_html_to_png(html, Path(f"{name}_{variant}.png"), (width, height)))
+            layers += _meteor_events(strips, seed, count, seconds)
             continue
-        width = 2160 if vx else 1080
-        height = 3840 if vy else 1920
-        x_offsets = "[-1080, 0, 1080, 2160]" if vx else "[-1080, 0, 1080]"
-        y_offsets = "[-1920, 0, 1920, 3840]" if vy else "[0]"
-        html = _EFFECT_HTML.format(
-            width=width, height=height, seed=seed, count=count, kind=kind,
-            size_low=size[0], size_high=size[1],
-            alpha_low=alpha[0], alpha_high=alpha[1],
-            x_offsets=x_offsets, y_offsets=y_offsets,
-        )
-        strip = render_html_to_png(
-            html, folder / f"{effect}_{index}.png", (width, height)
-        )
-        layers.append((strip, _scroll(vx, 1080), _scroll(vy, 1920)))
+        if motion[0] == "sway":
+            _, amount, period, phase = motion
+            width, height = 1080 + 2 * _SWAY_MARGIN, 1920
+            html = _layer_html(
+                kind, seed, count, size, alpha, width, height, "[0]", "[0]",
+                x_base=_SWAY_MARGIN,
+            )
+            x = f"-{_SWAY_MARGIN}+{amount}*sin(2*PI*t/{period}+{phase})"
+            y = "0"
+        else:
+            vx, vy = motion[1:] if motion[0] == "scroll" else (0, 0)
+            width = 2160 if vx else 1080
+            height = 3840 if vy else 1920
+            html = _layer_html(
+                kind, seed, count, size, alpha, width, height,
+                "[-1080, 0, 1080, 2160]" if vx else "[-1080, 0, 1080]" if kind != "mist" else "[0]",
+                "[-1920, 0, 1920, 3840]" if vy else "[0]",
+            )
+            x, y = _scroll(vx, 1080), _scroll(vy, 1920)
+        strip = render_html_to_png(html, Path(f"{name}.png"), (width, height))
+        layers.append((strip, x, y))
     return layers
 
 
@@ -262,12 +352,23 @@ def build_ffmpeg_command(
     # Effects move over the background but stay under the glow and text.
     previous = "vbase"
     first_effect = len(text_layers) + 1
-    for offset, (strip, x, y, *enable) in enumerate(effects):
+    for offset, (strip, x, y, *flash) in enumerate(effects):
         index = first_effect + offset
         label = "v0" if offset == len(effects) - 1 else f"ve{offset}"
-        timing = f":enable='{enable[0]}'" if enable else ""
+        source, timing = f"{index}:v", ""
+        if flash:
+            # A timed flash (a meteor) flares in and fades out.
+            start, length = flash[0]
+            fade_out = round(start + length - METEOR_FADE_SECONDS, 2)
+            filters.append(
+                f"[{index}:v]format=rgba,"
+                f"fade=t=in:st={start}:d={METEOR_FADE_SECONDS / 2}:alpha=1,"
+                f"fade=t=out:st={fade_out}:d={METEOR_FADE_SECONDS}:alpha=1[fx{offset}]"
+            )
+            source = f"fx{offset}"
+            timing = f":enable='between(t,{start},{round(start + length, 2)})'"
         filters.append(
-            f"[{previous}][{index}:v]overlay=x='{x}':y='{y}':format=auto{timing}[{label}]"
+            f"[{previous}][{source}]overlay=x='{x}':y='{y}':format=auto{timing}[{label}]"
         )
         previous = label
     if not effects:

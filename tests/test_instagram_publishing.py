@@ -1059,13 +1059,16 @@ def test_feed_post_poster_layout_and_conversion_to_reel(tmp_path, workspace, mon
 
 
 def test_meteors_are_timed_flashes_in_the_upper_sky(tmp_path):
-    events = video_renderer._meteor_events(tmp_path / "m.png", 5, 7, (-900, 620), 8)
-    assert len(events) == 7
-    starts = [float(enable.split(",")[1]) for _, _, _, enable in events]
+    strips = [tmp_path / "m0.png", tmp_path / "m1.png", tmp_path / "m2.png"]
+    events = video_renderer._meteor_events(strips, 5, 7, 8)
+    assert len(events) == 7 and {event[0] for event in events} == set(strips)
+    starts = [timing[0] for _, _, _, timing in events]
     assert starts == sorted(starts) and all(0 < start < 8 for start in starts)
-    for _, x, y, enable in events:
-        assert x.split("-")[0].isdigit() and "620*(t-" in y and enable.startswith("between(t,")
+    for _, x, y, (start, length) in events:
+        assert x.split("-")[0].isdigit() and f"*(t-{start})" in y
         assert int(y.split("+")[0]) <= 200  # starts high, so it stays in the sky
     command = video_renderer.build_ffmpeg_command(
         "ffmpeg", tmp_path / "bg.jpg", [], tmp_path / "o.mp4", 8, effects=events[:1])
-    assert ":enable='between(t," in command[command.index("-filter_complex") + 1]
+    filters = command[command.index("-filter_complex") + 1]
+    assert "fade=t=in" in filters and "fade=t=out" in filters  # flares and fades
+    assert ":enable='between(t," in filters
