@@ -61,9 +61,9 @@ no multi-scene video provider or 3D system is implemented.
 ### Runtime upgrade — [NEXT]
 - Upgrade from Python 3.9 to 3.11+ (boto3 drops 3.9 support in April 2026).
 
-### Back up local content — [NEXT]
-- Drafts, art, renders, and history are local only (ignored by git). Add a
-  documented backup (Time Machine or an iCloud copy) or an export command.
+### Back up local content — [CURRENT]
+- Done 22 Oct 2026: `scripts/backup_content.py` zips content to iCloud Drive
+  weekly through the scheduler (keeps four, excludes `.env`).
 
 ### Scheduler availability — [FUTURE]
 - Scheduling depends on the Mac being on. Consider a cloud scheduler only if

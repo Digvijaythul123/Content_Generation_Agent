@@ -1142,3 +1142,31 @@ def test_story_mode_style_is_not_overridden_by_thinker():
     )
     assert request.visual_style == "living_thinker"
 
+
+
+def test_backup_zips_content_folders_and_keeps_the_newest(tmp_path):
+    import zipfile
+    from datetime import datetime, timedelta, timezone
+    from scripts import backup_content
+
+    root = tmp_path / "project"
+    (root / "generated_posts").mkdir(parents=True)
+    (root / "generated_posts" / "post_001.json").write_text("{}")
+    (root / "music").mkdir()
+    (root / "music" / "a.mp3").write_bytes(b"mp3")
+    (root / ".env").write_text("SECRET=1")
+    dest = tmp_path / "backups"
+
+    for day in range(6):
+        backup_content.create_backup(dest, root, keep=4, now=datetime(2026, 10, 1 + day))
+    zips = sorted(dest.glob("content_*.zip"))
+    assert len(zips) == 4 and zips[-1].name == "content_2026-10-06_0000.zip"
+    names = zipfile.ZipFile(zips[-1]).namelist()
+    assert "generated_posts/post_001.json" in names and "music/a.mp3" in names
+    assert not any(".env" in name for name in names)
+
+    state = tmp_path / "state.json"
+    now = datetime(2026, 10, 22, tzinfo=timezone.utc)
+    kwargs = dict(destination=dest, root=root, state_path=state)
+    assert "backup saved" in backup_content.backup_if_due(now=now, **kwargs)
+    assert backup_content.backup_if_due(now=now + timedelta(days=3), **kwargs) is None

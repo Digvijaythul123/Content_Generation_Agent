@@ -259,3 +259,17 @@ Kubernetes, event buses, or distributed systems for this project.
    scheduled Reels every minute while the Mac is on; `--uninstall` stops it.
    Long-lived tokens expire after about 60 days; extend them with
    `python3 -m scripts.publish_post --refresh-token`.
+
+
+## Backups
+
+Drafts, art, renders, history, and music are ignored by git, so they are
+backed up separately to iCloud Drive (`Content_Generation_Agent backups/`),
+keeping the four newest zips. The scheduler does this automatically about
+once a week; run one any time with:
+
+```bash
+python3 -m scripts.backup_content
+```
+
+`.env` (tokens and keys) is never included; keep it safe separately.
