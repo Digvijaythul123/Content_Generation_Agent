@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 from unittest.mock import Mock, patch
 
@@ -11,6 +12,7 @@ from config_loader import (
     load_format,
     load_platform,
     load_profile_subtypes,
+    load_profile_visual_styles,
     resolve_generation_request,
 )
 from scripts import main
@@ -1223,3 +1225,21 @@ def test_fresh_wording_asks_for_new_lines_on_the_same_teaching():
     content_agent.simplify_copy(record, ai_service=service, fresh=True)
     prompt = service.generate_reel.call_args.args[0]
     assert "same teaching" in prompt and "Do not reuse" in prompt
+
+
+def test_dialogue_story_mode_reaches_prompt_and_asks_for_honest_labels():
+    prompt = _prompt_for(subtype="dialogue", thinker_id="buddha")
+    assert "Dialogue (Buddha and disciple)" in prompt
+    assert 'Disciple: "..."' in prompt and "A retelling inspired by" in prompt
+
+
+def test_visual_style_avoid_lists_never_name_text():
+    for style in load_profile_visual_styles("rational_thoughts"):
+        assert not re.search(r"\btext\b|letters|caption", style.get("avoid", ""), re.I), style["id"]
+
+
+def test_tidy_caption_joins_hashtags_split_across_lines():
+    from content_models import tidy_caption
+    caption = "Hook.\n\nTeaching: X (SN 1.1)\n\n#Buddhism\n\n#PaliCanon #Mindfulness\n#Dharma #Kindness"
+    assert tidy_caption(caption).endswith(
+        "(SN 1.1)\n\n#Buddhism #PaliCanon #Mindfulness #Dharma #Kindness")

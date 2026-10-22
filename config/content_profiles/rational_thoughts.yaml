@@ -137,6 +137,25 @@ subtypes:
     structure: Title is a 2-4 word plain hook; Main_point is the one-liner itself, at most 10 simple words, a whole life lesson in everyday language (a contrast or a turn works best); Supporting_copy is a small credit such as "— inspired by the Buddha" with the source; the caption explains the lesson in two or three short, plain sentences with one real-life example, then names the teaching and source.
     background: One calm, open image with a single warm light and lots of empty sky, so the line stands alone; soft flute or a gentle drone.
     example: '"You don''t lose what you let go. You lose what you hold too tight." — inspired by the Buddha, with a caption about a friendship that ended because one person held on too hard.'
+  - id: dialogue
+    default_visual_style: narrative_painting
+    name: Dialogue (Buddha and disciple)
+    definition: A two-line conversation between the Buddha and a disciple, in plain words, where the Buddha answers with a question or one line of wisdom that turns the disciple's thinking around.
+    structure: >-
+      Title is a 2-4 word plain hook naming the struggle (for example "When
+      anger stays"); Main_point is the disciple's line, written as
+      'Disciple: "..."', at most 10 simple words, usually a question about a
+      feeling people live with; Supporting_copy is the Buddha's reply,
+      written as 'Buddha: "..."', at most 10 simple words, a question back
+      or a short life lesson with a turn. Prefer a real exchange from the
+      suttas (for example Ananda on good friendship, SN 45.2, or Kisa Gotami
+      and the mustard seed), kept close to the text and cited; use a real
+      disciple's name only for a real exchange, otherwise write "Disciple".
+      Never present an invented line as the Buddha's exact words; the
+      caption says "A retelling inspired by" the teaching and gives its
+      source, then one plain sentence on how to use it today.
+    background: One quiet story moment with the Buddha and one disciple, the disciple looking up or bowing and the Buddha calm and kind, in a forest grove, a riverbank, or by lamplight; soft flute or a slow drone.
+    example: 'Disciple: "Why does my anger keep coming back?" Buddha: "Because you keep feeding it." Caption: a retelling inspired by the Buddha''s teaching on anger (Dhammapada 3-5).'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote
@@ -344,7 +363,7 @@ visual_styles:
       among black ones). Few or no people; a tiny human figure only for
       scale. Clean studio-quality composition, a single strong light, crisp
       macro detail, tactile materials, muted background.
-    avoid: clutter, more than one metaphor, cartoon look, text or signs on objects, cheap stock-photo feel
+    avoid: clutter, more than one metaphor, cartoon look, signboards or labels on objects, cheap stock-photo feel
   - id: storybook_monk
     name: Storybook young monk
     palette: night
@@ -363,7 +382,7 @@ visual_styles:
       layered mountains, a single small monk figure, one accent of red
       (sun or seal-free blossom), expressive dry-brush strokes, generous
       empty space.
-    avoid: calligraphy, red seal stamps, signatures, text, saturated colors
+    avoid: calligraphy, red seal stamps, signatures, saturated colors
   - id: narrative_painting
     name: Story-scene oil painting
     palette: day
@@ -372,7 +391,7 @@ visual_styles:
       moment with several figures: era-accurate clothing and village
       architecture, readable gestures and facial expressions that tell the
       story at a glance, warm natural daylight, rich detail, fine brushwork.
-    avoid: modern objects, caricature, crowded unreadable action, text or signs
+    avoid: modern objects, caricature, crowded unreadable action, signboards
   - id: fine_line_symbolic
     name: Fine-line symbolic close-up
     palette: night
@@ -382,7 +401,7 @@ visual_styles:
       symbolic close-up that shows only part of a figure (a hand, a robe
       sleeve) interacting with an animal or object; a single small glow of
       light at the point of contact.
-    avoid: full-body figures, busy backgrounds, harsh shading, text or seals
+    avoid: full-body figures, busy backgrounds, harsh shading, seals
   - id: golden_light
     name: Golden light (uplifting)
     palette: day
@@ -391,7 +410,7 @@ visual_styles:
       subject, god rays through mist or trees, warm amber and honey tones,
       drifting clouds or birds, luminous atmospheric haze, rich detail in
       robes, rock, water, and foliage, like a still from an epic film.
-    avoid: muddy colors, flat midday light, cluttered sky behind the text area, oversaturated orange, plastic skin
+    avoid: muddy colors, flat midday light, a cluttered sky, oversaturated orange, plastic skin
   - id: ink_gold
     name: Ink and gold
     palette: day
@@ -401,4 +420,4 @@ visual_styles:
       subject, misty layered mountains, a few floating gold lotus petals and
       sparks, strong light-versus-dark contrast that tells the idea, dramatic
       yet elegant composition.
-    avoid: colors other than black, grey, white, and gold; calligraphy; seals; clutter in the text area
+    avoid: colors other than black, grey, white, and gold; calligraphy; seals; a cluttered upper third

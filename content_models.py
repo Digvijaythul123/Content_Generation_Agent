@@ -573,6 +573,10 @@ def tidy_caption(caption):
         flags=re.MULTILINE,
     )
     text = re.sub(r"[ \t]+((?:#\w+\s*){2,})$", r"\n\n\1", text)
+    # Gather the closing hashtags onto one line, even if split across lines.
+    text = re.sub(
+        r"(?:#\w+\s*)+$", lambda match: " ".join(match.group(0).split()), text
+    )
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
