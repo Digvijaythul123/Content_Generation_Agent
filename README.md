@@ -166,6 +166,19 @@ generation prompt asks the model to do this. Artwork is its own review stage,
 so you can repaint it without changing the copy; repainting clears the stale
 render.
 
+In the review UI's Instagram tab, unpublished posts also have:
+
+- **Edit on-image text**: change the title, main point, and supporting copy
+  that the render draws (re-rendering alone redraws the same saved words).
+- **Layout** for feed posts: *Poster* (`templates/feed_poster.html`, words
+  over open space at the top) or *Standard* (the brand layout).
+- **Convert to Reel**: feed posts are still images, so this turns one into a
+  one-image Reel for video and music; add new 9:16 art afterwards.
+
+Art prompts never mention text, letters, or captions: image tools such as
+Copilot (DALL-E) tend to paint any words the prompt names. If a render shows
+the copy twice, the uploaded artwork already contains words; make it again.
+
 Artwork sources (`ART_PROVIDER` in `.env`):
 
 - `cloudflare` (default): Flux Schnell on Cloudflare Workers AI, inside the
