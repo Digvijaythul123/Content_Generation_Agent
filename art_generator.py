@@ -34,34 +34,39 @@ _EXTENSIONS = {
 MAX_VIDEO_ARTWORK_BYTES = 80 * 1024 * 1024
 VIDEO_ARTWORK_SUFFIXES = (".mp4", ".mov")
 
-# Text is overlaid later from the approved copy, so the art must have none.
+# Copy is laid over the art later, so the art must be wordless. Image tools
+# such as Copilot (DALL-E) tend to paint any words the prompt mentions, even
+# in a "no text" list, so these rules never name text, letters, or captions.
 _ART_RULES = (
     "Background artwork for a 4:5 portrait Instagram post. "
     "Place the main subject in the right third of the frame. Keep the left "
-    "60% calm, softly lit, and uncluttered (plain textured background) so "
-    "text can be overlaid there later. Absolutely no text, letters, numbers, "
-    "captions, signatures, watermarks, logos, or frames anywhere in the image."
+    "60% calm, softly lit, and empty (plain textured background, nothing "
+    "in it). {wordless}"
 )
 _IMAGE_REEL_ART_RULES = (
     "Background artwork for a 9:16 vertical Instagram Reel. "
     "{composition} {text_area} The camera slowly pushes in, so keep the "
-    "subject away from the edges. Absolutely no text, letters, numbers, "
-    "captions, signatures, watermarks, logos, or frames anywhere in the image."
+    "subject away from the edges. {wordless}"
 )
 _FEED_POSTER_ART_RULES = (
     "Background artwork for a 4:5 portrait Instagram post. Place the main "
     "subject in the lower 55% of the frame, large and clear. Keep the upper "
     "40% open, luminous, and uncluttered (open sky, soft mist, or a gentle "
-    "beam of light) so text can be overlaid there later. Absolutely no text, "
-    "letters, numbers, captions, signatures, watermarks, logos, or frames "
-    "anywhere in the image."
+    "beam of light) with nothing in it. {wordless}"
 )
+_WORDLESS = (
+    "A purely pictorial image: every surface is blank and unmarked, with no "
+    "writing, signs, symbols, watermark, border, or frame."
+)
+_ART_RULES = _ART_RULES.format(wordless=_WORDLESS)
+_IMAGE_REEL_ART_RULES = _IMAGE_REEL_ART_RULES.replace("{wordless}", _WORDLESS)
+_FEED_POSTER_ART_RULES = _FEED_POSTER_ART_RULES.format(wordless=_WORDLESS)
 _POSTER_COMPOSITION = (
     "Place the main subject in the lower 55% of the frame, large and clear."
 )
 _POSTER_TEXT_AREA = (
     "Keep the upper 35% open, luminous, and uncluttered (open sky, soft mist, "
-    "or a gentle beam of light) so text can be overlaid there later."
+    "or a gentle beam of light) with nothing in it."
 )
 _PANEL_COMPOSITION = "Make the main subject large, filling about 60% of the upper frame."
 # Every Reel should look like a frame from a high-end film, not a stock image.
@@ -73,12 +78,10 @@ _CINEMATIC_QUALITY = (
 )
 _TEXT_AREAS = {
     "night": (
-        "Let the lower 40% fall into deep, natural shadow so light text can "
-        "be overlaid there later."
+        "Let the lower 40% fall into deep, natural, empty shadow."
     ),
     "day": (
-        "Keep the lower 40% calm, softly lit, and uncluttered so dark text "
-        "can be overlaid there later."
+        "Keep the lower 40% calm, softly lit, plain, and empty."
     ),
 }
 

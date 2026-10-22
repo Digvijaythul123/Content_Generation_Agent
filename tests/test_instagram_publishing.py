@@ -1,4 +1,5 @@
 import json
+import re
 from unittest.mock import Mock
 
 import pytest
@@ -326,7 +327,8 @@ def test_brand_template_rejects_unknown_layout():
 
 def test_art_prompt_forbids_text_and_includes_style():
     prompt = build_art_prompt({"design_prompt": "A monk by a lake"}, "Warm parchment")
-    assert "no text" in prompt and "A monk by a lake" in prompt
+    assert "purely pictorial" in prompt and "A monk by a lake" in prompt
+    assert not re.search(r"\btext\b|letters|caption", prompt, re.I)
     assert "Visual style: Warm parchment" in prompt
     with pytest.raises(ArtGenerationError, match="design prompt"):
         build_art_prompt({"design_prompt": " "})
@@ -578,7 +580,7 @@ def test_visual_style_replaces_brand_style_and_darkens_render(tmp_path):
 
     assert "Photorealistic cinematic film still" in prompt
     assert "Painterly parchment brand" not in prompt
-    assert "deep, natural shadow" in prompt
+    assert "deep, natural, empty shadow" in prompt
     assert prompt.rstrip().endswith("HDR halos.")
 
     art = tmp_path / "art.png"
@@ -597,7 +599,7 @@ def test_image_reel_prompt_file_is_text_free_art_prompt():
     )
     assert "EXACT COPY" not in prompt
     assert POST["main_point"] not in prompt
-    assert "Absolutely no text" in prompt
+    assert "purely pictorial" in prompt
 
 
 def test_image_reel_footer_shows_source_and_handle(tmp_path):

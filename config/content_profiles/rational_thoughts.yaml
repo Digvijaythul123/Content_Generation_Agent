@@ -346,7 +346,7 @@ visual_styles:
       eyes, gentle humor. Soft painterly textures, glowing practical light
       (fireflies, a lantern, sunset), lush detailed nature, cozy cinematic
       depth of field.
-    avoid: chibi distortion, creepy or uncanny eyes, adult Buddha in childish form, plastic toy look, text in the image
+    avoid: chibi distortion, creepy or uncanny eyes, adult Buddha in childish form, plastic toy look
   - id: ink_wash
     name: Ink-wash landscape
     palette: day
