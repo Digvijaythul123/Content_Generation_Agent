@@ -889,3 +889,17 @@ def test_statue_and_portrait_styles_include_the_thinkers_likeness():
     assert "Likeness: Epictetus:" in portrait
     other = art_generator.build_art_prompt({**base, "visual_style": "conceptual_metaphor"})
     assert "Likeness" not in other
+
+
+def test_footer_skips_source_already_in_the_attribution(tmp_path):
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    brand = Brand.from_mapping({
+        "id": "demo", "display_name": "Demo", "default_profile_id": "rational_thoughts",
+        "default_format_id": "image_reel", "default_platform_id": "instagram",
+        "template": {"handle": "@demo"},
+    })
+    record = {**IMAGE_REEL, "supporting_copy": "— Epictetus, Discourses 2.17",
+              "caption": "Hook\n\nTeaching: X (Source: Discourses 2.17)\n\n#a"}
+    html = build_post_html(record, brand, artwork=art)
+    assert '<div class="handle">@demo</div>' in html

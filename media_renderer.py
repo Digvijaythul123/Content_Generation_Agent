@@ -87,6 +87,14 @@ def source_line(record):
     return re.sub(r"^(?:source|reference)s?:\s*", "", text.strip(), flags=re.I)
 
 
+def _footer_text(record, handle):
+    source = source_line(record)
+    # Quote posts already show the source in their attribution line.
+    if source and source.lower() in str(record.get("supporting_copy") or "").lower():
+        source = ""
+    return " · ".join(part for part in (source, handle) if part)
+
+
 def _brand_for(record):
     brand_id = record.get("brand_id")
     if not brand_id:
@@ -166,11 +174,7 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         labels=labels_html,
         brand_name=escape(brand.display_name) if brand is not None else "",
         handle=escape(template.handle or ""),
-        footer=escape(
-            " · ".join(
-                part for part in (source_line(record), template.handle) if part
-            )
-        ),
+        footer=escape(_footer_text(record, template.handle)),
     )
 
 
