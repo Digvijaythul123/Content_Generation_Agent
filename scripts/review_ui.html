@@ -1334,7 +1334,9 @@
       hint.className = "hint";
       hint.textContent = "Rendering draws exactly these words, so change them here and render again. "
         + "Only the text changes here (art, layout, music, and effect stay). Simplify or New wording "
-        + "fills in a suggestion; press again for another, edit it if needed, then Save text. "
+        + "fills in a suggestion. For illustrated designs (Mind states, Numbered list, Illustrated metaphor, "
+        + "Parable card) the image tool draws the words: after saving, copy the updated art prompt and make the art again. "
+        + "List posts keep one item per line. Press again for another suggestion, edit it if needed, then Save text. "
         + "Wrap one to three key words in **double asterisks** to highlight them. "
         + "In the Poster layout the title is not shown; keep the main point short (about 14 words).";
       box.append(hint);
@@ -1345,7 +1347,7 @@
         label.style.display = "block";
         label.textContent = name;
         const input = document.createElement("textarea");
-        input.rows = key === "title" ? 1 : 2;
+        input.rows = key === "title" ? 1 : Math.max(2, (state.record[key] || "").split("\n").length + 1);
         input.style.width = "100%";
         input.value = state.record[key] || "";
         const count = document.createElement("small");

@@ -331,11 +331,111 @@ def _without_blocked_names(text, record):
     return text
 
 
+def is_designed(record):
+    """True for illustrated story modes, where the image tool draws the words."""
+    subtype = record.get("subtype") or record.get("qa_subtype")
+    profile_id = record.get("profile_id")
+    if not subtype or not profile_id:
+        return False
+    from config_loader import ConfigurationError, load_profile_subtypes
+
+    try:
+        subtypes = load_profile_subtypes(profile_id)
+    except ConfigurationError:
+        return False
+    return any(
+        item.get("id") == subtype and item.get("designed_image") for item in subtypes
+    )
+
+
+def _handle_for(record):
+    brand_id = record.get("brand_id")
+    if not brand_id:
+        return ""
+    from config_loader import ConfigurationError, load_brand
+
+    try:
+        return load_brand(brand_id).template.handle or ""
+    except ConfigurationError:
+        return ""
+
+
+def _designed_art_prompt(record, scene, style, art_style=None):
+    """A finished illustrated post whose words the image tool draws."""
+    from content_text import strip_highlights
+
+    reel = art_aspect_ratio(record) == "9:16"
+    canvas = "a 9:16 vertical Instagram Reel" if reel else "a 4:5 portrait Instagram post"
+    safe_area = (
+        "Keep every word in the middle of the frame, clear of the top 12%, "
+        "the bottom 22%, and the right 12%, where Instagram's buttons and "
+        "caption sit."
+        if reel
+        else "Keep every word at least 6% away from each edge."
+    )
+    def plain(value):
+        return strip_highlights(str(value or "")).strip()
+
+    def quoted(text):
+        # Text that already has quote marks is shown as it is.
+        return text if '"' in text or "\u201c" in text else f'"{text}"'
+
+    words = ["Exact words to draw, spelled exactly as written, and no others:"]
+    if plain(record.get("title")):
+        words.append(f'Headline: {quoted(plain(record["title"]))}')
+    lines = [plain(line) for line in str(record.get("main_point") or "").splitlines()]
+    lines = [line for line in lines if line]
+    if len(lines) == 1:
+        words.append(f"Main line: {quoted(lines[0])}")
+    elif lines:
+        words.append("Lines, in this order, one per row or panel:")
+        words += [f"- {quoted(line)}" for line in lines]
+    if plain(record.get("supporting_copy")):
+        words.append(f'Closing line: {quoted(plain(record["supporting_copy"]))}')
+    handle = _handle_for(record)
+    if handle:
+        words.append(f'Small handle near the bottom: "{handle}"')
+    emphasis = re.findall(
+        r"\*\*(.+?)\*\*",
+        " ".join(str(record.get(field) or "") for field in ("title", "main_point", "supporting_copy")),
+    )
+    if emphasis:
+        words.append(
+            "Make these words bold and in the accent color: "
+            + ", ".join(dict.fromkeys(emphasis))
+        )
+    parts = [
+        f"Create one finished, illustrated image for {canvas}. The words are "
+        f"part of the design. {safe_area}",
+        "\n".join(words),
+        f"Layout and illustration: {scene}",
+    ]
+    if style:
+        parts.append(f"Visual style: {' '.join(style['recipe'].split())}")
+    elif art_style:
+        parts.append(f"Visual style: {art_style}")
+    likeness = _thinker_likeness(record, style)
+    if likeness:
+        parts.append(f"Likeness: {likeness}")
+    parts.append(
+        "Lettering: crisp, evenly spaced, and easy to read on a phone, with "
+        "strong contrast against what is behind it. Do not add any other "
+        "words, numbers, logos, signatures, or watermarks."
+    )
+    if style and style.get("avoid"):
+        parts.append(f"Avoid: {style['avoid']}.")
+    return "\n\n".join(parts)
+
+
 def build_art_prompt(record, art_style=None):
     description = str(record.get("design_prompt") or "").strip()
     if not description:
         raise ArtGenerationError("The post has no design prompt to paint from.")
     style = visual_style_for(record)
+    if is_designed(record):
+        return _designed_art_prompt(
+            record, _without_blocked_names(description, record), style, art_style
+        )
     if art_aspect_ratio(record) == "9:16":
         palette = style.get("palette", "day") if style else "day"
         if record.get("layout") == "poster":

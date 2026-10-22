@@ -27,6 +27,20 @@ VERIFIED_QUOTE_MODE = "verified_quote"
 
 
 
+# Illustrated story modes: the image tool draws the words from the fields.
+DESIGNED_IMAGE_RULES = (
+    "This story mode is a finished illustrated design: the image tool will "
+    "draw the words of Title, Main_point, and Supporting_copy into the "
+    "picture. These rules replace the format's rules about a wordless image, "
+    "an open upper third, and the 14-word Main_point limit:\n"
+    "- Main_point may hold several lines, one item per line, as the "
+    "structure describes.\n"
+    "- Design_prompt describes only the illustration and where each piece of "
+    "text sits (headline at the top, one row or panel per line, speech "
+    "bubbles, and so on). Do not write the words themselves in "
+    "Design_prompt; they are added from the other fields."
+)
+
 PLAIN_ENGLISH_RULES = (
     "Plain English (most important, for every on-screen line and the "
     "caption): write so a 12-year-old, or someone who learned English as a "
@@ -159,7 +173,7 @@ class ContentAgent:
             self._brief_section,
         ):
             prompt = section() + prompt
-        return self.ai_service.generate_reel(prompt)
+        return self.ai_service.generate_reel(prompt + self._designed_reminder())
 
     def _base_prompt(self):
         previous_titles = self.get_previous_titles()
@@ -404,11 +418,41 @@ class ContentAgent:
         ):
             if selected_subtype.get(key):
                 subtype_lines.append(f"{heading}: {selected_subtype[key]}")
+        if selected_subtype.get("designed_image"):
+            subtype_lines.append(DESIGNED_IMAGE_RULES)
         subtype_lines.append(
             f"Focus the content on this {label.lower()} while preserving the "
             "selected format's fields and the profile's accuracy safeguards.\n\n"
         )
         return "\n".join(subtype_lines)
+
+    def _designed_reminder(self):
+        """Restate an illustrated story mode's fields after the format rules,
+        which otherwise win (a small model follows the last instructions)."""
+        if not self.subtype:
+            return ""
+        selected = next(
+            (
+                item
+                for item in load_profile_subtypes(self.profile["id"])
+                if item["id"] == self.subtype and item.get("designed_image")
+            ),
+            None,
+        )
+        if selected is None:
+            return ""
+        return (
+            f"\n\nIMPORTANT, this overrides the format rules above: this is a "
+            f"{selected['name']} post. Write Title, Main_point, and "
+            f"Supporting_copy exactly as this structure says, not as a "
+            f"\"For the ...\" hook: {' '.join(selected['structure'].split())}\n"
+            f"Example of the shape (do not copy): {selected.get('example', '')}\n"
+            "Design_prompt: describe the illustrated page as one paragraph of "
+            "60-110 words (where the headline sits, one drawing or panel per "
+            "line or bubble, what each drawing shows, the background), without "
+            "Subject/Pose/Shot labels, without reserving empty space for text, "
+            "and without writing the words themselves.\n"
+        )
 
     def _comedy_section(self):
         if self.category_id != "comedy":
@@ -591,6 +635,7 @@ def _parse_simplified(reply):
     for label, text in zip(parts[1::2], parts[2::2]):
         text = text.strip()
         if label != "Caption":
-            text = " ".join(text.split())
+            # Keep one item per line (list posts), tidy spaces within lines.
+            text = "\n".join(" ".join(line.split()) for line in text.splitlines() if line.strip())
         found[_SIMPLIFY_LABELS[label]] = text
     return found

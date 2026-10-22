@@ -75,9 +75,9 @@ def build_post_prompt_file(
     One-image Reels get the text-free art prompt, because the renderer adds
     the copy itself; other posts get the finished-graphic prompt with copy.
     """
-    if content_format.id == "image_reel":
-        from art_generator import build_art_prompt
+    from art_generator import build_art_prompt, is_designed
 
+    if content_format.id == "image_reel" or is_designed(record):
         return build_art_prompt(
             {**record, "format_id": content_format.id}, art_style
         )

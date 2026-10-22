@@ -1098,3 +1098,33 @@ def test_poster_text_turns_dark_on_bright_art(tmp_path, monkeypatch):
         assert media_renderer.text_tone(art, record) == tone
         assert f"tone-{tone}" in build_post_html(record, artwork=art)
     assert media_renderer.text_tone(None, record) == "dark"
+
+
+def test_designed_posts_put_exact_words_in_the_art_prompt_and_render_whole(tmp_path):
+    record = {
+        **IMAGE_REEL, "profile_id": "rational_thoughts", "subtype": "mind_states",
+        "visual_style": "illustrated_watercolor", "brand_id": "default",
+        "title": "Where is your **mind**?",
+        "main_point": "**Regret** is when the mind is in the past.\n**Peace** is when the mind is here.",
+        "supporting_copy": "— inspired by the Buddha",
+        "design_prompt": "Cream page, one small monk beside each line.",
+    }
+    assert art_generator.is_designed(record)
+    assert not art_generator.is_designed({**record, "subtype": "mirror"})
+    prompt = art_generator.build_art_prompt(record)
+    assert 'Headline: "Where is your mind?"' in prompt
+    assert '- "Regret is when the mind is in the past."' in prompt
+    assert '"@buddha.realteachings"' in prompt and "Regret, Peace" in prompt
+    assert "purely pictorial" not in prompt and "watercolor" in prompt
+
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    html = build_post_html(record, artwork=art)
+    assert "object-fit: contain" in html and "Regret" not in html  # no overlay
+
+
+def test_designed_reel_video_moves_the_whole_picture_gently(tmp_path):
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [], tmp_path / "o.mp4", 8,
+        zoom=video_renderer.DESIGNED_ZOOM_AMOUNT)
+    assert "zoompan=z='1+0.025*on/240'" in command[command.index("-filter_complex") + 1]

@@ -31,6 +31,7 @@ from art_generator import (
     artwork_path,
     build_art_prompt,
     generate_post_artwork,
+    is_designed,
     save_post_artwork,
 )
 from content_text import strip_highlights
@@ -1104,6 +1105,9 @@ def update_post_settings(content_id, payload):
         record.pop("schedule_failed", None)
         changed.append("scheduled_at")
     save_post(content_id, record)
+    if is_designed(record) and set(changed) & set(ON_IMAGE_TEXT_FIELDS):
+        # The image tool draws these words, so its prompt must carry the new ones.
+        _write_art_prompt(content_id, record)
     _append_history(
         "post", content_id, "settings_updated", fields=changed,
         scheduled_at=record.get("scheduled_at"),
@@ -1121,6 +1125,24 @@ def simplify_post_text(content_id, fresh=False):
     return suggestion
 
 
+def _write_art_prompt(content_id, record):
+    """Rebuild the saved art prompt after the post's text or format changed."""
+    if not record.get("design_prompt"):
+        return
+    brand = _post_brand(record)
+    prompt = build_post_prompt_file(
+        record,
+        load_format(record.get("format_id") or "single_page"),
+        load_platform(record.get("platform_id") or "instagram"),
+        record.get("category_id"),
+        brand.template.art_style if brand else None,
+    )
+    GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    (GENERATED_ASSETS_DIRECTORY / f"{content_id}_design_prompt.txt").write_text(
+        prompt + "\n", encoding="utf-8"
+    )
+
+
 def convert_to_reel(content_id):
     """Turn an unpublished feed post into a one-image Reel (video and music).
 
@@ -1136,18 +1158,7 @@ def convert_to_reel(content_id):
     record.setdefault("music_cue", "Slow, reflective flute with a soft ambient drone.")
     save_post(content_id, record)
     post_image_path(content_id).unlink(missing_ok=True)
-    if record.get("design_prompt"):
-        brand = _post_brand(record)
-        prompt = build_post_prompt_file(
-            record,
-            load_format("image_reel"),
-            load_platform("instagram"),
-            record.get("category_id"),
-            brand.template.art_style if brand else None,
-        )
-        (GENERATED_ASSETS_DIRECTORY / f"{content_id}_design_prompt.txt").write_text(
-            prompt + "\n", encoding="utf-8"
-        )
+    _write_art_prompt(content_id, record)
     _append_history("post", content_id, "converted_to_reel")
     return record
 

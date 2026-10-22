@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from art_generator import artwork_path
-from art_generator import is_video_artwork
+from art_generator import is_designed, is_video_artwork
 from media_renderer import (
     IMAGE_REEL_SIZE,
     extract_video_frame,
@@ -26,6 +26,8 @@ DEFAULT_DURATION_SECONDS = 8
 FRAME_RATE = 30
 # How far the camera pushes into the painting over the whole clip.
 ZOOM_AMOUNT = 0.08
+# Illustrated designs carry words near their edges, so push in gently.
+DESIGNED_ZOOM_AMOUNT = 0.025
 TEXT_FADE_SECONDS = 0.5
 # Subtle cinematic motion on the background (brightness swing, seconds per
 # breath, grain strength). Kept low so the text layers stay calm and crisp.
@@ -311,6 +313,7 @@ def build_ffmpeg_command(
     motion_clip=False,
     clip_zoom=1.0,
     effects=(),
+    zoom=ZOOM_AMOUNT,
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -341,7 +344,7 @@ def build_ffmpeg_command(
         # Upscaling before zoompan keeps the slow push-in from jittering.
         filters = [
             f"[0:v]scale={width * 2}:{height * 2},"
-            f"zoompan=z='1+{ZOOM_AMOUNT}*on/{frames}':"
+            f"zoompan=z='1+{zoom}*on/{frames}':"
             "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
             f"d=1:s={width}x{height}:fps={FRAME_RATE},{finish}"
         ]
@@ -439,9 +442,20 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
     output.parent.mkdir(parents=True, exist_ok=True)
     motion_clip = is_video_artwork(artwork)
     poster = reel_layout(record) == "poster"
+    designed = is_designed(record)
     with tempfile.TemporaryDirectory() as folder:
         chrome = []
-        if motion_clip:
+        if designed:
+            # The art already carries the words: move the whole picture.
+            if motion_clip:
+                artwork = extract_video_frame(artwork, Path(folder) / "frame.png")
+                motion_clip = False
+            background = render_html_to_jpeg(
+                build_post_html(record, brand, artwork),
+                Path(folder) / "background.jpg",
+                IMAGE_REEL_SIZE,
+            )
+        elif motion_clip:
             # The clip itself moves; overlay only the glow and fades on it.
             clip = artwork
             artwork = extract_video_frame(clip, Path(folder) / "frame.png")
@@ -460,7 +474,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 Path(folder) / "background.jpg",
                 IMAGE_REEL_SIZE,
             )
-        text_layers = chrome + [
+        text_layers = [] if designed else chrome + [
             (
                 render_html_to_png(
                     build_post_html(
@@ -488,6 +502,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 if effect_for(record)
                 else ()
             ),
+            zoom=DESIGNED_ZOOM_AMOUNT if designed else ZOOM_AMOUNT,
         )
         try:
             subprocess.run(

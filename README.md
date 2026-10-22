@@ -178,6 +178,14 @@ In the review UI's Instagram tab, unpublished posts also have:
 - **Convert to Reel**: feed posts are still images, so this turns one into a
   one-image Reel for video and music; add new 9:16 art afterwards.
 
+**Illustrated story modes** (Mind states, Numbered list, Illustrated
+metaphor, Parable card) work the other way round: the image tool draws the
+words. Their art prompt lists the exact headline, lines, and handle from the
+post's text, and the uploaded picture is the finished post (no overlay; Reels
+still get a gentle push-in, music, and effects). Use ChatGPT or Gemini for
+these, check the spelling, and after editing the text copy the updated art
+prompt and make the art again.
+
 Art prompts never mention text, letters, or captions: image tools such as
 Copilot (DALL-E) tend to paint any words the prompt names. If a render shows
 the copy twice, the uploaded artwork already contains words; make it again.

@@ -92,6 +92,14 @@ def generate_content(
             f"Generated content does not satisfy format "
             f"{request.content_format.id!r}: {error}"
         ) from error
+    main_point = content.fields.get("main_point", "")
+    if "\n" in main_point and main_point.count('"') == 2 and main_point[0] == main_point[-1] == '"':
+        # A list wrapped in one pair of quote marks: keep just the lines.
+        content = GeneratedContent(
+            fields={**content.fields, "main_point": main_point[1:-1].strip()},
+            raw_content=content.raw_content,
+            profile_id=content.profile_id,
+        )
     if request.platform.id.startswith("instagram") and "caption" in content.fields:
         trimmed = tidy_caption(trim_hashtags(content.fields["caption"]))
         if trimmed != content.fields["caption"]:

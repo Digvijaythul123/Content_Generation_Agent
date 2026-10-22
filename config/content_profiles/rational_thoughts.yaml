@@ -157,6 +157,73 @@ subtypes:
       source, then one plain sentence on how to use it today.
     background: One quiet story moment with the Buddha and one young monk, the young monk looking up or bowing and the Buddha calm and kind, in a forest grove, a riverbank, or by lamplight; soft flute or a slow drone.
     example: 'Young monk: "Why does my anger keep coming back?" Buddha: "Because you keep feeding it." Caption: a retelling inspired by the Buddha''s teaching on anger (Dhammapada 3-5).'
+  - id: mind_states
+    default_visual_style: illustrated_watercolor
+    designed_image: true
+    name: Mind States (illustrated)
+    definition: Three or four parallel plain-English lines that each name a state of mind and say where the mind is, ending on peace; one small drawing of a monk beside each line shows that state.
+    structure: >-
+      Title is an optional short headline such as "Where is your mind?"
+      (2-5 words); Main_point holds three or four lines, one per line, each
+      in the same pattern, with the state word bold, for example
+      "**Worry** is when the mind lives in the future."; the last line is
+      the calm one (peace, joy, or freedom). Supporting_copy is one short
+      closing line or "— inspired by the Buddha". Each line is at most 10
+      simple words. The caption explains each state in one plain line,
+      names the teaching and source (for example the Bhaddekaratta Sutta,
+      MN 131, on living in the present), and asks which one the viewer
+      feels today.
+    background: Cream paper page with one small watercolor monk beside each line (head in hands for stress, looking back for regret, gazing at a winding road for worry, sitting at peace in soft light); soft flute.
+    example: '"**Regret** is when the mind is stuck in the past." / "**Worry** is when the mind runs to the future." / "**Peace** is when the mind is here."'
+  - id: numbered_list
+    default_visual_style: illustrated_watercolor
+    designed_image: true
+    name: Numbered List (illustrated)
+    definition: A headline and six to nine short numbered points about everyday life (people, habits, peace of mind), each with a small drawing, in the spirit of a teaching.
+    structure: >-
+      Title is the headline ending with a colon, for example "Signs of a
+      good friend:" (2-6 words); Main_point holds six to nine numbered
+      lines, one per line, such as "1. They listen without judging", each
+      at most 6 simple words; Supporting_copy is one short closing line
+      such as "Keep these people close." The caption expands each point in
+      one plain sentence, then ties the list to a teaching with its source
+      (for example the Sigalovada Sutta, DN 31, on true friends) and asks
+      viewers to tag someone.
+    background: A neat grid of small watercolor vignettes of monks acting out each point, with each numbered point lettered under its drawing; calm acoustic bed.
+    example: '"Signs of a good friend:" 1. They help when you are weak. 2. They keep your secrets. 3. They stay in hard times. (DN 31)'
+  - id: illustrated_metaphor
+    default_visual_style: illustrated_watercolor
+    designed_image: true
+    name: Illustrated Metaphor (speech bubbles)
+    definition: A big plain-English headline with one illustrated scene that shows it, often the Buddha or a monk walking calmly past people whose words appear in speech bubbles.
+    structure: >-
+      Title is the headline, one plain sentence of at most 16 words that is
+      the lesson (for example "You don't have to answer every voice that
+      shouts at you."); Main_point holds three to five short labels, one per
+      line, that appear in the speech bubbles (one to three words each, for
+      example "Lazy", "Too quiet", "Not enough"); Supporting_copy is a short
+      credit such as "— inspired by the Buddha". The caption explains the
+      lesson in two plain sentences, gives the teaching and source (for
+      example the Buddha's reply to the abusive Brahmin, SN 7.2), and asks
+      a question.
+    background: A calm figure walking or sitting at peace on one side while several people lean in shouting from the other, each with a speech bubble; warm watercolor on cream or soft pink paper; gentle music.
+    example: Headline "Not every opinion of you is yours to carry." with bubbles "Weak", "Too soft", "Strange".
+  - id: parable_card
+    default_visual_style: cinematic_photo
+    designed_image: true
+    name: Parable Card ("A monk was asked")
+    definition: A short story told in three lines over a warm, cinematic scene, where a monk or the Buddha gives a simple, beautiful answer to a big question.
+    structure: >-
+      Title is the opener, for example "A monk was asked," (at most 6
+      words); Main_point is the question in quotes, at most 6 words, for
+      example "What is anger?" (with the quote marks); Supporting_copy is the answer with its
+      lead-in, at most 20 simple words, for example He smiled and said:
+      "It is a punishment we give ourselves for someone else's mistake."
+      The caption labels the story honestly ("A short story inspired by"
+      the teaching, with its source) and gives one plain way to use it
+      today.
+    background: A warm, cinematic photo of an old monk and a young monk talking by lotus water or in a forest with soft god rays, with a calm, darker area in the lower third for the words; slow flute.
+    example: 'A monk was asked, "What is peace?" He answered: "Wanting nothing from this moment."'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote
@@ -422,3 +489,14 @@ visual_styles:
       sparks, strong light-versus-dark contrast that tells the idea, dramatic
       yet elegant composition.
     avoid: colors other than black, grey, white, and gold; calligraphy; seals; a cluttered upper third
+  - id: illustrated_watercolor
+    name: Illustrated watercolor (book page)
+    palette: day
+    recipe: >-
+      Hand-drawn illustration in warm watercolor and fine ink line on cream,
+      lightly textured paper, like a page from a gentle illustrated book:
+      monks in saffron and maroon robes with simple, kind, expressive faces,
+      soft pink and sage washes, plenty of clean paper around each drawing,
+      bold deep-red headings and dark brown serif lettering that are crisp
+      and easy to read.
+    avoid: photorealism, 3D render look, clutter, cramped lettering, misspellings

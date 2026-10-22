@@ -1243,3 +1243,27 @@ def test_tidy_caption_joins_hashtags_split_across_lines():
     caption = "Hook.\n\nTeaching: X (SN 1.1)\n\n#Buddhism\n\n#PaliCanon #Mindfulness\n#Dharma #Kindness"
     assert tidy_caption(caption).endswith(
         "(SN 1.1)\n\n#Buddhism #PaliCanon #Mindfulness #Dharma #Kindness")
+
+
+def test_designed_story_modes_tell_the_model_the_image_tool_draws_the_words():
+    for subtype in ("mind_states", "numbered_list", "illustrated_metaphor", "parable_card"):
+        prompt = _prompt_for(subtype=subtype, thinker_id="buddha")
+        assert "finished illustrated design" in prompt, subtype
+    assert "finished illustrated design" not in _prompt_for(subtype="mirror", thinker_id="buddha")
+
+
+def test_simplify_keeps_one_item_per_line():
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Title: Good friends:\nMain_point: 1. They   listen\n2. They stay\n"
+        "Supporting_copy: Keep them close.\nCaption: c"
+    )
+    record = {"title": "t", "main_point": "a\nb", "supporting_copy": "s", "caption": "c"}
+    assert content_agent.simplify_copy(record, ai_service=service)["main_point"] == "1. They listen\n2. They stay"
+
+
+def test_designed_modes_end_with_a_reminder_of_their_structure():
+    prompt = _prompt_for(subtype="numbered_list", thinker_id="buddha")
+    reminder = prompt[prompt.rindex("IMPORTANT, this overrides"):]
+    assert "Numbered List (illustrated)" in reminder and "Design_prompt" in reminder
+    assert "IMPORTANT, this overrides" not in _prompt_for(subtype="mirror", thinker_id="buddha")
