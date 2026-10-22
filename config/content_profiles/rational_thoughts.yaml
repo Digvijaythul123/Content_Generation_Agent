@@ -525,6 +525,8 @@ thinkers:
       - Talks published as books (for example The Book of Secrets; Courage)
     misattributions:
       - A huge number of "Osho quotes" online are paraphrases or invented; only quote wording checked against a specific book.
+    # Image tools refuse to draw him by name; art prompts use this instead.
+    art_alias: an elderly Indian mystic speaking in his Pune ashram in the 1980s
     portrayal: Engage his ideas critically; he is controversial (including the Rajneeshpuram events of the 1980s), so never present him as an unquestionable guru.
     setting: A quiet ashram garden in Pune, simple meditation hall.
 

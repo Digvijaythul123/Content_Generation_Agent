@@ -1,4 +1,5 @@
 import base64
+import re
 import secrets
 
 import requests
@@ -263,12 +264,37 @@ def _thinker_likeness(record, style):
     thinker = next((item for item in thinkers if item["id"] == thinker_id), None)
     if not thinker:
         return None
+    alias = thinker.get("art_alias")
+    if alias:
+        # Some image tools refuse named real people; describe the role only.
+        return f"Depict {alias}. If a reference image is attached, match the face from it."
     name = thinker["name"].split(" (")[0]
     form = "as a statue or bust of " if style["id"] == "thinker_statue" else ""
     return (
         f"Depict {form}{name} the way they are widely recognised. If a "
         "reference image is attached, match the face from it."
     )
+
+
+def _without_blocked_names(text, record):
+    """Swap a thinker's name for their art alias when tools refuse the name."""
+    thinker_id = record.get("thinker_id")
+    if not thinker_id:
+        return text
+    from config_loader import ConfigurationError, load_profile_thinkers
+
+    try:
+        thinkers = load_profile_thinkers(record.get("profile_id"))
+    except ConfigurationError:
+        return text
+    thinker = next((item for item in thinkers if item["id"] == thinker_id), None)
+    if not thinker or not thinker.get("art_alias"):
+        return text
+    names = {thinker["name"], thinker["name"].split(" (")[0]}
+    names |= set(re.findall(r"\(([^)]+)\)", thinker["name"]))
+    for name in sorted(names, key=len, reverse=True):
+        text = re.sub(rf"\b{re.escape(name)}\b", "the mystic", text)
+    return text
 
 
 def build_art_prompt(record, art_style=None):
@@ -285,7 +311,7 @@ def build_art_prompt(record, art_style=None):
         parts.append(f"Visual style: {' '.join(style['recipe'].split())}")
     elif art_style:
         parts.append(f"Visual style: {art_style}")
-    parts.append(f"Scene: {description}")
+    parts.append(f"Scene: {_without_blocked_names(description, record)}")
     likeness = _thinker_likeness(record, style)
     if likeness:
         parts.append(f"Likeness: {likeness}")

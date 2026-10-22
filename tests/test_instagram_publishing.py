@@ -919,10 +919,11 @@ def test_tidy_caption_splits_one_paragraph_into_parts():
     assert tidy_caption(already) == already
 
 
-def test_osho_prompt_uses_his_short_name_without_descriptions():
+def test_blocked_names_never_reach_the_art_prompt():
     record = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "osho",
-              "visual_style": "painterly"}
+              "visual_style": "painterly",
+              "design_prompt": "Subject: Osho in his later years, seated. Osho smiles."}
     prompt = art_generator.build_art_prompt(record)
-    assert "Depict Osho the way they are widely recognised" in prompt
-    assert "beard" not in prompt.split("Likeness:")[-1]
-
+    assert "Osho" not in prompt and "Rajneesh" not in prompt
+    assert "Depict an elderly Indian mystic" in prompt
+    assert "the mystic in his later years" in prompt
