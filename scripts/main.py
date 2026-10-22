@@ -35,8 +35,8 @@ def _save_result(result, caption_language="english"):
         data["category_id"] = result.request.category_id
         if result.request.comedy_subtype:
             data["comedy_subtype"] = result.request.comedy_subtype
-    if result.request.qa_subtype:
-        data["qa_subtype"] = result.request.qa_subtype
+    if result.request.subtype:
+        data["subtype"] = result.request.subtype
     if result.request.thinker_id:
         data["thinker_id"] = result.request.thinker_id
     if result.request.visual_style:
@@ -210,16 +210,16 @@ def main(argv=None):
         comedy_subtype = args.comedy_subtype
         if comedy_subtypes:
             comedy_subtype = comedy_subtypes[index % len(comedy_subtypes)]
-        qa_subtype = args.qa_subtype
+        subtype_id = args.qa_subtype
         if args.subtype:
             if args.profile == "comedy":
                 comedy_subtype = args.subtype
             elif profile_id is not None:
-                qa_subtype = args.subtype
+                subtype_id = args.subtype
             else:
                 parser.error("--subtype requires a content profile.")
         if qa_subtypes:
-            qa_subtype = qa_subtypes[index % len(qa_subtypes)]
+            subtype_id = qa_subtypes[index % len(qa_subtypes)]
         thinker_id = args.thinker
         if thinker_ids:
             thinker_id = thinker_ids[index % len(thinker_ids)]
@@ -231,7 +231,7 @@ def main(argv=None):
             brief=brief,
             category_id=args.category,
             comedy_subtype=comedy_subtype,
-            qa_subtype=qa_subtype,
+            subtype=subtype_id,
             thinker_id=thinker_id,
             visual_style=args.visual_style,
             caption_language=args.caption_language,

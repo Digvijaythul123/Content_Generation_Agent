@@ -154,7 +154,7 @@ def list_content_items():
                     "profile_id": record.get("profile_id", ""),
                     "category_id": record.get("category_id", ""),
                     "comedy_subtype": record.get("comedy_subtype", ""),
-                    "qa_subtype": record.get("qa_subtype", ""),
+                    "subtype": record.get("subtype") or record.get("qa_subtype", ""),
                     "thinker_id": record.get("thinker_id", ""),
                     "visual_style": record.get("visual_style", ""),
                     "scheduled_at": record.get("scheduled_at") or "",
@@ -1256,7 +1256,7 @@ def regenerate_content(content_type, content_id):
             "brief": record.get("brief"),
             "category_id": record.get("category_id"),
             "comedy_subtype": record.get("comedy_subtype"),
-            "qa_subtype": record.get("qa_subtype"),
+            "subtype": record.get("subtype") or record.get("qa_subtype"),
             "thinker_id": record.get("thinker_id"),
             "visual_style": record.get("visual_style"),
             "caption_language": record.get("caption_language"),
@@ -1412,14 +1412,15 @@ def generate_and_save(payload):
     profile_id = payload.get("profile_id")
     category_id = payload.get("category_id")
     comedy_subtype = payload.get("comedy_subtype")
-    qa_subtype = payload.get("qa_subtype")
+    # "qa_subtype" is the legacy name for "subtype".
+    subtype = payload.get("subtype") or payload.get("qa_subtype")
     content_subtype = payload.get("content_subtype")
     if content_subtype:
         if profile_id == "comedy":
             category_id = "comedy"
             comedy_subtype = content_subtype
         elif profile_id:
-            qa_subtype = content_subtype
+            subtype = content_subtype
         else:
             raise ValueError("Content subtypes require a content profile.")
 
@@ -1431,7 +1432,7 @@ def generate_and_save(payload):
         brief=brief.strip() if brief else None,
         category_id=category_id,
         comedy_subtype=comedy_subtype,
-        qa_subtype=qa_subtype,
+        subtype=subtype,
         thinker_id=payload.get("thinker_id") or None,
         visual_style=payload.get("visual_style") or None,
         caption_language=payload.get("caption_language") or "english",
@@ -1451,8 +1452,8 @@ def generate_and_save(payload):
         data["category_id"] = result.request.category_id
         if result.request.comedy_subtype:
             data["comedy_subtype"] = result.request.comedy_subtype
-    if result.request.qa_subtype:
-        data["qa_subtype"] = result.request.qa_subtype
+    if result.request.subtype:
+        data["subtype"] = result.request.subtype
     if result.request.thinker_id:
         data["thinker_id"] = result.request.thinker_id
     if result.request.visual_style:
@@ -1524,7 +1525,11 @@ def generate_batch_and_save(payload):
     thinker_ids = ()
     profile_id = payload.get("profile_id")
     if count > 1 and profile_id and profile_id != "comedy":
-        if not (payload.get("content_subtype") or payload.get("qa_subtype")):
+        if not (
+            payload.get("content_subtype")
+            or payload.get("subtype")
+            or payload.get("qa_subtype")
+        ):
             qa_subtype_ids = tuple(
                 subtype["id"] for subtype in load_profile_subtypes(profile_id)
             )

@@ -429,10 +429,15 @@ class GenerationRequest:
     brand_identity_explicit: bool = False
     category_id: Optional[str] = None
     comedy_subtype: Optional[str] = None
-    qa_subtype: Optional[str] = None
+    subtype: Optional[str] = None
     thinker_id: Optional[str] = None
     visual_style: Optional[str] = None
 
+
+    @property
+    def qa_subtype(self):
+        """Legacy name: the subtype was first used for QA topic pillars."""
+        return self.subtype
 
 @dataclass(frozen=True)
 class GeneratedContent:

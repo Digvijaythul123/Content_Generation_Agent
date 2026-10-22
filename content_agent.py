@@ -38,6 +38,7 @@ class ContentAgent:
         brand_selected=True,
         category_id=None,
         comedy_subtype=None,
+        subtype=None,
         qa_subtype=None,
         thinker_id=None,
         visual_style=None,
@@ -53,7 +54,7 @@ class ContentAgent:
         self.brand_selected = brand_selected
         self.category_id = category_id
         self.comedy_subtype = comedy_subtype
-        self.qa_subtype = qa_subtype
+        self.subtype = subtype or qa_subtype  # legacy keyword
         self.thinker_id = thinker_id
         self.visual_style = visual_style
         if caption_language not in CAPTION_LANGUAGES:
@@ -198,7 +199,7 @@ class ContentAgent:
                     f"Unknown thinker {self.thinker_id!r} for "
                     f"profile {profile['id']!r}."
                 )
-            quote_mode = self.qa_subtype == VERIFIED_QUOTE_MODE
+            quote_mode = self.subtype == VERIFIED_QUOTE_MODE
             quote = (
                 random.choice(thinker["quotes"])
                 if quote_mode and thinker.get("quotes")
@@ -320,18 +321,18 @@ class ContentAgent:
                 "modern gadgets, use an anonymous stand-in instead.\n\n" + prompt
             )
 
-        if self.qa_subtype:
+        if self.subtype:
             selected_subtype = next(
                 (
                     subtype
                     for subtype in load_profile_subtypes(profile["id"])
-                    if subtype["id"] == self.qa_subtype
+                    if subtype["id"] == self.subtype
                 ),
                 None,
             )
             if selected_subtype is None:
                 raise ValueError(
-                    f"Unknown subtype {self.qa_subtype!r} for "
+                    f"Unknown subtype {self.subtype!r} for "
                     f"profile {profile['id']!r}."
                 )
             label = story_settings["subtype_label"]

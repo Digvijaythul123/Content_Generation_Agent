@@ -501,7 +501,7 @@ def test_review_ui_saves_explicitly_unbranded_content(
     request = resolve_generation_request(
         brand_id="",
         profile_id="qa_engineering_ai",
-        qa_subtype="testing_strategy",
+        subtype="testing_strategy",
         format_id="linkedin_text_post",
         platform_id="linkedin",
     )
@@ -531,7 +531,7 @@ def test_review_ui_saves_explicitly_unbranded_content(
         (posts_directory / f"{saved['id']}.json").read_text(encoding="utf-8")
     )
     assert record["brand_id"] is None
-    assert record["qa_subtype"] == "testing_strategy"
+    assert record["subtype"] == "testing_strategy"
     assert record["image_generation_prompt"].startswith("A clear editorial")
     assert saved["type"] == "post"
 

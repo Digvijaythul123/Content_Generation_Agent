@@ -74,7 +74,9 @@ def fetch_performance(publisher=None, records=None):
                 "title": record.get("title", ""),
                 "permalink": item.get("permalink"),
                 "posted_at": item.get("timestamp"),
-                "story_mode": record.get("qa_subtype") or "unspecified",
+                "story_mode": record.get("subtype")
+                or record.get("qa_subtype")
+                or "unspecified",
                 "visual_style": record.get("visual_style") or "unspecified",
                 "thinker": record.get("thinker_id") or "unspecified",
                 "likes": item.get("like_count", 0),

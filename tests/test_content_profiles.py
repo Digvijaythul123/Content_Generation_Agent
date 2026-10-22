@@ -298,31 +298,31 @@ def test_qa_profile_defines_selectable_topic_pillars():
 def test_qa_subtype_is_validated_and_resolved_for_profile():
     request = resolve_generation_request(
         profile_id="qa_engineering_ai",
-        qa_subtype="llm_testing",
+        subtype="llm_testing",
         format_id="linkedin_text_post",
         platform_id="linkedin",
     )
 
-    assert request.qa_subtype == "llm_testing"
+    assert request.subtype == "llm_testing"
 
     from config_loader import ConfigurationError
 
     with pytest.raises(ConfigurationError, match="Unknown QA subtype"):
         resolve_generation_request(
             profile_id="qa_engineering_ai",
-            qa_subtype="made_up",
+            subtype="made_up",
         )
     with pytest.raises(ConfigurationError, match="Unknown Story mode subtype"):
         resolve_generation_request(
             profile_id="rational_thoughts",
-            qa_subtype="llm_testing",
+            subtype="llm_testing",
         )
 
 
 def test_selected_qa_subtype_guides_linkedin_prompt():
     request = resolve_generation_request(
         profile_id="qa_engineering_ai",
-        qa_subtype="llm_testing",
+        subtype="llm_testing",
         format_id="linkedin_text_post",
         platform_id="linkedin",
         brief="Explain a useful way to evaluate model responses.",
@@ -338,7 +338,7 @@ def test_selected_qa_subtype_guides_linkedin_prompt():
             content_format=request.content_format,
             platform=request.platform,
             brief=request.brief,
-            qa_subtype=request.qa_subtype,
+            subtype=request.subtype,
         )
         agent.generate_content()
 
@@ -361,11 +361,11 @@ def test_content_pipeline_passes_qa_subtype_to_agent():
     with patch("content_pipeline.ContentAgent", return_value=agent) as agent_class:
         result = content_pipeline.generate_content(
             profile_id="qa_engineering_ai",
-            qa_subtype="ci_flaky_tests",
+            subtype="ci_flaky_tests",
         )
 
-    assert result.request.qa_subtype == "ci_flaky_tests"
-    assert agent_class.call_args.kwargs["qa_subtype"] == "ci_flaky_tests"
+    assert result.request.subtype == "ci_flaky_tests"
+    assert agent_class.call_args.kwargs["subtype"] == "ci_flaky_tests"
 
 
 def test_linkedin_request_accepts_qa_text_and_visual_posts():
@@ -690,7 +690,7 @@ def test_main_saves_selected_profile_id(
         brief=None,
         category_id=None,
         comedy_subtype=None,
-        qa_subtype=None,
+        subtype=None,
         thinker_id=None,
         visual_style=None,
         caption_language="english",
@@ -705,7 +705,7 @@ def test_main_saves_selected_profile_id(
             brief,
             category_id,
             comedy_subtype,
-            qa_subtype,
+            subtype,
         )
         agent = FakeContentAgent(profile_id or "rational_thoughts")
         from config_loader import resolve_generation_request
@@ -830,11 +830,11 @@ def test_main_qa_batch_rotates_pillars_and_saves_each_draft(
     requested_subtypes = []
 
     def fake_generate_content(**kwargs):
-        subtype = kwargs["qa_subtype"]
+        subtype = kwargs["subtype"]
         requested_subtypes.append(subtype)
         request = resolve_generation_request(
             profile_id=kwargs["profile_id"],
-            qa_subtype=subtype,
+            subtype=subtype,
             format_id=kwargs["format_id"],
             platform_id=kwargs["platform_id"],
         )
@@ -860,7 +860,7 @@ def test_main_qa_batch_rotates_pillars_and_saves_each_draft(
         json.loads(path.read_text(encoding="utf-8"))
         for path in sorted(reels_dir.glob("*.json"))
     ]
-    assert [record["qa_subtype"] for record in saved_records] == (
+    assert [record["subtype"] for record in saved_records] == (
         requested_subtypes
     )
     assert len(set(requested_subtypes)) == 8
@@ -886,10 +886,10 @@ def test_thinker_and_story_mode_are_validated_for_rational_thoughts():
 
     request = resolve_generation_request(
         profile_id="rational_thoughts",
-        qa_subtype="comedy",
+        subtype="comedy",
         thinker_id="buddha",
     )
-    assert request.qa_subtype == "comedy"
+    assert request.subtype == "comedy"
     assert request.thinker_id == "buddha"
 
     with pytest.raises(ConfigurationError, match="Unknown thinker"):
@@ -905,7 +905,7 @@ def test_thinker_and_story_mode_are_validated_for_rational_thoughts():
 def test_thinker_story_prompt_includes_sources_mode_and_duration():
     request = resolve_generation_request(
         profile_id="rational_thoughts",
-        qa_subtype="thought_provoking",
+        subtype="thought_provoking",
         thinker_id="buddha",
     )
     service = Mock()
@@ -918,7 +918,7 @@ def test_thinker_story_prompt_includes_sources_mode_and_duration():
             brand=request.brand,
             content_format=request.content_format,
             platform=request.platform,
-            qa_subtype=request.qa_subtype,
+            subtype=request.subtype,
             thinker_id=request.thinker_id,
         ).generate_content()
 
@@ -943,7 +943,7 @@ def test_main_story_batch_rotates_modes_and_thinkers(tmp_path, monkeypatch):
     def fake_generate_content(**kwargs):
         request = resolve_generation_request(
             profile_id=kwargs["profile_id"],
-            qa_subtype=kwargs["qa_subtype"],
+            subtype=kwargs["subtype"],
             thinker_id=kwargs["thinker_id"],
         )
         return GenerationResult(
@@ -961,7 +961,7 @@ def test_main_story_batch_rotates_modes_and_thinkers(tmp_path, monkeypatch):
         json.loads(path.read_text(encoding="utf-8"))
         for path in sorted(reels_dir.glob("*.json"))
     ]
-    assert len({record["qa_subtype"] for record in records}) == 6
+    assert len({record["subtype"] for record in records}) == 6
     assert len({record["thinker_id"] for record in records}) == 6
 
 
@@ -972,18 +972,18 @@ def test_story_mode_picks_default_visual_style_for_posts_only():
         profile_id="rational_thoughts",
         format_id="image_reel",
         platform_id="instagram",
-        qa_subtype="myth_buster",
+        subtype="myth_buster",
     )
     assert post.visual_style == "thinker_statue"
     reel = resolve_generation_request(
-        profile_id="rational_thoughts", qa_subtype="myth_buster"
+        profile_id="rational_thoughts", subtype="myth_buster"
     )
     assert reel.visual_style is None
     chosen = resolve_generation_request(
         profile_id="rational_thoughts",
         format_id="image_reel",
         platform_id="instagram",
-        qa_subtype="myth_buster",
+        subtype="myth_buster",
         visual_style="3d_render",
     )
     assert chosen.visual_style == "3d_render"
@@ -1055,7 +1055,7 @@ def _prompt_for(**kwargs):
             profile=request.profile.to_mapping(),
             content_format=request.content_format,
             platform=request.platform,
-            qa_subtype=request.qa_subtype,
+            subtype=request.subtype,
             thinker_id=request.thinker_id,
         ).generate_content()
     return service.generate_reel.call_args.args[0]
@@ -1067,11 +1067,11 @@ def test_verified_quote_mode_uses_exact_quote_or_paraphrases_honestly():
     epictetus = next(
         t for t in load_profile_thinkers("rational_thoughts") if t["id"] == "epictetus"
     )
-    prompt = _prompt_for(qa_subtype="verified_quote", thinker_id="epictetus")
+    prompt = _prompt_for(subtype="verified_quote", thinker_id="epictetus")
     assert any(quote["text"] in prompt for quote in epictetus["quotes"])
     assert "Supporting_copy must be: — Epictetus" in prompt
 
-    osho = _prompt_for(qa_subtype="verified_quote", thinker_id="osho")
+    osho = _prompt_for(subtype="verified_quote", thinker_id="osho")
     assert "No verified quote is on file" in osho
     assert "inspired by Osho'" in osho
 
@@ -1098,7 +1098,7 @@ def test_pipeline_rotates_thinkers_when_none_chosen(monkeypatch):
     monkeypatch.setattr(content_pipeline, "ContentAgent", FakeAgent)
     result = content_pipeline.generate_content(
         profile_id="rational_thoughts", format_id="image_reel",
-        platform_id="instagram", qa_subtype="verified_quote",
+        platform_id="instagram", subtype="verified_quote",
     )
     assert seen[0] and seen[0] != "osho"  # quote mode only picks quoted thinkers
     assert result.request.thinker_id == seen[0]
@@ -1129,7 +1129,7 @@ def test_long_captions_are_shortened_once_for_threads():
 
 
 def test_other_modes_may_only_quote_verified_lines():
-    prompt = _prompt_for(qa_subtype="mirror", thinker_id="seneca")
+    prompt = _prompt_for(subtype="mirror", thinker_id="seneca")
     assert "We suffer more often in imagination than in reality." in prompt
     assert "inspired by Seneca" in prompt
     assert "Selected Story mode: Mirror" in prompt
@@ -1138,7 +1138,7 @@ def test_other_modes_may_only_quote_verified_lines():
 def test_story_mode_style_is_not_overridden_by_thinker():
     request = resolve_generation_request(
         profile_id="rational_thoughts", format_id="image_reel",
-        platform_id="instagram", qa_subtype="thoughtful", thinker_id="osho",
+        platform_id="instagram", subtype="thoughtful", thinker_id="osho",
     )
     assert request.visual_style == "living_thinker"
 
@@ -1170,3 +1170,12 @@ def test_backup_zips_content_folders_and_keeps_the_newest(tmp_path):
     kwargs = dict(destination=dest, root=root, state_path=state)
     assert "backup saved" in backup_content.backup_if_due(now=now, **kwargs)
     assert backup_content.backup_if_due(now=now + timedelta(days=3), **kwargs) is None
+
+
+def test_legacy_qa_subtype_name_still_works():
+    # Old callers pass qa_subtype; old records store "qa_subtype" (analytics
+    # reads those in test_performance_groups_by_story_mode_style_and_thinker).
+    request = resolve_generation_request(
+        profile_id="qa_engineering_ai", qa_subtype="llm_testing"
+    )
+    assert request.subtype == "llm_testing" and request.qa_subtype == "llm_testing"

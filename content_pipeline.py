@@ -30,12 +30,14 @@ def generate_content(
     brief=None,
     category_id=None,
     comedy_subtype=None,
+    subtype=None,
     qa_subtype=None,
     thinker_id=None,
     visual_style=None,
     caption_language="english",
 ):
     """Resolve configuration, generate a draft, and validate its content."""
+    subtype = subtype or qa_subtype  # legacy keyword
     request = resolve_generation_request(
         brand_id=brand_id,
         profile_id=profile_id,
@@ -44,12 +46,12 @@ def generate_content(
         brief=brief,
         category_id=category_id,
         comedy_subtype=comedy_subtype,
-        qa_subtype=qa_subtype,
+        subtype=subtype,
         thinker_id=thinker_id,
         visual_style=visual_style,
     )
     if request.thinker_id is None and not brief and request.category_id != "comedy":
-        thinker_id = _pick_thinker(request.profile.id, request.qa_subtype)
+        thinker_id = _pick_thinker(request.profile.id, request.subtype)
     if thinker_id is not None and thinker_id != request.thinker_id:
         # Resolve again so the rotated thinker is validated and saved.
         request = resolve_generation_request(
@@ -60,7 +62,7 @@ def generate_content(
             brief=brief,
             category_id=category_id,
             comedy_subtype=comedy_subtype,
-            qa_subtype=qa_subtype,
+            subtype=subtype,
             thinker_id=thinker_id,
             visual_style=visual_style,
         )
@@ -75,7 +77,7 @@ def generate_content(
         brand_selected=request.brand is not None,
         category_id=request.category_id,
         comedy_subtype=request.comedy_subtype,
-        qa_subtype=request.qa_subtype,
+        subtype=request.subtype,
         thinker_id=request.thinker_id,
         visual_style=request.visual_style,
         caption_language=caption_language,

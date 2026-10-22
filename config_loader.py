@@ -377,22 +377,24 @@ def resolve_generation_request(
     brief=None,
     category_id=None,
     comedy_subtype=None,
+    subtype=None,
     qa_subtype=None,
     thinker_id=None,
     visual_style=None,
 ):
+    subtype = subtype or qa_subtype  # legacy keyword
     if category_id is not None and not isinstance(category_id, str):
         raise ConfigurationError("Content category ID must be text.")
     if comedy_subtype is not None and not isinstance(comedy_subtype, str):
         raise ConfigurationError("Comedy subtype ID must be text.")
-    if qa_subtype is not None and not isinstance(qa_subtype, str):
+    if subtype is not None and not isinstance(subtype, str):
         raise ConfigurationError("QA subtype ID must be text.")
     if category_id == "":
         category_id = None
     if comedy_subtype == "":
         comedy_subtype = None
-    if qa_subtype == "":
-        qa_subtype = None
+    if subtype == "":
+        subtype = None
     if thinker_id is not None and not isinstance(thinker_id, str):
         raise ConfigurationError("Thinker ID must be text.")
     if thinker_id == "":
@@ -443,7 +445,7 @@ def resolve_generation_request(
             else default_context.default_profile_id
         )
     )
-    if qa_subtype:
+    if subtype:
         subtype_ids = {
             subtype["id"] for subtype in load_profile_subtypes(profile.id)
         }
@@ -451,13 +453,13 @@ def resolve_generation_request(
             raise ConfigurationError(
                 f"Content profile {profile.id!r} does not define subtypes."
             )
-        if qa_subtype not in subtype_ids:
+        if subtype not in subtype_ids:
             label = (
                 "QA"
                 if profile.id == "qa_engineering_ai"
                 else load_profile_story_settings(profile.id)["subtype_label"]
             )
-            raise ConfigurationError(f"Unknown {label} subtype {qa_subtype!r}.")
+            raise ConfigurationError(f"Unknown {label} subtype {subtype!r}.")
     if thinker_id:
         thinker_ids = {
             thinker["id"] for thinker in load_profile_thinkers(profile.id)
@@ -517,13 +519,13 @@ def resolve_generation_request(
         visual_style is None
         and style_ids
         and content_format.content_kind == "post"
-        and qa_subtype
+        and subtype
     ):
         visual_style = next(
             (
-                subtype.get("default_visual_style")
-                for subtype in load_profile_subtypes(profile.id)
-                if subtype["id"] == qa_subtype
+                item.get("default_visual_style")
+                for item in load_profile_subtypes(profile.id)
+                if item["id"] == subtype
             ),
             None,
         )
@@ -537,7 +539,7 @@ def resolve_generation_request(
         brand_identity_explicit=brand_was_explicit,
         category_id=category_id,
         comedy_subtype=comedy_subtype,
-        qa_subtype=qa_subtype,
+        subtype=subtype,
         thinker_id=thinker_id,
         visual_style=visual_style,
     )

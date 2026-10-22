@@ -596,7 +596,7 @@
         (!profile || item.profile_id === profile) &&
         (!format || item.format_id === format) &&
         (!platform || item.platform_id === platform) &&
-        (!term || `${item.id} ${item.id.replace(/_0+(?=\d)/, "_")} ${item.title} ${item.profile_id} ${item.format_id} ${item.qa_subtype || ""} ${item.search_text || ""}`.toLowerCase().includes(term))
+        (!term || `${item.id} ${item.id.replace(/_0+(?=\d)/, "_")} ${item.title} ${item.profile_id} ${item.format_id} ${item.subtype || ""} ${item.search_text || ""}`.toLowerCase().includes(term))
       );
       const list = $("items");
       list.replaceChildren();
@@ -630,7 +630,7 @@
         const category = item.category_id
           ? ` · ${item.category_id}${item.comedy_subtype ? ` / ${item.comedy_subtype}` : ""}`
           : "";
-        const qaPillar = item.qa_subtype ? ` · ${item.qa_subtype}` : "";
+        const qaPillar = item.subtype ? ` · ${item.subtype}` : "";
         const thinker = item.thinker_id ? ` · ${item.thinker_id}` : "";
         meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}${category}${qaPillar}${thinker}`;
         button.append(top, title, meta);
@@ -1271,7 +1271,7 @@
       title.textContent = state.record.title || "Untitled";
       const meta = document.createElement("div");
       meta.className = "detail-meta";
-      [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.category_id, state.record.comedy_subtype, state.record.qa_subtype, state.record.format_id, state.record.platform_id]
+      [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.category_id, state.record.comedy_subtype, (state.record.subtype || state.record.qa_subtype), state.record.format_id, state.record.platform_id]
         .filter(Boolean).forEach((value) => {
           const tag = document.createElement("span");
           tag.className = `badge ${badgeClass(value)}`;
