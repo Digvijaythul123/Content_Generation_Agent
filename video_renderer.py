@@ -31,6 +31,42 @@ TEXT_FADE_SECONDS = 0.5
 LIGHT_BREATH = 0.025
 LIGHT_PERIOD = 4
 GRAIN = 6
+# Optional drifting sparks: (seed, specks, max radius px, rise px/second).
+SPARK_LAYERS = ((7, 70, 3.2, 46), (19, 30, 6.5, 24))
+_SPARK_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
+html, body {{ margin: 0; width: 1080px; height: 3840px; background: transparent; }}
+</style></head><body><canvas id="c" width="1080" height="3840"></canvas><script>
+let seed = {seed};
+const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const ctx = document.getElementById("c").getContext("2d");
+const specks = [];
+for (let i = 0; i < {count}; i++) specks.push([
+  rand() * 1080, rand() * 1920, 0.8 + rand() * {radius}, 0.25 + rand() * 0.6
+]);
+// Draw the same 1920px tile twice so the upward scroll loops seamlessly.
+for (const offset of [0, 1920]) for (const [x, y, r, a] of specks) {{
+  const g = ctx.createRadialGradient(x, y + offset, 0, x, y + offset, r * 3);
+  g.addColorStop(0, `rgba(255, 214, 140, ${{a}})`);
+  g.addColorStop(1, "rgba(255, 214, 140, 0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y + offset, r * 3, 0, Math.PI * 2); ctx.fill();
+}}
+</script></body></html>"""
+
+
+def render_spark_layers(folder):
+    """Draw the spark layers once as tall transparent PNG strips."""
+    return [
+        (
+            render_html_to_png(
+                _SPARK_HTML.format(seed=seed, count=count, radius=radius),
+                folder / f"sparks_{seed}.png",
+                (1080, 3840),
+            ),
+            speed,
+        )
+        for seed, count, radius, speed in SPARK_LAYERS
+    ]
 # The hook is on screen from the first frame (average watch time was ~2.6s),
 # then the main line and the payoff follow quickly.
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
@@ -51,6 +87,7 @@ def build_ffmpeg_command(
     music=None,
     motion_clip=False,
     clip_zoom=1.0,
+    sparks=(),
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -66,7 +103,7 @@ def build_ffmpeg_command(
     # moving grain, so the background feels like a shot from a film.
     finish = (
         f"eq=eval=frame:brightness='{LIGHT_BREATH}*sin(2*PI*t/{LIGHT_PERIOD})',"
-        f"vignette=angle=PI/5,noise=alls={GRAIN}:allf=t[v0]"
+        f"vignette=angle=PI/5,noise=alls={GRAIN}:allf=t[vbase]"
     )
     if motion_clip:
         top = "0" if clip_zoom > 1 else f"(ih-{height})/2"
@@ -89,6 +126,18 @@ def build_ffmpeg_command(
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
             "-i", str(background),
         ]
+    # Sparks rise over the background but stay under the glow and text.
+    previous = "vbase"
+    first_spark = len(text_layers) + 1
+    for offset, (strip, speed) in enumerate(sparks):
+        index = first_spark + offset
+        label = "v0" if offset == len(sparks) - 1 else f"vs{offset}"
+        filters.append(
+            f"[{previous}][{index}:v]overlay=0:'-mod(t*{speed},1920)':format=auto[{label}]"
+        )
+        previous = label
+    if not sparks:
+        filters[0] = filters[0].replace("[vbase]", "[v0]")
     for index, (layer, start) in enumerate(text_layers, start=1):
         inputs += [
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
@@ -105,6 +154,11 @@ def build_ffmpeg_command(
     filters.append(
         f"[v{len(text_layers)}]scale=out_range=tv,format=yuv420p[out]"
     )
+    for strip, _ in sparks:
+        inputs += [
+            "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
+            "-i", str(strip),
+        ]
     audio = ["-an"]
     if music is not None:
         # Loop short tracks, then fade in and out so the Reel loops cleanly.
@@ -112,7 +166,7 @@ def build_ffmpeg_command(
         # Skip a silent intro, even out loudness for phone speakers, then
         # fade in and out so the Reel loops cleanly.
         filters.append(
-            f"[{len(text_layers) + 1}:a]"
+            f"[{len(text_layers) + len(sparks) + 1}:a]"
             "silenceremove=start_periods=1:start_threshold=-45dB,"
             f"atrim=0:{seconds},asetpts=PTS-STARTPTS,"
             "loudnorm=I=-16:TP=-1.5:LRA=11,"
@@ -194,6 +248,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             motion_clip=motion_clip,
             # Posters crop the bottom strip where tools put watermarks.
             clip_zoom=1.11 if poster else 1.0,
+            sparks=render_spark_layers(Path(folder)) if record.get("sparks") else (),
         )
         try:
             subprocess.run(

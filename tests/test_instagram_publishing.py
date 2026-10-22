@@ -995,3 +995,22 @@ def test_motion_clip_command_loops_crops_and_overlays(tmp_path):
     assert "crop=1080:1920:(iw-1080)/2:0" in filters
     assert "zoompan" not in filters and "noise=" in filters
     assert "-maxrate" in command
+
+
+def test_sparks_overlay_rises_under_the_text_and_can_be_toggled(tmp_path, workspace, monkeypatch):
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8,
+        tmp_path / "m.mp3", sparks=[(tmp_path / "s1.png", 46), (tmp_path / "s2.png", 24)],
+    )
+    filters = command[command.index("-filter_complex") + 1]
+    assert "overlay=0:'-mod(t*46,1920)'" in filters and "[vs0]" in filters
+    assert filters.index("mod(t*24") < filters.index("[v0][t1]")  # sparks under text
+    assert "[4:a]" in filters  # music index shifts past the spark inputs
+    plain = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8)
+    assert "vbase" not in plain[plain.index("-filter_complex") + 1]
+
+    _reel_workspace(workspace, monkeypatch)
+    review_ui.update_post_settings("post_001", {"sparks": True})
+    assert workspace.read()["sparks"] is True
+    assert not video_renderer.reel_video_path("post_001").exists()

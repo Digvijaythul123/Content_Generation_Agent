@@ -235,6 +235,7 @@
       <a href="#library" data-queue="Approved">Production</a>
       <a href="#library" data-tab="assets">Assets</a>
       <a href="#activity">Activity</a>
+      <a href="#scheduled">Scheduled</a>
       <a href="#performance">Performance</a>
     </nav>
 
@@ -250,6 +251,16 @@
         <strong>Recent activity</strong>
         <div id="recent-activity" class="activity-entry">No activity recorded yet.</div>
       </div>
+    </section>
+
+    <section class="panel generator" id="scheduled" aria-labelledby="scheduled-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="scheduled-heading">Scheduled</h2>
+          <p class="hint">Reels queued to post automatically (your Mac must be on at the time).</p>
+        </div>
+      </div>
+      <div id="scheduled-body" class="hint">Nothing scheduled.</div>
     </section>
 
     <section class="panel generator" id="performance" aria-labelledby="performance-heading">
@@ -536,7 +547,41 @@
       });
     }
 
+    function renderScheduled() {
+      const body = $("scheduled-body");
+      body.replaceChildren();
+      const queued = state.items
+        .filter((item) => item.scheduled_at && item.status !== "Published")
+        .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+      if (!queued.length) {
+        body.className = "hint";
+        body.textContent = "Nothing scheduled. Open a Reel's Instagram tab to schedule it.";
+        return;
+      }
+      body.className = "";
+      body.append(performanceTable(
+        ["When", "Post", "Status"],
+        queued.map((item) => {
+          const open = document.createElement("a");
+          open.href = `#${item.type}/${item.id}/instagram`;
+          open.textContent = `${item.id} · ${item.title.replaceAll("**", "")}`;
+          open.addEventListener("click", (event) => {
+            event.preventDefault();
+            state.activeTab = "instagram";
+            state.selected = item;
+            loadSelected(item);
+          });
+          const when = new Date(item.scheduled_at);
+          const status = item.schedule_failed
+            ? "Failed: reschedule it"
+            : (when < new Date() ? "Due: posting within a minute" : "Queued");
+          return [when.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), open, status];
+        })
+      ));
+    }
+
     function renderItems() {
+      renderScheduled();
       const term = $("search").value.trim().toLowerCase();
       const type = $("type-filter").value;
       const status = $("status-filter").value;
@@ -1312,6 +1357,20 @@
       });
       layoutLabel.append(layoutSelect);
       box.append(layoutLabel);
+      const sparksLabel = document.createElement("label");
+      const sparks = document.createElement("input");
+      sparks.type = "checkbox";
+      sparks.checked = Boolean(state.record.sparks);
+      sparks.addEventListener("change", async () => {
+        try {
+          await saveReelSettings({ sparks: sparks.checked },
+            "Effect changed. Render the Reel video again to see it.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      sparksLabel.append(sparks, " Drifting sparks");
+      box.append(sparksLabel);
       const note = document.createElement("span");
       note.className = "message";
       const used = state.record.video_music;

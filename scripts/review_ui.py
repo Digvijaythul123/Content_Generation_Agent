@@ -157,6 +157,8 @@ def list_content_items():
                     "qa_subtype": record.get("qa_subtype", ""),
                     "thinker_id": record.get("thinker_id", ""),
                     "visual_style": record.get("visual_style", ""),
+                    "scheduled_at": record.get("scheduled_at") or "",
+                    "schedule_failed": bool(record.get("schedule_failed")),
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
                     ),
@@ -1048,6 +1050,13 @@ def update_post_settings(content_id, payload):
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("layout")
+    if "sparks" in payload:
+        if not isinstance(payload["sparks"], bool):
+            raise ValueError("Sparks must be on or off.")
+        record["sparks"] = payload["sparks"]
+        # The rendered video carries the old effect, so render it again.
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("sparks")
     if "scheduled_at" in payload:
         value = payload["scheduled_at"]
         if value:
