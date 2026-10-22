@@ -13,7 +13,134 @@
 Status labels: **[CURRENT]** implemented; **[NEXT]** near-term design or
 implementation; **[FUTURE]** longer-term capability.
 
-## 2. Current system
+## 2. Architecture diagrams
+
+These diagrams render on GitHub (Mermaid) and describe the [CURRENT] system.
+
+### 2.1 Components
+
+```mermaid
+flowchart LR
+    user(["You"])
+
+    subgraph entry["Entry points"]
+        ui["Review UI<br/>scripts/review_ui.html<br/>review_server.py + review_ui.py"]
+        cli["CLI<br/>scripts/main.py, publish_post.py"]
+        sched["Scheduler<br/>publish_scheduled.py<br/>macOS LaunchAgent, every 60 s"]
+    end
+
+    subgraph gen["Generation"]
+        pipe["content_pipeline.py<br/>thinker rotation, caption tidy,<br/>5 hashtags, Threads fit"]
+        agent["content_agent.py<br/>prompt sections, plain English,<br/>Simplify / New wording"]
+        ai["ai_service.py"]
+    end
+
+    subgraph cfg["Configuration"]
+        yaml["config/*.yaml<br/>profile, story modes, visual styles,<br/>brands, formats, platforms"]
+        prompts["prompts/formats/*.md"]
+    end
+
+    subgraph media["Media"]
+        art["art_generator.py<br/>art prompts, artwork storage"]
+        render["media_renderer.py<br/>Playwright + templates/*.html"]
+        video["video_renderer.py<br/>ffmpeg, effects, film finish"]
+        music["music_library.py<br/>music/*.mp3"]
+    end
+
+    subgraph store["Local storage"]
+        posts[("generated_posts/*.json")]
+        assets[("generated_assets/<br/>art, renders, videos,<br/>history, prompts")]
+    end
+
+    subgraph pub["Publishing and insights"]
+        host["media_host.py"]
+        insta["instagram_publisher.py"]
+        stats["analytics.py"]
+        backup["backup_content.py"]
+    end
+
+    llm[["Ollama-compatible model<br/>MODEL_ENDPOINT"]]
+    imgtool[["Image tools<br/>ChatGPT, Gemini, Copilot<br/>(manual) or Gemini/Cloudflare API"]]
+    r2[["Cloudflare R2"]]
+    ig[["Instagram Graph API"]]
+    icloud[["iCloud Drive"]]
+
+    user --> ui & cli
+    ui --> pipe
+    cli --> pipe
+    pipe --> agent --> ai --> llm
+    agent --> yaml & prompts
+    pipe --> posts
+    ui --> art --> imgtool
+    art --> assets
+    ui --> render --> assets
+    ui --> video
+    video --> render
+    video --> music
+    video --> assets
+    ui --> host --> r2
+    ui --> insta --> ig
+    sched --> host
+    sched --> insta
+    sched --> backup --> icloud
+    ig -.->|fetches media| r2
+    stats --> ig
+    ui --> stats
+```
+
+### 2.2 One-image Reel lifecycle
+
+```mermaid
+flowchart TD
+    A["Generate draft<br/>story mode, thinker, visual style"] --> B{"Review"}
+    B -- "edit words" --> T["Edit on-image text<br/>Simplify / New wording"]
+    T --> B
+    B -- "Reject" --> R["Rejected<br/>(Regenerate as new draft)"]
+    B -- "Approve" --> P["Art prompt<br/>(text-free, or exact words<br/>for illustrated modes)"]
+    P --> U["Make art in an image tool<br/>and upload (image or clip)"]
+    U --> C["Render cover image<br/>layout + text tone"]
+    C --> V["Render Reel video<br/>push-in, effect, music"]
+    V --> S{"Publish"}
+    S -- "now" --> PUB["Upload to R2<br/>Instagram Reel with AI label<br/>and text cover"]
+    S -- "schedule" --> Q["Scheduled queue"] --> PUB
+    PUB --> D["Published<br/>permalink saved, R2 copy deleted"]
+    D --> I["Insights<br/>Performance section"]
+```
+
+### 2.3 Rendering: layout choice and video layers
+
+```mermaid
+flowchart TD
+    rec["Post record"] --> d{"Illustrated story mode?<br/>(designed_image)"}
+    d -- "yes" --> des["designed.html<br/>art is the finished post"]
+    d -- "no" --> reel{"Reel?"}
+    reel -- "yes" --> lay{"Layout"}
+    lay -- "poster" --> pos["image_reel_poster.html<br/>words over the sky,<br/>tone: light / mid / dark"]
+    lay -- "panel" --> pan["image_reel.html<br/>shade only behind the words"]
+    reel -- "no (feed)" --> flay{"Layout"}
+    flay -- "poster" --> fpos["feed_poster.html"]
+    flay -- "standard" --> brand["brand layout<br/>quote_painting.html"]
+
+    pos & pan --> layers["Video layers, bottom to top:<br/>1. background (push-in, film finish)<br/>2. effect (sparks, meteors, rain, sunlight)<br/>3. text lines fading in<br/>4. music"]
+    des --> whole["Video: whole picture, gentle push-in,<br/>effect and music, no text layers"]
+```
+
+### 2.4 Post status
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft: generate
+    Draft --> Approved: approve
+    Draft --> Rejected: reject
+    Approved --> Approved: edit text, art, layout, effect, schedule
+    Approved --> Published: publish (now or scheduled)
+    Published --> [*]
+```
+
+Regenerate (from Draft or Rejected) creates a separate new Draft; the
+original record is kept.
+
+## 3. Current system (text view)
 
 ```text
 CLI scripts/
@@ -41,16 +168,25 @@ local review UI -> draft generation, shared review decisions, and local history
                -> format-aware pipeline status and production-stage actions
                -> asset links for generated prompts and scene files
 
-one-image Reel (image_reel format):
-  content pipeline (thinker rotation, story mode, critical lens, caption tidy,
-                    5-hashtag cap, Threads fit) -> generated_posts/*.json
-  art_generator.py -> text-free art prompt (layout, style, likeness/alias)
+one-image Reel (image_reel format) and Instagram feed post:
+  content pipeline (thinker rotation, story mode, critical lens, plain-English
+                    rules, caption tidy, 5-hashtag cap, Threads fit)
+                   -> generated_posts/*.json
+  review UI text tools: Edit on-image text, Simplify, New wording
+                   (content_agent.simplify_copy; nothing saved until Save)
+  art_generator.py -> art prompt: wordless for overlay layouts, or the exact
+                   words for illustrated story modes (designed_image)
   artwork (image or MP4/MOV clip, attached in the UI) -> generated_assets/
-  media_renderer.py + templates/image_reel_poster.html | image_reel.html
-                   -> generated_assets/*_instagram.jpg (cover)
-  video_renderer.py (ffmpeg) + music_library.py -> generated_assets/*_reel.mp4
+  media_renderer.py + templates/
+      image_reel_poster.html | image_reel.html | feed_poster.html |
+      quote_painting.html | designed.html
+                   -> generated_assets/*_instagram.jpg (cover / feed image)
+  video_renderer.py (ffmpeg): push-in + film finish + effect layer
+      (sparks, meteors, rain, sunlight) + text fades + music_library.py
+                   -> generated_assets/*_reel.mp4
   review UI publish/schedule -> media_host.py (R2) -> instagram_publisher.py
-  scripts/publish_scheduled.py (LaunchAgent, every minute; token refresh)
+  scripts/publish_scheduled.py (LaunchAgent, every minute): due posts,
+      weekly token refresh, weekly iCloud backup (backup_content.py)
   analytics.py -> generated_assets/performance.json -> UI Performance section
 ```
 
@@ -88,7 +224,7 @@ one-image Reel (image_reel format):
   adapter exists yet. Image art is made by hand in an image tool or through
   the optional Gemini/Cloudflare image clients in `art_generator.py`.
 
-## 3. Domain boundaries
+## 4. Domain boundaries
 
 ```text
 Source / Brief
@@ -120,7 +256,7 @@ explicit Comedy category with no brand argument defaults to Life Is a Glitch;
 an explicit blank brand selection still means no publisher identity is
 included or saved. Category metadata is stored only on opted-in drafts.
 
-## 4. Target modular-monolith organization
+## 5. Target modular-monolith organization
 
 The current flat root modules and `scripts/` are retained for now. Do not
 perform a package move as part of video planning. Add modules incrementally
@@ -166,7 +302,7 @@ Possible future modules such as `storyboard_models.py`, `asset_catalog.py`,
 corresponding roadmap phase begins. A practical modular monolith is preferable
 to empty architectural layers.
 
-## 5. Content pipeline status
+## 6. Content pipeline status
 
 | Pipeline stage | Status | Boundary / next decision |
 |---|---|---|
@@ -184,7 +320,7 @@ to empty architectural layers.
 | Publishing | [CURRENT] | Instagram (Reels and Feed) with approval, confirmation, scheduling, AI label, and text cover. Other platforms are [FUTURE]. |
 | Analytics | [CURRENT] | Per-post insights linked to story mode, visual style, and thinker. |
 
-## 6. Near-term design
+## 7. Near-term design
 
 ### [NEXT] Structured production plan
 
@@ -216,7 +352,7 @@ can map stable IDs to files. Validate paths and required template values.
 Record prompt IDs/versions on new production plans; do not claim existing
 records have prompt provenance.
 
-## 7. Video provider boundary
+## 8. Video provider boundary
 
 ### [FUTURE] Provider-neutral contract
 
@@ -233,7 +369,7 @@ format, or storyboard contract. Add providers incrementally and test the
 same request/result contract with mocks. Do not implement a generic provider
 marketplace or plugin system before a second integration is justified.
 
-## 8. Asset libraries and consistency
+## 9. Asset libraries and consistency
 
 ### [NEXT] Prompt and visual-style assets
 
@@ -270,7 +406,7 @@ are future capabilities. They may use provider-managed references or local
 assets; the architecture should keep those details behind asset references
 and provider adapters. No 3D renderer or consistency engine currently exists.
 
-## 9. Configuration and precedence
+## 10. Configuration and precedence
 
 Use validated YAML for human-authored settings and JSON for current content
 records. Keep configuration data declarative. A future explicit precedence
@@ -283,7 +419,7 @@ Secrets and provider credentials belong in environment variables or a
 dedicated local secret mechanism, never in prompts or version-controlled
 configuration.
 
-## 10. Quality and failure behavior
+## 11. Quality and failure behavior
 
 - Validate configuration and generated fields at boundaries.
 - Surface model, filesystem, and provider errors explicitly.
