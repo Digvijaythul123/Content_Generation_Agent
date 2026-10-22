@@ -879,3 +879,13 @@ def test_generated_captions_are_trimmed_to_five_hashtags():
 )
 def test_footer_source_line_handles_caption_variants(line, expected):
     assert media_renderer.source_line({"caption": f"Hook\n\n{line}\n\n#a"}) == expected
+
+
+def test_statue_and_portrait_styles_include_the_thinkers_likeness():
+    base = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "epictetus"}
+    statue = art_generator.build_art_prompt({**base, "visual_style": "thinker_statue"})
+    assert "The statue must portray Epictetus" in statue and "bearded" in statue
+    portrait = art_generator.build_art_prompt({**base, "visual_style": "living_thinker"})
+    assert "Likeness: Epictetus:" in portrait
+    other = art_generator.build_art_prompt({**base, "visual_style": "conceptual_metaphor"})
+    assert "Likeness" not in other

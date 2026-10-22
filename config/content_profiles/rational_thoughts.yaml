@@ -196,6 +196,7 @@ thinkers:
         source: 'Dhammapada 103 (tr. Buddharakkhita)'
       - text: 'Health is the most precious gain and contentment the greatest wealth.'
         source: 'Dhammapada 204 (tr. Buddharakkhita)'
+    statue: 'Head and shoulders of the Buddha: serene face, downcast half-closed eyes, elongated earlobes, tightly curled hair with the crown topknot (ushnisha), robe over one shoulder.'
     portrayal: A human teacher and reasoner, not a deity or miracle worker; calm, wry, and respectful; no caricature.
     appearance: >-
       A man of about 35 from 5th-century-BCE northern India with warm brown skin;
@@ -223,6 +224,7 @@ thinkers:
     quotes:
       - text: 'The unexamined life is not worth living for a human being.'
         source: 'Plato, Apology 38a (tr. Grube)'
+    statue: 'Head and shoulders of an old bald Athenian man with a broad snub nose, wide bulging eyes, thick lips, and a full curly beard, in a simple draped cloak.'
     portrayal: Barefoot, playful, persistent questioner; never smug.
     appearance: An older Athenian man with a broad snub nose, bulging eyes, bald crown, and a full grey beard, barefoot in a plain worn himation.
     setting: Athenian agora, stone colonnades, olive trees, marketplaces, dusty sandals.
@@ -245,6 +247,7 @@ thinkers:
         source: 'Principal Doctrines 2'
       - text: 'Of all the means which wisdom acquires to ensure happiness throughout the whole of life, by far the most important is friendship.'
         source: 'Principal Doctrines 27'
+    statue: 'Head and shoulders of a calm Greek man with a long full beard and short curly hair, in a draped himation.'
     portrayal: A warm host in a garden, not a glutton.
     setting: A simple walled garden near Athens, shared meals of bread and olives, friends talking under trees.
   - id: diogenes
@@ -261,6 +264,7 @@ thinkers:
     quotes:
       - text: 'I am a citizen of the world.'
         source: 'Diogenes Laertius, Lives of Eminent Philosophers VI.63'
+    statue: 'Head and shoulders of a gaunt old Greek man with a wild unkempt beard and tangled hair, in a coarse rough cloak.'
     portrayal: A cheeky provocateur with a lamp and a barrel; witty, not cruel.
     appearance: A lean, sun-darkened Greek man with a wild grey beard and tangled hair in a coarse ragged cloak, carrying an oil lamp, often near a large clay jar.
     setting: A large clay jar on a busy Greek street, a lamp in daylight, marble statues, crowded markets.
@@ -280,6 +284,7 @@ thinkers:
     quotes:
       - text: 'Knowing others is intelligence; knowing yourself is true wisdom.'
         source: 'Tao Te Ching, chapter 33'
+    statue: 'Head and shoulders of an elderly Chinese sage with a long flowing white beard and topknot, in simple layered robes.'
     portrayal: A quiet, gently humorous old sage; note that his historicity is uncertain.
     appearance: An elderly Chinese sage with a long white beard and topknot in simple layered robes, often riding a water buffalo through a mountain pass.
     setting: Misty mountains, flowing rivers, bamboo, a mountain pass, an ox, ink-wash landscapes.
@@ -316,6 +321,7 @@ thinkers:
     quotes:
       - text: 'A wise man, therefore, proportions his belief to the evidence.'
         source: 'An Enquiry Concerning Human Understanding, Section X'
+    statue: 'Head and shoulders of a heavy-set 18th-century Scottish gentleman, clean-shaven with a round face, in a cravat and coat.'
     portrayal: Genial, good-humored, and modest.
     setting: 18th-century Edinburgh, candlelit study, cobbled streets, coffee houses, quill and paper.
   - id: russell
@@ -334,6 +340,7 @@ thinkers:
     quotes:
       - text: 'The fundamental cause of the trouble is that in the modern world the stupid are cocksure while the intelligent are full of doubt.'
         source: '"The Triumph of Stupidity" (1933)'
+    statue: 'Head and shoulders of a thin elderly Englishman with a sharp nose, swept-back white hair, clean-shaven, in a suit and tie.'
     portrayal: Dry, witty, precise; a pipe and a raised eyebrow.
     setting: Mid-century English study, books, a lecture hall, a teapot orbiting among planets.
   - id: ambedkar
@@ -353,6 +360,7 @@ thinkers:
     quotes:
       - text: 'Educate, agitate, organize.'
         source: 'Closing message, All-India Depressed Classes Conference, Nagpur (1942)'
+    statue: 'Head and shoulders of B. R. Ambedkar: round glasses, neatly combed hair, clean-shaven, in a three-piece suit and tie.'
     portrayal: A scholar and reformer of quiet resolve; treat caste themes with care and accuracy.
     setting: Libraries, the Constituent Assembly hall, Indian towns and villages, a blue-and-white palette.
   - id: sagan
@@ -372,6 +380,7 @@ thinkers:
     quotes:
       - text: 'Extraordinary claims require extraordinary evidence.'
         source: 'Cosmos (1980)'
+    statue: 'Head and shoulders of a smiling middle-aged American man with dark side-parted hair, clean-shaven, in a turtleneck and jacket.'
     portrayal: Gentle wonder plus rigorous skepticism.
     setting: Observatories, starfields, the Voyager probe, Earth as a pale blue dot, a 1980s TV studio.
   - id: marcus_aurelius
@@ -392,6 +401,7 @@ thinkers:
         source: 'Meditations 12.17'
     misattributions:
       - '"Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth." (not in the Meditations)'
+    statue: 'Head and shoulders of a Roman emperor with thick curly hair and a full curly beard, in a cuirass and military cloak.'
     portrayal: A tired, self-critical emperor writing notes to himself, not a motivational guru; note that he also ruled an empire at war.
     appearance: A bearded Roman man in his fifties with curly greying hair, wearing a plain military cloak, writing by oil lamp in a campaign tent.
     setting: Roman army camps on the Danube frontier, lamplit tents, marble Rome.
@@ -414,6 +424,7 @@ thinkers:
         source: 'On the Shortness of Life 1'
     misattributions:
       - '"Luck is what happens when preparation meets opportunity" (not Seneca)'
+    statue: 'Head and shoulders of an elderly Roman man, balding with thin hair, a short beard, and deep lines on his face, in a toga.'
     portrayal: A sharp writer who preached simplicity while being one of Rome's richest men; acknowledge the tension honestly.
     appearance: An older balding Roman man with a short grey beard in a toga, writing letters at a wooden desk.
     setting: A Roman villa study with scrolls and wax tablets, Mediterranean light.
@@ -435,6 +446,7 @@ thinkers:
         source: 'Discourses 2.17'
     misattributions:
       - Many "Epictetus" lines online are modern paraphrases; check the Enchiridion or Discourses before quoting.
+    statue: 'Head and shoulders of a Greek Stoic teacher with a full beard and short hair, plain lined face, in a simple worn tunic; humble, not imperial.'
     portrayal: A former slave with a lame leg who became a teacher; plain-spoken and demanding.
     appearance: A bearded Greek man in a simple worn tunic, walking with a slight limp and a stick, teaching students in a bare classroom.
     setting: The school at Nicopolis, stone benches, simple oil lamps.
@@ -455,6 +467,7 @@ thinkers:
         source: 'Kabir, doha'
     misattributions:
       - Many couplets shared as Kabir online are modern; check standard collections before quoting.
+    statue: 'Head and shoulders of a 15th-century Indian poet-weaver with a white beard, a simple cap or turban, and a plain shawl.'
     portrayal: A weaver-poet who mocked hypocrisy in every religion; witty, blunt, never preachy.
     appearance: A lean 15th-century Indian weaver in a simple white dhoti and shawl, sitting at a wooden handloom.
     setting: Varanasi lanes, river ghats, handlooms and spun cotton.
@@ -475,6 +488,7 @@ thinkers:
         source: 'Raja Yoga (1896)'
     misattributions:
       - '"Talk to yourself once in a day, otherwise you may miss meeting an excellent person in this world." (unverified)'
+    statue: 'Head and shoulders of a young Indian monk with a round face and strong gaze, wearing a saffron turban and robe, clean-shaven.'
     portrayal: Emphasize his rational, reformist, education-first side; he was also a religious monk, so do not present him as a secular thinker.
     appearance: A young Indian monk in a saffron turban and long saffron robe, arms folded, confident gaze.
     setting: Late 19th-century Kolkata, the Chicago Parliament of Religions hall (1893).
@@ -496,6 +510,7 @@ thinkers:
         source: '"Why I Am an Atheist" (1930)'
     misattributions:
       - Many slogans attributed to him online are unsourced; quote "Why I Am an Atheist" or his letters directly.
+    statue: 'Head and shoulders of a young Indian man in his early twenties with a thin moustache and a felt fedora hat, in a 1920s coat.'
     portrayal: A young, widely read revolutionary thinker; focus on his reasoning, not on glorifying violence.
     appearance: A young Indian man in his early twenties with a thin moustache and a felt hat, reading in a jail cell.
     setting: 1920s Lahore, prison cells with books, typewritten pamphlets.
@@ -516,6 +531,7 @@ thinkers:
         source: 'Shetkaryacha Asud (1883)'
     misattributions:
       - Check English quotes against Gulamgiri or Shetkaryacha Asud before using them.
+    statue: 'Head and shoulders of a 19th-century Maharashtrian man with a moustache, wearing a white pagadi turban and a white shawl.'
     portrayal: A reformer who, with Savitribai Phule, opened schools for girls and the oppressed; practical and fearless.
     appearance: A 19th-century Maharashtrian man in a white pagadi turban and white clothes, standing at a modest schoolroom.
     setting: 1850s Pune, the first girls' school at Bhide Wada, slates and chalk.
@@ -531,6 +547,7 @@ thinkers:
       - Talks published as books (for example The Book of Secrets; Courage)
     misattributions:
       - A huge number of "Osho quotes" online are paraphrases or invented; only quote wording checked against a specific book.
+    statue: 'Head and shoulders of an older Indian man with a long flowing white beard, large calm eyes, and a knitted cap, in a simple robe.'
     portrayal: Engage his ideas critically; he is controversial (including the Rajneeshpuram events of the 1980s), so never present him as an unquestionable guru.
     appearance: An older Indian man with a long white beard in a simple robe and knitted cap, speaking calmly.
     setting: A quiet ashram garden in Pune, simple meditation hall.

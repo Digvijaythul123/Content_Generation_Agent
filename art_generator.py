@@ -239,6 +239,39 @@ def visual_style_for(record):
     raise ArtGenerationError(f"Unknown visual style {style_id!r}.")
 
 
+# Styles that depict the thinker themself need their real likeness.
+_LIKENESS_STYLES = ("living_thinker", "thinker_statue")
+
+
+def _thinker_likeness(record, style):
+    if not style or style["id"] not in _LIKENESS_STYLES:
+        return None
+    thinker_id = record.get("thinker_id")
+    if not thinker_id:
+        return None
+    from config_loader import ConfigurationError, load_profile_thinkers
+
+    try:
+        thinkers = load_profile_thinkers(record.get("profile_id"))
+    except ConfigurationError:
+        return None
+    thinker = next((item for item in thinkers if item["id"] == thinker_id), None)
+    if not thinker:
+        return None
+    if style["id"] == "thinker_statue":
+        # Busts need a head-and-shoulders likeness, not a full scene.
+        face = thinker.get("statue") or thinker.get("appearance")
+        if not face:
+            return None
+        return (
+            f"The statue must portray {thinker['name']}: "
+            f"{' '.join(face.split())} Render that likeness in carved stone or bronze."
+        )
+    if not thinker.get("appearance"):
+        return None
+    return f"{thinker['name']}: {' '.join(thinker['appearance'].split())}"
+
+
 def build_art_prompt(record, art_style=None):
     description = str(record.get("design_prompt") or "").strip()
     if not description:
@@ -254,6 +287,9 @@ def build_art_prompt(record, art_style=None):
     elif art_style:
         parts.append(f"Visual style: {art_style}")
     parts.append(f"Scene: {description}")
+    likeness = _thinker_likeness(record, style)
+    if likeness:
+        parts.append(f"Likeness: {likeness}")
     if style and style.get("avoid"):
         parts.append(f"Avoid: {style['avoid']}.")
     return "\n\n".join(parts)
