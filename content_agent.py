@@ -1,6 +1,13 @@
 from ai_service import AIService
-from config_loader import load_comedy_config, load_profile_subtypes
+from config_loader import (
+    load_comedy_config,
+    load_profile_story_settings,
+    load_profile_subtypes,
+    load_profile_thinkers,
+    load_profile_visual_styles,
+)
 import json
+import random
 from string import Template
 import warnings
 
@@ -13,6 +20,7 @@ from project_paths import (
 
 
 PROMPT_TEMPLATE_PATH = PROMPT_DIRECTORY / "content_generation.md"
+CAPTION_LANGUAGES = ("english", "hinglish")
 
 
 class ContentAgent:
@@ -30,6 +38,9 @@ class ContentAgent:
         category_id=None,
         comedy_subtype=None,
         qa_subtype=None,
+        thinker_id=None,
+        visual_style=None,
+        caption_language="english",
     ):
         self.ai_service = AIService()
         self.profile = profile or load_profile(profile_id)
@@ -42,6 +53,11 @@ class ContentAgent:
         self.category_id = category_id
         self.comedy_subtype = comedy_subtype
         self.qa_subtype = qa_subtype
+        self.thinker_id = thinker_id
+        self.visual_style = visual_style
+        if caption_language not in CAPTION_LANGUAGES:
+            raise ValueError(f"Unknown caption language {caption_language!r}.")
+        self.caption_language = caption_language
 
     def get_previous_titles(self, profile_id=None, brand_id=None):
 
@@ -153,6 +169,104 @@ class ContentAgent:
                 f"Selected format requirements:\n{instructions}\n\n" + prompt
             )
 
+        story_settings = load_profile_story_settings(profile["id"])
+        format_id = getattr(self.content_format, "id", "reel")
+        duration = story_settings["reel_duration_seconds"]
+        if duration and format_id == "reel" and self.category_id != "comedy":
+            prompt = (
+                f"Recommended duration: {duration['minimum']}-"
+                f"{duration['maximum']} seconds. Pace the script for about "
+                f"{duration['minimum'] * 5 // 2}-{duration['maximum'] * 5 // 2} "
+                "spoken words and land the hook within the first 1-2 seconds.\n"
+                "In the script, mark each visual beat with a strong, specific "
+                "background: setting, lighting, color mood, and a short "
+                "background-music cue.\n\n" + prompt
+            )
+
+        if self.thinker_id:
+            thinker = next(
+                (
+                    item
+                    for item in load_profile_thinkers(profile["id"])
+                    if item["id"] == self.thinker_id
+                ),
+                None,
+            )
+            if thinker is None:
+                raise ValueError(
+                    f"Unknown thinker {self.thinker_id!r} for "
+                    f"profile {profile['id']!r}."
+                )
+            # A random pick keeps drafts from collapsing onto the first idea.
+            focus_idea = random.choice(thinker["core_ideas"])
+            thinker_lines = [
+                f"Selected thinker: {thinker['name']}"
+                + (f" ({thinker['era']})" if thinker.get("era") else ""),
+                f"Build this draft on this core idea: {focus_idea}",
+                "Other core ideas (for context only):",
+                _as_bullets(
+                    [idea for idea in thinker["core_ideas"] if idea != focus_idea]
+                ),
+                "Verified sources:",
+                _as_bullets(thinker["sources"]),
+            ]
+            if thinker.get("misattributions"):
+                thinker_lines += [
+                    "Misattributed quotes to avoid (never present these as "
+                    "the thinker's words):",
+                    _as_bullets(thinker["misattributions"]),
+                ]
+            if thinker.get("portrayal"):
+                thinker_lines.append(f"Portrayal: {thinker['portrayal']}")
+            if thinker.get("setting"):
+                thinker_lines.append(f"Period background: {thinker['setting']}")
+            if thinker.get("appearance"):
+                thinker_lines.append(
+                    "Visual appearance (describe these details whenever the "
+                    f"thinker appears in an image): {thinker['appearance']}"
+                )
+            thinker_lines.append(
+                "Paraphrase the idea instead of inventing quotations. Quote "
+                "only wording you are confident appears in a listed source. "
+                "In the caption, name the teaching and the reference given "
+                "with the idea, for example 'Teaching: The Second Arrow "
+                "(SN 36.6)'. Label later-tradition ideas by their tradition "
+                "(for example 'Zen story'), never as the Buddha's own words.\n\n"
+            )
+            prompt = "\n".join(thinker_lines) + prompt
+        elif self.category_id != "comedy":
+            thinkers = load_profile_thinkers(profile["id"])
+            if thinkers:
+                prompt = (
+                    "Build the story on one real idea from one of these "
+                    "thinkers: "
+                    + ", ".join(item["name"] for item in thinkers)
+                    + ". Draw on the full range of their teaching, not one "
+                    "favorite text. Paraphrase rather than invent quotations "
+                    "and name the teaching and its reference in the "
+                    "caption.\n\n" + prompt
+                )
+
+        if self.visual_style:
+            style = next(
+                (
+                    item
+                    for item in load_profile_visual_styles(profile["id"])
+                    if item["id"] == self.visual_style
+                ),
+                None,
+            )
+            if style is None:
+                raise ValueError(f"Unknown visual style {self.visual_style!r}.")
+            prompt = (
+                f"Visual style for the Design_prompt: {style['name']}. "
+                f"{style['recipe'].strip()}\n"
+                "Write the scene so it suits this style, but do not repeat the "
+                "style keywords; they are added automatically. Show the Buddha "
+                "with dignity: in comedy or scenes with modern objects, use an "
+                "anonymous monk instead of the Buddha.\n\n" + prompt
+            )
+
         if self.qa_subtype:
             selected_subtype = next(
                 (
@@ -164,16 +278,26 @@ class ContentAgent:
             )
             if selected_subtype is None:
                 raise ValueError(
-                    f"Unknown QA subtype {self.qa_subtype!r} for "
+                    f"Unknown subtype {self.qa_subtype!r} for "
                     f"profile {profile['id']!r}."
                 )
-            prompt = (
-                f"Selected QA topic pillar: {selected_subtype['name']} — "
-                f"{selected_subtype['definition']}\n"
-                "Focus the content on this pillar while preserving the "
+            label = story_settings["subtype_label"]
+            subtype_lines = [
+                f"Selected {label}: {selected_subtype['name']} — "
+                f"{selected_subtype['definition']}"
+            ]
+            for key, heading in (
+                ("structure", "Structure"),
+                ("background", "Background and music"),
+                ("example", "Example of the approach (do not copy)"),
+            ):
+                if selected_subtype.get(key):
+                    subtype_lines.append(f"{heading}: {selected_subtype[key]}")
+            subtype_lines.append(
+                f"Focus the content on this {label.lower()} while preserving the "
                 "selected format's fields and the profile's accuracy safeguards.\n\n"
-                + prompt
             )
+            prompt = "\n".join(subtype_lines) + prompt
 
         if self.category_id == "comedy":
             comedy = load_comedy_config()
@@ -241,6 +365,15 @@ class ContentAgent:
                 "visually practical. Return only the selected format's fields.\n\n"
             )
             prompt = comedy_guidance + prompt
+
+        if self.caption_language == "hinglish":
+            prompt = (
+                "Caption language: after the caption's English hook line, add "
+                "one short, natural Hinglish line (Hindi written in Latin "
+                "script, the way people text in India) that restates the "
+                "idea warmly. Keep every other caption line and all on-screen "
+                "copy in English.\n\n" + prompt
+            )
 
         if self.brief:
             prompt = (

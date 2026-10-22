@@ -32,6 +32,27 @@ _ART_RULES = (
     "text can be overlaid there later. Absolutely no text, letters, numbers, "
     "captions, signatures, watermarks, logos, or frames anywhere in the image."
 )
+_IMAGE_REEL_ART_RULES = (
+    "Background artwork for a 9:16 vertical Instagram Reel. "
+    "Make the main subject large, filling about 60% of the upper frame. "
+    "{text_area} The camera slowly pushes in, so keep the subject away from "
+    "the edges. Absolutely no text, letters, numbers, captions, signatures, "
+    "watermarks, logos, or frames anywhere in the image."
+)
+_TEXT_AREAS = {
+    "night": (
+        "Let the lower 40% fall into deep, natural shadow so light text can "
+        "be overlaid there later."
+    ),
+    "day": (
+        "Keep the lower 40% calm, softly lit, and uncluttered so dark text "
+        "can be overlaid there later."
+    ),
+}
+
+
+def art_aspect_ratio(record):
+    return "9:16" if record.get("format_id") == "image_reel" else "4:5"
 
 
 class ArtGenerationError(RuntimeError):
@@ -200,14 +221,41 @@ def detect_image_type(data):
     return None
 
 
+def visual_style_for(record):
+    """Return the post's configured visual style, or None for brand styling."""
+    style_id = record.get("visual_style")
+    profile_id = record.get("profile_id")
+    if not style_id or not profile_id:
+        return None
+    from config_loader import ConfigurationError, load_profile_visual_styles
+
+    try:
+        styles = load_profile_visual_styles(profile_id)
+    except ConfigurationError as error:
+        raise ArtGenerationError(str(error)) from error
+    for style in styles:
+        if style["id"] == style_id:
+            return style
+    raise ArtGenerationError(f"Unknown visual style {style_id!r}.")
+
+
 def build_art_prompt(record, art_style=None):
     description = str(record.get("design_prompt") or "").strip()
     if not description:
         raise ArtGenerationError("The post has no design prompt to paint from.")
-    parts = [_ART_RULES]
-    if art_style:
+    style = visual_style_for(record)
+    if art_aspect_ratio(record) == "9:16":
+        palette = style.get("palette", "day") if style else "day"
+        parts = [_IMAGE_REEL_ART_RULES.format(text_area=_TEXT_AREAS[palette])]
+    else:
+        parts = [_ART_RULES]
+    if style:
+        parts.append(f"Visual style: {' '.join(style['recipe'].split())}")
+    elif art_style:
         parts.append(f"Visual style: {art_style}")
     parts.append(f"Scene: {description}")
+    if style and style.get("avoid"):
+        parts.append(f"Avoid: {style['avoid']}.")
     return "\n\n".join(parts)
 
 
@@ -222,8 +270,11 @@ def artwork_path(post_id):
 
 def generate_post_artwork(post_id, art_style=None, client=None):
     """Paint background art for a post and save it beside its other assets."""
-    prompt = build_art_prompt(load_post(post_id), art_style)
-    image_bytes, _ = (client or get_image_client()).generate(prompt)
+    record = load_post(post_id)
+    prompt = build_art_prompt(record, art_style)
+    image_bytes, _ = (client or get_image_client()).generate(
+        prompt, aspect_ratio=art_aspect_ratio(record)
+    )
     return save_post_artwork(post_id, image_bytes)
 
 

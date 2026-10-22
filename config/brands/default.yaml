@@ -14,7 +14,7 @@ template:
   text: "#2B1D14"
   accent: "#8E1F1B"
   font_family: "Georgia, 'Times New Roman', serif"
-  # handle: "@your_instagram_handle"  # optional footer text
+  handle: "@d_agnostic_being"  # footer text on rendered images
   art_style: >-
     Warm painterly illustration in the style of a classical Buddhist
     devotional painting on aged cream parchment. Soft golden-hour light,

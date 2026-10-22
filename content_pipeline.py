@@ -4,6 +4,7 @@ from content_models import (
     ContentValidationError,
     GeneratedContent,
     GenerationRequest,
+    trim_hashtags,
     validate_instagram_caption,
 )
 from config_loader import resolve_generation_request
@@ -25,6 +26,9 @@ def generate_content(
     category_id=None,
     comedy_subtype=None,
     qa_subtype=None,
+    thinker_id=None,
+    visual_style=None,
+    caption_language="english",
 ):
     """Resolve configuration, generate a draft, and validate its content."""
     request = resolve_generation_request(
@@ -36,6 +40,8 @@ def generate_content(
         category_id=category_id,
         comedy_subtype=comedy_subtype,
         qa_subtype=qa_subtype,
+        thinker_id=thinker_id,
+        visual_style=visual_style,
     )
     agent = ContentAgent(
         profile_id=request.profile.id,
@@ -49,6 +55,9 @@ def generate_content(
         category_id=request.category_id,
         comedy_subtype=request.comedy_subtype,
         qa_subtype=request.qa_subtype,
+        thinker_id=request.thinker_id,
+        visual_style=request.visual_style,
+        caption_language=caption_language,
     )
     raw_content = agent.generate_content()
     try:
@@ -61,5 +70,12 @@ def generate_content(
             f"{request.content_format.id!r}: {error}"
         ) from error
     if request.platform.id.startswith("instagram") and "caption" in content.fields:
+        trimmed = trim_hashtags(content.fields["caption"])
+        if trimmed != content.fields["caption"]:
+            content = GeneratedContent(
+                fields={**content.fields, "caption": trimmed},
+                raw_content=content.raw_content,
+                profile_id=content.profile_id,
+            )
         validate_instagram_caption(content.fields["caption"])
     return GenerationResult(request=request, content=content)

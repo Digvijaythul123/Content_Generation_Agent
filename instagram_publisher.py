@@ -2,7 +2,12 @@ import time
 
 import requests
 
-from app_settings import SettingsError, get_setting, require_settings
+from app_settings import (
+    SettingsError,
+    current_file_setting,
+    get_setting,
+    require_settings,
+)
 
 
 DEFAULT_GRAPH_BASE_URL = "https://graph.instagram.com/v23.0"
@@ -37,7 +42,9 @@ class InstagramPublisher:
                 )
             except SettingsError as error:
                 raise InstagramPublishError(str(error)) from error
-            access_token = access_token or settings["INSTAGRAM_ACCESS_TOKEN"]
+            access_token = access_token or current_file_setting(
+                "INSTAGRAM_ACCESS_TOKEN", settings["INSTAGRAM_ACCESS_TOKEN"]
+            )
             account_id = account_id or settings["INSTAGRAM_ACCOUNT_ID"]
         self._access_token = access_token
         self._account_id = account_id
@@ -111,7 +118,30 @@ class InstagramPublisher:
             raise InstagramPublishError("Instagram did not return a container ID.")
         return container_id
 
-    def wait_until_ready(self, container_id):
+    def create_reel_container(
+        self, video_url, caption, thumb_offset_ms=None, cover_url=None
+    ):
+        params = {
+            "media_type": "REELS",
+            "video_url": video_url,
+            "caption": caption,
+            "share_to_feed": "true",
+        }
+        if cover_url:
+            # A custom cover image wins over a frame picked from the video.
+            params["cover_url"] = cover_url
+        elif thumb_offset_ms is not None:
+            params["thumb_offset"] = str(int(thumb_offset_ms))
+        payload = self._request(
+            "POST", f"{self._base_url}/{self._account_id}/media", **params
+        )
+        container_id = payload.get("id")
+        if not container_id:
+            raise InstagramPublishError("Instagram did not return a container ID.")
+        return container_id
+
+    def wait_until_ready(self, container_id, timeout_seconds=None):
+        timeout_seconds = timeout_seconds or self._poll_timeout_seconds
         waited = 0
         while True:
             status = self._request(
@@ -122,12 +152,12 @@ class InstagramPublisher:
             if status in ("ERROR", "EXPIRED"):
                 raise InstagramPublishError(
                     f"Instagram could not process the media (status {status}). "
-                    "Check that the image is a public JPEG URL."
+                    "Check that the media is a public JPEG or MP4 URL."
                 )
-            if waited >= self._poll_timeout_seconds:
+            if waited >= timeout_seconds:
                 raise InstagramPublishError(
                     f"Instagram was still processing the media after "
-                    f"{self._poll_timeout_seconds} seconds."
+                    f"{timeout_seconds} seconds."
                 )
             self._sleep(self._poll_interval_seconds)
             waited += self._poll_interval_seconds
@@ -148,14 +178,35 @@ class InstagramPublisher:
             "GET", f"{self._base_url}/{media_id}", fields="permalink"
         ).get("permalink")
 
-    def publish_image(self, image_url, caption):
-        """Publish one image post and return {'media_id', 'permalink'}."""
+    def _check_quota(self):
         used, total = self.publishing_quota()
         if used >= total:
             raise InstagramPublishError(
                 f"The Instagram publishing limit is reached ({used}/{total} "
                 "posts in the last 24 hours). Try again later."
             )
+
+    def _finish(self, container_id, timeout_seconds=None):
+        self.wait_until_ready(container_id, timeout_seconds)
+        media_id = self.publish_container(container_id)
+        try:
+            link = self.permalink(media_id)
+        except InstagramPublishError:
+            link = None  # The post is live; a missing permalink is not fatal.
+        return {"media_id": media_id, "permalink": link}
+
+    def publish_reel(self, video_url, caption, thumb_offset_ms=None, cover_url=None):
+        """Publish one Reel (shared to the feed) and return its ID and link."""
+        self._check_quota()
+        container_id = self.create_reel_container(
+            video_url, caption, thumb_offset_ms, cover_url
+        )
+        # Instagram transcodes video, which takes much longer than images.
+        return self._finish(container_id, timeout_seconds=600)
+
+    def publish_image(self, image_url, caption):
+        """Publish one image post and return {'media_id', 'permalink'}."""
+        self._check_quota()
         container_id = self.create_image_container(image_url, caption)
         self.wait_until_ready(container_id)
         media_id = self.publish_container(container_id)

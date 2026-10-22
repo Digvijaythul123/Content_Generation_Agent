@@ -35,6 +35,7 @@ topics:
   - Large language models in QA workflows
   - Human review, privacy, and limits of AI testing
 
+subtype_label: QA topic pillar
 subtypes:
   - id: testing_strategy
     name: Testing Strategy & Risk

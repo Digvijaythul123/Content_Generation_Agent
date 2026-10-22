@@ -1,15 +1,24 @@
 import argparse
 from pathlib import Path
 
-from config_loader import load_comedy_config, load_profile_subtypes
+from config_loader import (
+    load_brand,
+    load_comedy_config,
+    load_profile_subtypes,
+    load_profile_thinkers,
+)
 from content_pipeline import generate_content
-from post_prompt import build_ready_design_prompt
+from post_prompt import build_post_prompt_file
 from project_paths import GENERATED_ASSETS_DIRECTORY
 from post_storage import create_post
 from reel_storage import create_reel
 
 
-def _save_result(result):
+def _art_style(brand):
+    return brand.template.art_style if brand is not None else None
+
+
+def _save_result(result, caption_language="english"):
     print(result.content.raw_content)
     data = {
         "brand_id": (
@@ -28,6 +37,12 @@ def _save_result(result):
             data["comedy_subtype"] = result.request.comedy_subtype
     if result.request.qa_subtype:
         data["qa_subtype"] = result.request.qa_subtype
+    if result.request.thinker_id:
+        data["thinker_id"] = result.request.thinker_id
+    if result.request.visual_style:
+        data["visual_style"] = result.request.visual_style
+    if caption_language != "english":
+        data["caption_language"] = caption_language
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)
@@ -37,11 +52,12 @@ def _save_result(result):
             )
             GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
             prompt_file.write_text(
-                build_ready_design_prompt(
-                    result.content.fields,
+                build_post_prompt_file(
+                    data,
                     result.request.content_format,
                     result.request.platform,
                     result.request.category_id,
+                    _art_style(result.request.brand),
                 )
                 + "\n",
                 encoding="utf-8",
@@ -95,15 +111,42 @@ def main(argv=None):
     parser.add_argument(
         "--subtype",
         default=None,
-        help="Optional subtype for the selected Comedy or QA profile.",
+        help=(
+            "Optional subtype for the selected profile (Comedy subtype, QA "
+            "topic pillar, or Rational Thoughts story mode)."
+        ),
+    )
+    parser.add_argument(
+        "--thinker",
+        default=None,
+        help=(
+            "Optional thinker ID from the profile's thinker library, such as "
+            "buddha; omit to let the model choose (batches rotate thinkers)."
+        ),
+    )
+    parser.add_argument(
+        "--visual-style",
+        default=None,
+        help=(
+            "Optional art style for post formats, such as cinematic_photo, "
+            "living_buddha, buddha_statue, 3d_render, conceptual_metaphor, "
+            "storybook_monk, ink_wash, or painterly (default: the story "
+            "mode's style)."
+        ),
+    )
+    parser.add_argument(
+        "--caption-language",
+        choices=("english", "hinglish"),
+        default="english",
+        help="Add a short Hinglish line to the caption (on-screen copy stays English).",
     )
     parser.add_argument(
         "--count",
         type=int,
         default=1,
         help=(
-            "Generate this many separate drafts (1-10; Comedy and QA batches "
-            "rotate subtypes/topic pillars when none is selected)."
+            "Generate this many separate drafts (1-10; batches rotate "
+            "subtypes and thinkers when none is selected)."
         ),
     )
     brief_source = parser.add_mutually_exclusive_group()
@@ -147,17 +190,20 @@ def main(argv=None):
         comedy_subtypes = tuple(
             subtype["id"] for subtype in load_comedy_config()["subtypes"]
         )
+    profile_id = args.profile
+    if profile_id is None and args.category is None and args.brand != "":
+        profile_id = load_brand(args.brand or "default").default_profile_id
     qa_subtypes = ()
-    if (
-        args.profile == "qa_engineering_ai"
-        and args.qa_subtype is None
-        and args.subtype is None
-        and args.count > 1
-    ):
-        qa_subtypes = tuple(
-            subtype["id"]
-            for subtype in load_profile_subtypes("qa_engineering_ai")
-        )
+    thinker_ids = ()
+    if profile_id not in (None, "comedy") and args.count > 1:
+        if args.qa_subtype is None and args.subtype is None:
+            qa_subtypes = tuple(
+                subtype["id"] for subtype in load_profile_subtypes(profile_id)
+            )
+        if args.thinker is None:
+            thinker_ids = tuple(
+                thinker["id"] for thinker in load_profile_thinkers(profile_id)
+            )
     for index in range(args.count):
         comedy_subtype = args.comedy_subtype
         if comedy_subtypes:
@@ -166,15 +212,15 @@ def main(argv=None):
         if args.subtype:
             if args.profile == "comedy":
                 comedy_subtype = args.subtype
-            elif args.profile == "qa_engineering_ai":
+            elif profile_id is not None:
                 qa_subtype = args.subtype
             else:
-                parser.error(
-                    "--subtype requires --profile comedy or "
-                    "--profile qa_engineering_ai."
-                )
+                parser.error("--subtype requires a content profile.")
         if qa_subtypes:
             qa_subtype = qa_subtypes[index % len(qa_subtypes)]
+        thinker_id = args.thinker
+        if thinker_ids:
+            thinker_id = thinker_ids[index % len(thinker_ids)]
         result = generate_content(
             profile_id=args.profile,
             brand_id=args.brand,
@@ -184,8 +230,11 @@ def main(argv=None):
             category_id=args.category,
             comedy_subtype=comedy_subtype,
             qa_subtype=qa_subtype,
+            thinker_id=thinker_id,
+            visual_style=args.visual_style,
+            caption_language=args.caption_language,
         )
-        _save_result(result)
+        _save_result(result, args.caption_language)
     return 0
 
 

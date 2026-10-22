@@ -4,6 +4,8 @@ PyYAML
 python-dotenv
 # Instagram image rendering (also run: python3 -m playwright install chromium)
 playwright
+# One-image Reel video rendering (bundles its own ffmpeg)
+imageio-ffmpeg
 # Uploading media to Cloudflare R2 (S3-compatible) before publishing
 boto3
 

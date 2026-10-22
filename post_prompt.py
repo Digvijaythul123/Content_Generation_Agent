@@ -65,3 +65,22 @@ def build_ready_design_prompt(
         "The finished image must communicate the idea without relying on "
         "unprovided words."
     )
+
+
+def build_post_prompt_file(
+    record, content_format, platform, category_id=None, art_style=None
+):
+    """Return the prompt saved beside a post for use in an image tool.
+
+    One-image Reels get the text-free art prompt, because the renderer adds
+    the copy itself; other posts get the finished-graphic prompt with copy.
+    """
+    if content_format.id == "image_reel":
+        from art_generator import build_art_prompt
+
+        return build_art_prompt(
+            {**record, "format_id": content_format.id}, art_style
+        )
+    return build_ready_design_prompt(
+        record, content_format, platform, category_id
+    )

@@ -69,7 +69,7 @@ def test_instagram_caption_limits():
     assert validate_instagram_caption("  Hook line #one  ") == "Hook line #one"
     with pytest.raises(ContentValidationError, match="2200 characters"):
         validate_instagram_caption("x" * 2201)
-    with pytest.raises(ContentValidationError, match="30 hashtags"):
+    with pytest.raises(ContentValidationError, match="5 hashtags"):
         validate_instagram_caption(" ".join(f"#tag{n}" for n in range(31)))
     with pytest.raises(ContentValidationError, match="require a caption"):
         validate_instagram_caption("   ")
@@ -190,7 +190,7 @@ def test_publish_requires_approval_and_rendered_image(workspace):
 
     workspace.write({**POST, "platform_id": "linkedin"})
     workspace.render()
-    with pytest.raises(ValueError, match="Instagram Feed"):
+    with pytest.raises(ValueError, match="Instagram posts and Reels"):
         review_ui.publish_content("post", "post_001", host=Mock(), publisher=Mock())
 
 
@@ -475,3 +475,387 @@ def test_manual_artwork_upload_and_prompt(workspace, monkeypatch):
     stages = {s["id"]: s for s in review_ui.get_pipeline("post", "post_001")["stages"]}
     assert stages["artwork"]["status"] == "ready"
     assert stages["instagram_image"]["can_run"] is True
+
+
+import video_renderer
+
+IMAGE_REEL = {
+    **POST,
+    "brand_id": None,
+    "format_id": "image_reel",
+    "platform_id": "instagram",
+    "design_prompt": "A woman with a clay bowl on a village path",
+    "music_cue": "Slow flute",
+}
+
+
+def test_image_reel_format_resolves_for_instagram_with_thinker():
+    from config_loader import resolve_generation_request
+    from content_models import GeneratedContent
+
+    request = resolve_generation_request(
+        profile_id="rational_thoughts",
+        format_id="image_reel",
+        platform_id="instagram",
+        thinker_id="buddha",
+    )
+    assert request.content_format.content_kind == "post"
+    assert request.content_format.aspect_ratio == "9:16"
+    content = GeneratedContent.from_text(
+        "Title: T\nMain_point: M\nSupporting_copy: S\nVisual_labels: None\n"
+        "Design_prompt: D\nMusic_cue: Slow flute\nCaption: C",
+        request.content_format.content_fields,
+    )
+    assert content.fields["music_cue"] == "Slow flute"
+
+
+def test_image_reel_art_is_vertical():
+    record = {**IMAGE_REEL}
+    assert art_generator.art_aspect_ratio(record) == "9:16"
+    assert "9:16 vertical" in art_generator.build_art_prompt(record)
+    assert "4:5" in art_generator.build_art_prompt({**POST, "design_prompt": "x"})
+
+
+def test_image_reel_layers_split_art_and_text(tmp_path):
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    full = build_post_html(IMAGE_REEL, artwork=art)
+    text = build_post_html(IMAGE_REEL, artwork=art, layer="text")
+    background = build_post_html(IMAGE_REEL, artwork=art, layer="background")
+
+    assert "height: 1920px" in full and "<img" in full
+    assert "<img" not in text and 'class="layer-text"' in text
+    assert 'class="layer-background"' in background
+    with pytest.raises(MediaRenderError, match="artwork"):
+        build_post_html(IMAGE_REEL)
+
+
+def test_ffmpeg_command_renders_silent_vertical_clip(tmp_path):
+    layers = [(tmp_path / f"t{n}.png", start) for n, start in enumerate((0, 1.5, 4.0))]
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", layers, tmp_path / "out.mp4", 10
+    )
+    filters = command[command.index("-filter_complex") + 1]
+    assert "s=1080x1920" in filters
+    assert [f"fade=t=in:st={s}:" in filters for s in (1.5, 4.0)] == [True] * 2
+    assert "[1:v]format=rgba[t1]" in filters  # first line: no fade, frame one
+    assert video_renderer.TEXT_REVEALS[0] == ("title", 0)
+    assert "[v3]scale=out_range=tv" in filters
+    assert "-an" in command and command[-1].endswith("out.mp4")
+    assert command[command.index("-t") + 1] == "10"
+
+
+def test_image_reel_pipeline_adds_video_and_blocks_api_publish(workspace, monkeypatch):
+    monkeypatch.setattr(video_renderer, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    monkeypatch.setattr(art_generator, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    workspace.write(IMAGE_REEL)
+
+    stages = {s["id"]: s for s in review_ui.get_pipeline("post", "post_001")["stages"]}
+    assert stages["reel_video"]["reason"] == "Generate the artwork first."
+    assert "video" not in stages
+    assert stages["publishing"]["can_run"] is False
+    assert stages["publishing"]["reason"] == "Render the Reel video first."
+
+    rendered = []
+    monkeypatch.setattr(
+        review_ui,
+        "render_image_reel_video",
+        lambda post_id: rendered.append(post_id) or workspace.assets / "x.mp4",
+    )
+    art_generator.save_post_artwork("post_001", b"\x89PNG\r\n\x1a\nfake")
+    review_ui.run_production_stage("post", "post_001", "reel_video")
+    assert rendered == ["post_001"]
+    with pytest.raises(ValueError, match="Reel video"):
+        review_ui.publish_content("post", "post_001", host=Mock(), publisher=Mock())
+
+
+def test_visual_style_replaces_brand_style_and_darkens_render(tmp_path):
+    record = {**IMAGE_REEL, "visual_style": "cinematic_photo"}
+    prompt = art_generator.build_art_prompt(record, "Painterly parchment brand")
+
+    assert "Photorealistic cinematic film still" in prompt
+    assert "Painterly parchment brand" not in prompt
+    assert "deep, natural shadow" in prompt
+    assert prompt.rstrip().endswith("HDR halos.")
+
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    html = build_post_html(record, artwork=art)
+    assert "#0E0C0B" in html and "#F5C542" in html
+
+
+def test_image_reel_prompt_file_is_text_free_art_prompt():
+    from config_loader import load_format, load_platform
+    from post_prompt import build_post_prompt_file
+
+    record = {**IMAGE_REEL, "visual_style": "cinematic_photo"}
+    prompt = build_post_prompt_file(
+        record, load_format("image_reel"), load_platform("instagram")
+    )
+    assert "EXACT COPY" not in prompt
+    assert POST["main_point"] not in prompt
+    assert "Absolutely no text" in prompt
+
+
+def test_image_reel_footer_shows_source_and_handle(tmp_path):
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    brand = Brand.from_mapping(
+        {
+            "id": "demo",
+            "display_name": "Demo",
+            "default_profile_id": "rational_thoughts",
+            "default_format_id": "image_reel",
+            "default_platform_id": "instagram",
+            "template": {"handle": "@demo"},
+        }
+    )
+    record = {
+        **IMAGE_REEL,
+        "caption": "Hook.\n\nTeaching: The mind leads (Dhammapada 1-2)\n\n#tag",
+    }
+    assert media_renderer.source_line(record) == "Dhammapada 1-2"
+    html = build_post_html(record, brand, artwork=art)
+    assert "Dhammapada 1-2 · @demo" in html
+
+
+def test_image_reel_can_be_marked_as_posted_by_hand(workspace, monkeypatch):
+    monkeypatch.setattr(video_renderer, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    monkeypatch.setattr(review_ui, "reel_video_path", video_renderer.reel_video_path)
+    workspace.write(IMAGE_REEL)
+
+    with pytest.raises(ValueError, match="Render the Reel video"):
+        review_ui.mark_posted("post", "post_001")
+    video = video_renderer.reel_video_path("post_001")
+    video.parent.mkdir(parents=True, exist_ok=True)
+    video.write_bytes(b"mp4")
+    with pytest.raises(ValueError, match="instagram.com"):
+        review_ui.mark_posted("post", "post_001", "https://example.com/x")
+
+    record = review_ui.mark_posted(
+        "post", "post_001", "https://www.instagram.com/reel/abc/"
+    )
+    assert record["status"] == "Published" and record["published_manually"]
+    assert workspace.read()["instagram_permalink"].endswith("/reel/abc/")
+    stages = {s["id"]: s for s in review_ui.get_pipeline("post", "post_001")["stages"]}
+    assert stages["publishing"]["status"] == "ready"
+    with pytest.raises(ValueError, match="unposted"):
+        review_ui.mark_posted("post", "post_001")
+
+
+def _reel_workspace(workspace, monkeypatch, **extra):
+    monkeypatch.setattr(video_renderer, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    monkeypatch.setattr(review_ui, "reel_video_path", video_renderer.reel_video_path)
+    workspace.write({**IMAGE_REEL, **extra})
+    video = video_renderer.reel_video_path("post_001")
+    video.parent.mkdir(parents=True, exist_ok=True)
+    video.write_bytes(b"mp4")
+    return video
+
+
+def test_image_reel_publishes_video_as_reel(workspace, monkeypatch):
+    video = _reel_workspace(workspace, monkeypatch)
+    host = Mock()
+    host.upload.return_value = ("key", "https://cdn.example/reel.mp4")
+    publisher = Mock()
+    publisher.publish_reel.return_value = {
+        "media_id": "m1", "permalink": "https://www.instagram.com/reel/m1/"
+    }
+
+    review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+
+    assert host.upload.call_args.args[0] == video
+    url, caption = publisher.publish_reel.call_args.args
+    assert url == "https://cdn.example/reel.mp4" and caption == POST["caption"]
+    assert publisher.publish_reel.call_args.kwargs["thumb_offset_ms"] == 5000
+    publisher.publish_image.assert_not_called()
+    record = workspace.read()
+    assert record["status"] == "Published"
+    assert record["instagram_permalink"].endswith("/reel/m1/")
+
+
+def test_publisher_creates_reel_container_and_waits_longer():
+    session = Mock()
+    session.get.side_effect = [
+        _response({"data": [{"quota_usage": 0, "config": {"quota_total": 100}}]}),
+        _response({"status_code": "IN_PROGRESS"}),
+        _response({"status_code": "FINISHED"}),
+        _response({"permalink": "https://www.instagram.com/reel/x/"}),
+    ]
+    session.post.side_effect = [_response({"id": "c1"}), _response({"id": "m1"})]
+    publisher = InstagramPublisher("token", "123", session=session, sleep=lambda s: None)
+
+    result = publisher.publish_reel("https://cdn.example/r.mp4", "Hi", 5000)
+
+    data = session.post.call_args_list[0].kwargs["data"]
+    assert data["media_type"] == "REELS" and data["video_url"].endswith("r.mp4")
+    assert data["thumb_offset"] == "5000" and data["share_to_feed"] == "true"
+    assert result == {"media_id": "m1", "permalink": "https://www.instagram.com/reel/x/"}
+
+
+def test_review_settings_save_caption_music_and_schedule(workspace, monkeypatch):
+    video = _reel_workspace(workspace, monkeypatch)
+    import music_library
+
+    music = workspace.assets / "music"
+    music.mkdir()
+    (music / "slow_flute.mp3").write_bytes(b"mp3")
+    monkeypatch.setattr(music_library, "MUSIC_DIRECTORY", music)
+
+    review_ui.update_post_settings("post_001", {"caption": "New caption #one"})
+    assert workspace.read()["caption"] == "New caption #one"
+    assert video.exists()
+
+    review_ui.update_post_settings("post_001", {"music_track": "slow_flute.mp3"})
+    assert workspace.read()["music_track"] == "slow_flute.mp3"
+    assert not video.exists()  # stale audio must be re-rendered
+    with pytest.raises(ValueError, match="not in the music folder"):
+        review_ui.update_post_settings("post_001", {"music_track": "x.mp3"})
+
+    with pytest.raises(ValueError, match="future"):
+        review_ui.update_post_settings(
+            "post_001", {"scheduled_at": "2000-01-01T10:00:00+05:30"}
+        )
+    review_ui.update_post_settings(
+        "post_001", {"scheduled_at": "2999-01-01T19:30:00+05:30"}
+    )
+    assert workspace.read()["scheduled_at"] == "2999-01-01T14:00:00+00:00"
+    review_ui.update_post_settings("post_001", {"scheduled_at": None})
+    assert "scheduled_at" not in workspace.read()
+
+
+def test_due_reels_publish_once_and_failures_are_not_retried(workspace, monkeypatch):
+    from datetime import datetime, timezone
+
+    _reel_workspace(workspace, monkeypatch, scheduled_at="2026-10-22T10:00:00+00:00")
+    host = Mock()
+    host.upload.return_value = ("key", "https://cdn.example/reel.mp4")
+    publisher = Mock()
+    publisher.publish_reel.side_effect = InstagramPublishError("token expired")
+    early = datetime(2026, 10, 22, 9, 0, tzinfo=timezone.utc)
+    late = datetime(2026, 10, 22, 11, 0, tzinfo=timezone.utc)
+
+    assert review_ui.publish_due_posts(early, host, publisher) == []
+    assert review_ui.publish_due_posts(late, host, publisher)[0][1] == "failed"
+    assert "token expired" in workspace.read()["schedule_failed"]
+    assert review_ui.publish_due_posts(late, host, publisher) == []
+    assert publisher.publish_reel.call_count == 1
+
+    publisher.publish_reel.side_effect = None
+    publisher.publish_reel.return_value = {"media_id": "m", "permalink": None}
+    record = workspace.read()
+    record.pop("schedule_failed")
+    workspace.write(record)
+    assert review_ui.publish_due_posts(late, host, publisher)[0][1] == "published"
+    assert workspace.read()["status"] == "Published"
+    assert "scheduled_at" not in workspace.read()
+
+
+def test_reel_uses_rendered_still_as_cover_and_cleans_up(workspace, monkeypatch):
+    _reel_workspace(workspace, monkeypatch)
+    workspace.render()  # the rendered 9:16 still with the copy
+    host = Mock()
+    host.upload.side_effect = [
+        ("video-key", "https://cdn.example/reel.mp4"),
+        ("cover-key", "https://cdn.example/cover.jpg"),
+    ]
+    publisher = Mock()
+    publisher.publish_reel.return_value = {"media_id": "m1", "permalink": None}
+
+    review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+
+    assert publisher.publish_reel.call_args.kwargs["cover_url"].endswith("cover.jpg")
+    assert [c.args[0] for c in host.delete.call_args_list] == ["video-key", "cover-key"]
+
+
+def test_cover_url_replaces_thumb_offset_in_container():
+    session = Mock()
+    session.post.return_value = _response({"id": "c1"})
+    publisher = InstagramPublisher("token", "123", session=session)
+    publisher.create_reel_container("https://v.mp4", "Hi", 5000, "https://c.jpg")
+    data = session.post.call_args.kwargs["data"]
+    assert data["cover_url"] == "https://c.jpg" and "thumb_offset" not in data
+
+
+def test_token_refresh_rewrites_only_the_token_line_weekly(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from scripts import publish_scheduled
+
+    env = tmp_path / ".env"
+    env.write_text("# note\nINSTAGRAM_ACCESS_TOKEN=old\nR2_BUCKET=b\n", encoding="utf-8")
+    state = tmp_path / "state.json"
+    monkeypatch.setenv("INSTAGRAM_ACCESS_TOKEN", "old")
+    factory = Mock()
+    factory.return_value.refresh_access_token.return_value = ("new", 5184000)
+    now = datetime(2026, 10, 22, tzinfo=timezone.utc)
+
+    message = publish_scheduled.refresh_token_if_due(now, env, state, factory)
+    assert "refreshed" in message and "new" not in message
+    assert env.read_text() == "# note\nINSTAGRAM_ACCESS_TOKEN=new\nR2_BUCKET=b\n"
+    assert publish_scheduled.refresh_token_if_due(now + timedelta(days=3), env, state, factory) is None
+    assert publish_scheduled.refresh_token_if_due(now + timedelta(days=8), env, state, factory)
+    assert factory.return_value.refresh_access_token.call_count == 2
+
+
+def test_failed_token_refresh_waits_a_day(tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from scripts import publish_scheduled
+
+    env = tmp_path / ".env"
+    env.write_text("INSTAGRAM_ACCESS_TOKEN=old\n", encoding="utf-8")
+    monkeypatch.setenv("INSTAGRAM_ACCESS_TOKEN", "old")
+    factory = Mock()
+    factory.return_value.refresh_access_token.side_effect = InstagramPublishError("nope")
+    now = datetime(2026, 10, 22, tzinfo=timezone.utc)
+    state = tmp_path / "s.json"
+
+    assert "failed" in publish_scheduled.refresh_token_if_due(now, env, state, factory)
+    assert publish_scheduled.refresh_token_if_due(now + timedelta(hours=1), env, state, factory) is None
+    assert env.read_text() == "INSTAGRAM_ACCESS_TOKEN=old\n"
+
+
+def test_performance_groups_by_story_mode_style_and_thinker(tmp_path):
+    import analytics
+
+    records = [
+        {"id": "post_a", "title": "A", "status": "Published", "instagram_media_id": "1",
+         "qa_subtype": "comedy", "visual_style": "3d_render", "thinker_id": "buddha"},
+        {"id": "post_b", "title": "B", "status": "Published",
+         "instagram_permalink": "https://www.instagram.com/reel/b/",
+         "qa_subtype": "comedy", "visual_style": "cinematic_photo", "thinker_id": "buddha"},
+    ]
+    publisher = Mock(_base_url="https://graph")
+    insights = {
+        "1": [("views", 100), ("reach", 80), ("saved", 2), ("shares", 1),
+              ("total_interactions", 5), ("ig_reels_avg_watch_time", 4000)],
+        "2": [("views", 50), ("reach", 40), ("saved", 0), ("shares", 3),
+              ("total_interactions", 4), ("ig_reels_avg_watch_time", 2000)],
+    }
+
+    def request(method, url, **params):
+        if url.endswith("/me/media"):
+            return {"data": [
+                {"id": "1", "permalink": "https://www.instagram.com/reel/a/", "media_product_type": "REELS"},
+                {"id": "2", "permalink": "https://www.instagram.com/reel/b/", "media_product_type": "REELS"},
+            ]}
+        media_id = url.rsplit("/", 2)[-2]
+        return {"data": [{"name": n, "values": [{"value": v}]} for n, v in insights[media_id]]}
+
+    publisher._request.side_effect = request
+    report = analytics.refresh_report(publisher, tmp_path / "perf.json", records)
+
+    assert [row["id"] for row in report["posts"]] == ["post_a", "post_b"]
+    mode = report["groups"]["Story mode"][0]
+    assert mode == {"value": "comedy", "posts": 2, "avg_views": 75, "avg_reach": 60,
+                    "saves": 2, "shares": 4, "avg_watch_seconds": 3.0}
+    assert [g["value"] for g in report["groups"]["Visual style"]] == ["3d_render", "cinematic_photo"]
+    assert analytics.cached_report(tmp_path / "perf.json")["posts"][0]["views"] == 100
+
+
+def test_generated_captions_are_trimmed_to_five_hashtags():
+    from content_models import trim_hashtags
+
+    caption = "Hook.\n\nTeaching: X\n\n#a #b #c #d #e #f #g"
+    assert trim_hashtags(caption) == "Hook.\n\nTeaching: X\n\n#a #b #c #d #e"
+    with pytest.raises(ContentValidationError, match="5 hashtags"):
+        validate_instagram_caption(caption)

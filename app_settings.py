@@ -41,3 +41,17 @@ def require_settings(*names):
             + ", ".join(missing)
         )
     return values
+
+
+def current_file_setting(name, default=None):
+    """Read a setting from .env on every call, for values rotated on disk.
+
+    The scheduler refreshes the Instagram token in .env; long-running
+    processes such as the review UI must not keep using the old one.
+    """
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return get_setting(name, default)
+    value = (dotenv_values(PROJECT_ROOT / ".env").get(name) or "").strip()
+    return value or get_setting(name, default)

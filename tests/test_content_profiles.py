@@ -312,7 +312,7 @@ def test_qa_subtype_is_validated_and_resolved_for_profile():
             profile_id="qa_engineering_ai",
             qa_subtype="made_up",
         )
-    with pytest.raises(ConfigurationError, match="only available"):
+    with pytest.raises(ConfigurationError, match="Unknown Story mode subtype"):
         resolve_generation_request(
             profile_id="rational_thoughts",
             qa_subtype="llm_testing",
@@ -691,8 +691,14 @@ def test_main_saves_selected_profile_id(
         category_id=None,
         comedy_subtype=None,
         qa_subtype=None,
+        thinker_id=None,
+        visual_style=None,
+        caption_language="english",
     ):
         del (
+            thinker_id,
+            visual_style,
+            caption_language,
             brand_id,
             format_id,
             platform_id,
@@ -858,3 +864,179 @@ def test_main_qa_batch_rotates_pillars_and_saves_each_draft(
         requested_subtypes
     )
     assert len(set(requested_subtypes)) == 8
+
+
+def test_rational_thoughts_defines_story_modes_and_thinkers():
+    from config_loader import load_profile_story_settings, load_profile_thinkers
+
+    modes = {item["id"] for item in load_profile_subtypes("rational_thoughts")}
+    thinkers = load_profile_thinkers("rational_thoughts")
+
+    assert {"comedy", "thoughtful", "thought_provoking"} <= modes
+    assert "buddha" in {item["id"] for item in thinkers}
+    assert all(item["sources"] for item in thinkers)
+    assert load_profile_story_settings("rational_thoughts") == {
+        "subtype_label": "Story mode",
+        "reel_duration_seconds": {"minimum": 30, "maximum": 60},
+    }
+
+
+def test_thinker_and_story_mode_are_validated_for_rational_thoughts():
+    from config_loader import ConfigurationError
+
+    request = resolve_generation_request(
+        profile_id="rational_thoughts",
+        qa_subtype="comedy",
+        thinker_id="buddha",
+    )
+    assert request.qa_subtype == "comedy"
+    assert request.thinker_id == "buddha"
+
+    with pytest.raises(ConfigurationError, match="Unknown thinker"):
+        resolve_generation_request(
+            profile_id="rational_thoughts", thinker_id="made_up"
+        )
+    with pytest.raises(ConfigurationError, match="does not define thinkers"):
+        resolve_generation_request(
+            profile_id="qa_engineering_ai", thinker_id="buddha"
+        )
+
+
+def test_thinker_story_prompt_includes_sources_mode_and_duration():
+    request = resolve_generation_request(
+        profile_id="rational_thoughts",
+        qa_subtype="thought_provoking",
+        thinker_id="buddha",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            qa_subtype=request.qa_subtype,
+            thinker_id=request.thinker_id,
+        ).generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Selected thinker: The Buddha" in prompt
+    assert "Kalama Sutta (Anguttara Nikaya 3.65)" in prompt
+    assert "Misattributed quotes to avoid" in prompt
+    assert "Selected Story mode: Thought-Provoking Dilemma" in prompt
+    assert "Background and music:" in prompt
+    assert "Recommended duration: 30-60 seconds" in prompt
+
+
+def test_main_story_batch_rotates_modes_and_thinkers(tmp_path, monkeypatch):
+    from content_models import GeneratedContent
+    from content_pipeline import GenerationResult
+
+    reels_dir = tmp_path / "generated_reels"
+    reels_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(reel_storage, "GENERATED_REELS_DIRECTORY", reels_dir)
+
+    def fake_generate_content(**kwargs):
+        request = resolve_generation_request(
+            profile_id=kwargs["profile_id"],
+            qa_subtype=kwargs["qa_subtype"],
+            thinker_id=kwargs["thinker_id"],
+        )
+        return GenerationResult(
+            request=request,
+            content=GeneratedContent.from_text(
+                "Title: Story\nHook: A hook.\nScript: A story.\n"
+                "Caption: Idea: a source."
+            ),
+        )
+
+    monkeypatch.setattr(main, "generate_content", fake_generate_content)
+    assert main.main(["--profile", "rational_thoughts", "--count", "6"]) == 0
+
+    records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(reels_dir.glob("*.json"))
+    ]
+    assert len({record["qa_subtype"] for record in records}) == 6
+    assert len({record["thinker_id"] for record in records}) == 6
+
+
+def test_story_mode_picks_default_visual_style_for_posts_only():
+    from config_loader import ConfigurationError
+
+    post = resolve_generation_request(
+        profile_id="rational_thoughts",
+        format_id="image_reel",
+        platform_id="instagram",
+        qa_subtype="myth_buster",
+    )
+    assert post.visual_style == "buddha_statue"
+    reel = resolve_generation_request(
+        profile_id="rational_thoughts", qa_subtype="myth_buster"
+    )
+    assert reel.visual_style is None
+    chosen = resolve_generation_request(
+        profile_id="rational_thoughts",
+        format_id="image_reel",
+        platform_id="instagram",
+        qa_subtype="myth_buster",
+        visual_style="3d_render",
+    )
+    assert chosen.visual_style == "3d_render"
+    with pytest.raises(ConfigurationError, match="Unknown visual style"):
+        resolve_generation_request(
+            profile_id="rational_thoughts", visual_style="made_up"
+        )
+
+
+def test_visual_style_and_appearance_reach_generation_prompt():
+    request = resolve_generation_request(
+        profile_id="rational_thoughts",
+        format_id="image_reel",
+        platform_id="instagram",
+        thinker_id="buddha",
+        visual_style="living_buddha",
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            brand=request.brand,
+            content_format=request.content_format,
+            platform=request.platform,
+            thinker_id=request.thinker_id,
+            visual_style=request.visual_style,
+        ).generate_content()
+
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Visual style for the Design_prompt: Living Buddha" in prompt
+    assert "ushnisha" in prompt
+    assert "anonymous monk" in prompt
+    assert "Subject:" in prompt and "Lighting:" in prompt
+
+
+def test_hinglish_caption_option_reaches_prompt_and_rejects_unknown():
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram"
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            content_format=request.content_format,
+            platform=request.platform,
+            caption_language="hinglish",
+        ).generate_content()
+        with pytest.raises(ValueError, match="caption language"):
+            content_agent.ContentAgent(
+                profile=request.profile.to_mapping(), caption_language="klingon"
+            )
+    assert "Hinglish line" in service.generate_reel.call_args.args[0]

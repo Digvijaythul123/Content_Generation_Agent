@@ -36,9 +36,9 @@ topics:
 
 visual:
   image_style:
-    - Thoughtful editorial illustration with a mature, contemporary feel
+    - Striking, realistic imagery (cinematic film stills, museum-grade statue photography, or high-end 3D renders) chosen per post
     - Clear visual metaphors for evidence, belief, uncertainty, and perspective
-    - Restrained, consistent color palette and legible composition
+    - One dominant light source and a deliberate color grade per image
   setting:
     - Everyday human and cultural contexts rather than default corporate scenes
     - Respectful, non-caricatured treatment of philosophical and secular themes
@@ -48,7 +48,7 @@ visual:
   camera:
     - Purposeful, readable framing that supports the argument
     - Use close details or visual contrasts to clarify an idea
-    - Calm transitions; avoid spectacle that distracts from the point
+    - Dramatic but purposeful light; never spectacle that contradicts the point
   music:
     - Subtle, reflective instrumental bed
     - No vocals
@@ -57,3 +57,371 @@ visual:
     - Burned-in captions
     - High-contrast, readable typography
     - Match voiceover timing
+
+# Story Reels: one real idea from one thinker, told in a selected story mode.
+subtype_label: Story mode
+reel_duration_seconds:
+  minimum: 30
+  maximum: 60
+
+subtypes:
+  - id: parable
+    default_visual_style: 3d_render
+    name: Modern Parable
+    definition: Retell a classic story or teaching as a short modern-day scene with a clear turn and takeaway.
+    structure: Hook with a relatable modern situation; the thinker's idea arrives through action, not lecture; quiet twist; one-line takeaway.
+    background: Warm cinematic light, grounded everyday setting that transitions to the thinker's era for the key moment; soft acoustic or sitar-like bed.
+    example: The mustard seed story retold in a hospital waiting room.
+  - id: comedy
+    default_visual_style: cinematic_photo
+    name: Witty Comedy
+    definition: Idea-driven humor where the joke lands on human behavior and irrational habits, never on the thinker or on believers.
+    structure: Instant absurd premise; escalate through the habit the idea exposes; the thinker's calm logic is the punchline; short reflective button.
+    background: Bright, slightly exaggerated colors and clean framing; playful pizzicato or light percussion with a comic pause before the punchline.
+    example: Diogenes reviewing a self-help influencer's morning routine.
+  - id: thoughtful
+    default_visual_style: living_buddha
+    name: Thoughtful Reflection
+    definition: A calm, reflective story that leaves one line the viewer will remember.
+    structure: Gentle hook image; a small human moment; the idea reframes it; end on a still, memorable line.
+    background: Slow, painterly visuals with golden-hour or candle light, mist, water, or open landscapes; ambient pads or soft flute, no vocals.
+    example: A student keeps a grudge like a hot coal and finally notices who is getting burned.
+  - id: thought_provoking
+    default_visual_style: cinematic_photo
+    name: Thought-Provoking Dilemma
+    definition: A puzzle, paradox, or dilemma that ends on an open question inviting comments.
+    structure: Pose the dilemma in the first two seconds; show two tempting answers; the thinker's tool reframes it; end on a direct question to the viewer.
+    background: High-contrast, moody lighting and symbolic split compositions; low pulsing drone that builds tension and cuts to silence on the final question.
+    example: Socrates asks a confident commenter how they would know if they were wrong.
+  - id: time_traveler
+    default_visual_style: cinematic_photo
+    name: Thinker in Today's World
+    definition: The thinker encounters a modern situation and examines it with their own method.
+    structure: Fish-out-of-water hook; the modern claim or habit; the thinker applies their method; the modern person's realization; light closing beat.
+    background: Era-accurate figure contrasted against vivid modern settings such as phones, malls, or city streets; music blends an ancient instrument with a modern beat.
+    example: The Buddha applies the Kalama Sutta to a viral WhatsApp forward.
+  - id: myth_buster
+    default_visual_style: buddha_statue
+    name: Myth Buster
+    definition: A popular quote or claim attributed to the thinker is checked against what the source actually says.
+    structure: Show the viral quote; ask where it comes from; reveal the source or its absence; present the real idea; invite viewers to check sources.
+    background: Clean documentary look with paper, manuscript, and archive textures and stamp or highlight effects; steady investigative beat.
+    example: "Did the Buddha really say 'Holding on to anger is like drinking poison'?"
+
+thinkers:
+  - id: buddha
+    name: The Buddha (Siddhartha Gautama)
+    era: c. 5th century BCE, northern India
+    core_ideas:
+      # Framework
+      - Life involves dissatisfaction (dukkha), it has a cause, it can end, and there is a path (Four Noble Truths, SN 56.11)
+      - A practical path of right view, intention, speech, action, livelihood, effort, mindfulness, and concentration (Noble Eightfold Path, SN 56.11)
+      - The middle way between indulgence and harsh self-denial (SN 56.11)
+      - Everything conditioned is impermanent (Dhammapada 277)
+      - No fixed, unchanging self can be found in body or mind (Anattalakkhana Sutta, SN 22.59)
+      - Things arise from causes and conditions, not by fate or chance (dependent origination, SN 12.2)
+      - Karma is intention; what shapes us is the intent behind our actions, not luck or ritual (AN 6.63)
+      # Questioning and wisdom
+      - Test teachings yourself instead of accepting them on authority or tradition (Kalama Sutta, AN 3.65)
+      - Teachings are a raft for crossing, to be put down, not carried on your head (Alagaddupama Sutta, MN 22)
+      - Do not get lost in unanswerable questions; pull out the poisoned arrow first (MN 63)
+      - People who see only part of the truth argue like blind men describing an elephant (Udana 6.4)
+      - Be an island to yourselves; rely on the teaching, not on a person (Mahaparinibbana Sutta, DN 16)
+      # Mind training
+      - The mind leads; actions and their results follow how we think (Dhammapada 1-2)
+      - The untrained mind leaps like a monkey from branch to branch (SN 12.61)
+      - Pain is the first arrow; our reaction is the second arrow we shoot ourselves (Sallatha Sutta, SN 36.6)
+      - Desire, ill will, dullness, restlessness, and doubt cloud the mind like dyed, boiling, or muddy water (five hindrances, SN 46.55)
+      - Effort should be like a well-tuned lute string, neither too tight nor too loose (AN 6.55)
+      - Mindful breathing calms and clarifies the mind (Anapanasati Sutta, MN 118)
+      - Heedfulness is the path to the deathless; heedlessness is the path to death (Dhammapada 21)
+      - Conquering yourself is greater than conquering a thousand battles (Dhammapada 103)
+      # Heart and ethics
+      - Hatred is never ended by hatred, only by non-hatred (Dhammapada 5)
+      - Conquer anger with calm, meanness with generosity, lies with truth (Dhammapada 223)
+      - An insult you do not accept stays with the one who offered it (Akkosa Sutta, SN 7.2)
+      - Loving-kindness for all beings, like a mother protecting her only child (Karaniya Metta Sutta, Sn 1.8)
+      - Kindness, compassion, joy in others' success, and equanimity (the four brahmaviharas, DN 13)
+      - Speak only what is true, timely, gentle, beneficial, and spoken with goodwill (AN 5.198)
+      - Stay steady through gain and loss, praise and blame, fame and disgrace, pleasure and pain (eight worldly winds, AN 8.6)
+      - Patience even when wronged, as in the simile of the saw (MN 21)
+      - Contentment is the greatest wealth (Dhammapada 204)
+      - Generosity frees the giver; if people knew its results they would not eat without sharing (Itivuttaka 26)
+      - Gratitude is rare and marks a good person (AN 2.31-32)
+      - Good friendship is the whole of the spiritual life (Upaddha Sutta, SN 45.2)
+      - Remembering death makes each day count (Maranassati Sutta, AN 6.19)
+      # Stories
+      - Grief is universal; no household is untouched by death (Kisa Gotami, Therigatha commentary)
+      - Even a violent man can change completely (Angulimala Sutta, MN 86)
+      - A leader sacrifices for those in his care (the monkey king, Mahakapi Jataka 407)
+      - Selfless giving even at great cost (the hare in the moon, Sasa Jataka 316)
+      # Later traditions (label as the tradition, never as the Buddha's words)
+      - A full cup cannot receive anything new (Zen story of Nan-in and the professor)
+      - The finger pointing at the moon is not the moon (Zen and Mahayana teaching image)
+    sources:
+      - Pali Canon discourses (Digha, Majjhima, Samyutta, and Anguttara Nikayas)
+      - Kalama Sutta (Anguttara Nikaya 3.65)
+      - Dhammapada
+      - Sutta Nipata, Udana, and Itivuttaka
+      - Theragatha and Therigatha with commentaries
+      - Jataka tales
+      - Later traditions (Zen, Mahayana, Tibetan) when labeled as such
+    misattributions:
+      - '"Holding on to anger is like grasping a hot coal" (not found in the suttas)'
+      - '"Three things cannot be long hidden: the sun, the moon, and the truth" (later paraphrase)'
+      - '"Believe nothing, no matter where you read it..." (loose modern expansion of the Kalama Sutta)'
+      - '"You will not be punished for your anger, you will be punished by your anger" (modern paraphrase)'
+      - '"Peace comes from within. Do not seek it without." (modern)'
+      - '"What you think, you become" / "The mind is everything" (loose modern compression of Dhammapada 1)'
+      - '"Do not dwell in the past, do not dream of the future..." (modern)'
+    portrayal: A human teacher and reasoner, not a deity or miracle worker; calm, wry, and respectful; no caricature.
+    appearance: >-
+      A man of about 35 from 5th-century-BCE northern India with warm brown skin;
+      serene face, eyes lowered and half-closed, faint gentle smile, elongated
+      earlobes, short tightly curled dark hair with a small crown topknot
+      (ushnisha); plain saffron cotton robe draped over the left shoulder leaving
+      the right shoulder bare; calm hand gestures such as the earth-touching or
+      teaching mudra; often beneath a Bodhi tree, with an alms bowl, oil lamp, or lotus.
+    setting: Forests, riverbanks, village paths, and monastic groves of the Gangetic plain; saffron robes, alms bowls, oil lamps.
+  - id: socrates
+    name: Socrates
+    era: 470-399 BCE, Athens
+    core_ideas:
+      - Wisdom begins with recognizing what you do not know
+      - Question definitions; confident people often cannot define what they claim to know
+      - The unexamined life is not worth living
+      - It is better to suffer injustice than to commit it
+    sources:
+      - Plato, Apology
+      - Plato, Euthyphro
+      - Plato, Crito and Gorgias
+    misattributions:
+      - '"I know that I know nothing" (a later compression of Apology 21d)'
+      - '"Strong minds discuss ideas, average minds discuss events..." (modern, not Socrates)'
+    portrayal: Barefoot, playful, persistent questioner; never smug.
+    appearance: An older Athenian man with a broad snub nose, bulging eyes, bald crown, and a full grey beard, barefoot in a plain worn himation.
+    setting: Athenian agora, stone colonnades, olive trees, marketplaces, dusty sandals.
+  - id: epicurus
+    name: Epicurus
+    era: 341-270 BCE, Athens
+    core_ideas:
+      - A good life is calm pleasure, friendship, and freedom from fear, not luxury
+      - Death is nothing to us; where death is, we are not
+      - Distinguish natural and necessary desires from empty ones
+      - Fear of gods and punishment is unnecessary for a good life
+    sources:
+      - Letter to Menoeceus
+      - Principal Doctrines
+      - Vatican Sayings
+    misattributions:
+      - The "Epicurean paradox" of evil is attributed to him by Lactantius; there is no surviving text by Epicurus
+    portrayal: A warm host in a garden, not a glutton.
+    setting: A simple walled garden near Athens, shared meals of bread and olives, friends talking under trees.
+  - id: diogenes
+    name: Diogenes of Sinope
+    era: c. 412-323 BCE, Athens and Corinth
+    core_ideas:
+      - Most social conventions and status symbols are unnecessary
+      - Live simply and according to nature
+      - Expose hypocrisy through action rather than argument
+    sources:
+      - Diogenes Laertius, Lives of Eminent Philosophers, Book VI
+    misattributions:
+      - Many anecdotes are later legends; present them as stories told about him
+    portrayal: A cheeky provocateur with a lamp and a barrel; witty, not cruel.
+    appearance: A lean, sun-darkened Greek man with a wild grey beard and tangled hair in a coarse ragged cloak, carrying an oil lamp, often near a large clay jar.
+    setting: A large clay jar on a busy Greek street, a lamp in daylight, marble statues, crowded markets.
+  - id: laozi
+    name: Laozi
+    era: Traditionally 6th century BCE, China (historicity uncertain)
+    core_ideas:
+      - Soft and yielding things overcome hard and rigid things, like water
+      - Those who know do not speak; those who speak do not know
+      - Knowing others is intelligence; knowing yourself is wisdom
+      - Act without forcing (wu wei)
+    sources:
+      - Tao Te Ching (Daodejing), chapters 8, 33, 56, 78
+    misattributions:
+      - '"A journey of a thousand miles begins with a single step" is a loose translation of chapter 64'
+      - Many modern "Lao Tzu" quotes on social media are not in the text
+    portrayal: A quiet, gently humorous old sage; note that his historicity is uncertain.
+    appearance: An elderly Chinese sage with a long white beard and topknot in simple layered robes, often riding a water buffalo through a mountain pass.
+    setting: Misty mountains, flowing rivers, bamboo, a mountain pass, an ox, ink-wash landscapes.
+  - id: charvaka
+    name: Charvaka (Lokayata) school
+    era: c. 6th century BCE onward, India
+    core_ideas:
+      - Perception is the primary valid source of knowledge
+      - Skepticism about the afterlife, rebirth, and ritual sacrifice
+      - Rituals mainly benefit those who perform and sell them
+    sources:
+      - Fragments preserved in Madhavacharya's Sarva-darshana-sangraha (14th century)
+      - References in Buddhist, Jain, and Hindu texts that critiqued the school
+    misattributions:
+      - Their own texts are lost; most surviving lines come from opponents, so present them as reported views
+    portrayal: Sharp, earthy, materialist debaters; do not reduce them to hedonism.
+    setting: Ancient Indian debate courts, village fire-ritual grounds, dusty marketplaces, palm-leaf manuscripts.
+  - id: hume
+    name: David Hume
+    era: 1711-1776, Scotland
+    core_ideas:
+      - A wise person proportions belief to the evidence
+      - Extraordinary miracle claims require weighing testimony against the uniformity of experience
+      - We infer causation from habit and constant conjunction, not from seeing necessity
+      - You cannot derive an "ought" purely from an "is"
+    sources:
+      - An Enquiry Concerning Human Understanding (Section X, Of Miracles)
+      - A Treatise of Human Nature (Book III)
+    misattributions:
+      - '"Extraordinary claims require extraordinary evidence" is Sagan''s phrasing, though inspired by Hume'
+    portrayal: Genial, good-humored, and modest.
+    setting: 18th-century Edinburgh, candlelit study, cobbled streets, coffee houses, quill and paper.
+  - id: russell
+    name: Bertrand Russell
+    era: 1872-1970, Britain
+    core_ideas:
+      - The burden of proof lies with the person making an unfalsifiable claim (the celestial teapot)
+      - Fools and fanatics are cocksure while wise people are full of doubt
+      - Do not feel absolutely certain of anything
+    sources:
+      - '"Is There a God?" (1952), the teapot analogy'
+      - '"The Triumph of Stupidity" (1933)'
+      - '"A Liberal Decalogue" (1951)'
+    misattributions:
+      - The doubt line is a paraphrase; the original says "the stupid are cocksure while the intelligent are full of doubt"
+    portrayal: Dry, witty, precise; a pipe and a raised eyebrow.
+    setting: Mid-century English study, books, a lecture hall, a teapot orbiting among planets.
+  - id: ambedkar
+    name: B. R. Ambedkar
+    era: 1891-1956, India
+    core_ideas:
+      - Reason and morality should judge customs, not tradition or birth
+      - Educate, agitate, organize
+      - Liberty, equality, and fraternity must go together
+      - Buddhism read as a rational, ethical path (Navayana)
+    sources:
+      - Annihilation of Caste (1936)
+      - The Buddha and His Dhamma (1957)
+      - Speech to the Constituent Assembly, 25 November 1949
+    misattributions:
+      - Verify any short motivational quote against his speeches and writings before use
+    portrayal: A scholar and reformer of quiet resolve; treat caste themes with care and accuracy.
+    setting: Libraries, the Constituent Assembly hall, Indian towns and villages, a blue-and-white palette.
+  - id: sagan
+    name: Carl Sagan
+    era: 1934-1996, United States
+    core_ideas:
+      - Extraordinary claims require extraordinary evidence
+      - Use a baloney detection kit to evaluate claims
+      - The Pale Blue Dot shows our shared fragility and smallness
+      - Science is a way of thinking, not just a body of knowledge
+    sources:
+      - The Demon-Haunted World (1995)
+      - Pale Blue Dot (1994)
+      - Cosmos (1980)
+    misattributions:
+      - '"Somewhere, something incredible is waiting to be known" is often misattributed; avoid it'
+    portrayal: Gentle wonder plus rigorous skepticism.
+    setting: Observatories, starfields, the Voyager probe, Earth as a pale blue dot, a 1980s TV studio.
+
+# Art direction for posts. A story mode picks a default; the user can override.
+visual_styles:
+  - id: cinematic_photo
+    name: Cinematic photo
+    palette: night
+    recipe: >-
+      Photorealistic cinematic film still, shot on a full-frame cinema camera
+      with an 85mm lens at f/1.8, shallow depth of field. One motivated key
+      light with a soft rim light and deep, rich shadows; subtle volumetric
+      haze. Teal-and-amber film color grade, fine film grain, natural skin
+      texture with visible pores, realistic fabric weave.
+    avoid: plastic or airbrushed skin, extra or fused fingers, oversaturation, cartoon or illustration look, HDR halos
+  - id: living_buddha
+    name: Living Buddha (photoreal)
+    palette: night
+    recipe: >-
+      Photorealistic historical recreation set in 5th-century-BCE northern
+      India, like a still from a prestige historical film. Accurate Buddhist
+      iconography, era-correct plain cotton robes, natural materials, no
+      modern objects. Soft natural key light (dawn, dusk, or oil lamp), gentle
+      rim light, atmospheric depth, 85mm lens, shallow depth of field, warm
+      earthy film grade.
+    avoid: glowing halo or aura, deity or superhero styling, jewelry or crowns, fair-skinned European features, plastic skin, extra fingers, modern objects
+  - id: buddha_statue
+    name: Buddha statue (museum photo)
+    palette: night
+    recipe: >-
+      Museum-grade macro photograph of an ancient Buddha statue in weathered
+      bronze or carved stone: patina, fine cracks, moss or small flowers.
+      Hard directional side light carving the face out of darkness, faint
+      incense smoke in the beam, 100mm macro lens at f/2.8 with razor-thin
+      focus, dark moody background.
+    avoid: shiny new plastic statue, souvenir-shop look, cartoon features, cluttered background, decorative misuse of the statue
+  - id: 3d_render
+    name: 3D render
+    palette: night
+    recipe: >-
+      High-end 3D animated-film render with stylized but realistic
+      proportions: subsurface scattering on skin, detailed cloth simulation
+      on robes, soft global illumination, warm practical light against cool
+      ambient light, gentle depth of field, cinematic composition and rich
+      color grade.
+    avoid: low-poly or toy look, flat lighting, uncanny faces, plastic sheen, distorted hands
+  - id: painterly
+    name: Painterly parchment
+    palette: day
+    recipe: >-
+      Warm painterly illustration in the style of a classical Buddhist
+      devotional painting on aged cream parchment. Soft golden-hour light,
+      muted ochre, saffron, terracotta and sepia tones, gentle brush texture,
+      high detail on the figure, soft vignette.
+    avoid: photographic look, neon colors, harsh contrast
+  - id: conceptual_metaphor
+    name: Conceptual metaphor (photo)
+    palette: night
+    recipe: >-
+      Photorealistic conceptual still life that turns the idea into one
+      surreal but believable physical metaphor (for example dominoes, a
+      bird held or released, a tree split between two seasons, one red bird
+      among black ones). Few or no people; a tiny human figure only for
+      scale. Clean studio-quality composition, a single strong light, crisp
+      macro detail, tactile materials, muted background.
+    avoid: clutter, more than one metaphor, cartoon look, text or signs on objects, cheap stock-photo feel
+  - id: storybook_monk
+    name: Storybook young monk
+    palette: night
+    recipe: >-
+      Warm storybook 3D-animated look starring a small, cute young novice
+      monk with a shaved head and an oversized saffron robe, big expressive
+      eyes, gentle humor. Soft painterly textures, glowing practical light
+      (fireflies, a lantern, sunset), lush detailed nature, cozy cinematic
+      depth of field.
+    avoid: chibi distortion, creepy or uncanny eyes, adult Buddha in childish form, plastic toy look, text in the image
+  - id: ink_wash
+    name: Ink-wash landscape
+    palette: day
+    recipe: >-
+      East Asian ink-wash (sumi-e) painting on textured rice paper: misty
+      layered mountains, a single small monk figure, one accent of red
+      (sun or seal-free blossom), expressive dry-brush strokes, generous
+      empty space.
+    avoid: calligraphy, red seal stamps, signatures, text, saturated colors
+  - id: narrative_painting
+    name: Story-scene oil painting
+    palette: day
+    recipe: >-
+      Realistic classical Indian academic oil painting of one dramatic story
+      moment with several figures: era-accurate clothing and village
+      architecture, readable gestures and facial expressions that tell the
+      story at a glance, warm natural daylight, rich detail, fine brushwork.
+    avoid: modern objects, caricature, crowded unreadable action, text or signs
+  - id: fine_line_symbolic
+    name: Fine-line symbolic close-up
+    palette: night
+    recipe: >-
+      Soft East Asian fine-line (gongbi) illustration with delicate outlines
+      and gentle gradients, on one bold flat background color. A tight,
+      symbolic close-up that shows only part of a figure (a hand, a robe
+      sleeve) interacting with an animal or object; a single small glow of
+      light at the point of contact.
+    avoid: full-body figures, busy backgrounds, harsh shading, text or seals

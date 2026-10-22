@@ -430,6 +430,8 @@ class GenerationRequest:
     category_id: Optional[str] = None
     comedy_subtype: Optional[str] = None
     qa_subtype: Optional[str] = None
+    thinker_id: Optional[str] = None
+    visual_style: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -548,8 +550,23 @@ def _optional_string_list(data: Mapping[str, Any], key: str, brand_id: str):
 
 
 INSTAGRAM_CAPTION_MAX_CHARACTERS = 2200
-INSTAGRAM_MAX_HASHTAGS = 30
+# Instagram now caps posts at 5 hashtags; a few precise tags work best.
+INSTAGRAM_MAX_HASHTAGS = 5
 _HASHTAG_PATTERN = re.compile(r"(?<!\w)#\w+")
+
+
+def trim_hashtags(caption, limit=None):
+    """Drop hashtags beyond the limit, keeping the first ones in order."""
+    limit = INSTAGRAM_MAX_HASHTAGS if limit is None else limit
+    seen = 0
+
+    def keep(match):
+        nonlocal seen
+        seen += 1
+        return match.group(0) if seen <= limit else ""
+
+    trimmed = _HASHTAG_PATTERN.sub(keep, caption)
+    return re.sub(r"[ \t]+(\n|$)", r"\1", trimmed).rstrip()
 
 
 def validate_instagram_caption(caption):

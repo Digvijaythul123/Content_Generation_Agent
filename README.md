@@ -26,6 +26,8 @@ work:
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |
 | Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed or LinkedIn post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
 | LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish post copy and a topic-specific image-generation prompt to copy into an image tool; it does not generate the image file. |
+| Thinker story Reels | [CURRENT] | Rational Thoughts Reels can take a thinker (Buddha, Socrates, Epicurus, Diogenes, Laozi, Charvaka, Hume, Russell, Ambedkar, Sagan) and a story mode (parable, comedy, thoughtful, thought-provoking, time traveler, myth buster). The prompt includes verified sources, known misattributions, a 30–60s pacing target, and background and music cues. Batches rotate modes and thinkers. |
+| One-image Reels | [CURRENT] | `--format image_reel --platform instagram` writes short on-screen copy, a 9:16 art prompt, and a music cue. After approval and artwork, rendering produces a 1080×1920 cover and a silent 10s MP4 with a slow push-in and lines that fade in one by one. Upload it in the Instagram app and add music there. |
 | QA topic pillars | [CURRENT] | Optionally focus QA Engineering & AI drafts on one of eight pillars; multi-draft batches rotate through them when none is selected. |
 | Optional Comedy category | [CURRENT] | Select Comedy independently of format, optionally choose one of ten subtypes, and generate Reel, single-page, or explicitly requested LinkedIn drafts without changing their output fields. Comedy batches can create up to ten drafts and rotate across subtypes. |
 | Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but broader profile and platform coverage remains incomplete. |
@@ -34,7 +36,8 @@ work:
 | AI video rendering | [FUTURE] | No video provider integration or rendered video output exists. |
 | Recurring 3D characters and reusable asset library | [FUTURE] | Not implemented. |
 | Instagram Feed publishing | [CURRENT] | Approved Instagram Feed posts render to a 1080×1350 JPEG for review, then publish through the Instagram API after explicit confirmation. |
-| Reels publishing, scheduling, and analytics | [FUTURE] | Needs rendered video; no scheduler or analytics integration exists. |
+| One-image Reel publishing and scheduling | [CURRENT] | After review on a Reel's Instagram tab (caption editor, 5-hashtag check, music choice), **Publish Reel now** uploads the MP4 to R2 and posts it through the Instagram API; **Schedule** queues it for `scripts.publish_scheduled`. Royalty-free tracks in `music/` are mixed in, because the API cannot add Instagram's music library. |
+| Analytics | [FUTURE] | No analytics integration exists. |
 
 ## Current workflow
 
@@ -93,6 +96,12 @@ python3 -m scripts.main --category comedy \
 python3 -m scripts.main --profile rational_thoughts \
   --format single_page --platform instagram_feed \
   --brief "Explain why confidence is not evidence."
+python3 -m scripts.main --profile rational_thoughts \
+  --thinker buddha --subtype comedy
+python3 -m scripts.main --profile rational_thoughts --count 6
+python3 -m scripts.main --profile rational_thoughts --format image_reel \
+  --platform instagram --thinker buddha --subtype thoughtful
+python3 -m scripts.publish_post post_009 --art-file ~/Downloads/art.png
 python3 -m scripts.main --profile qa_engineering_ai \
   --format linkedin_text_post --platform linkedin \
   --subtype llm_testing \
@@ -231,3 +240,22 @@ Keep the implementation Python-based, locally executable, and organized as a
 modular monolith. Prefer configuration, explicit contracts, small modules,
 and tests over new infrastructure. Do not introduce microservices,
 Kubernetes, event buses, or distributed systems for this project.
+
+
+## Instagram auto-publishing setup
+
+1. Switch the Instagram account to a **Professional** account (Creator or
+   Business) in the Instagram app settings.
+2. Create a Facebook account (needed only to register as a Meta developer),
+   then register at developers.facebook.com and create an app.
+3. Add the **Instagram** product, choose **API setup with Instagram login**,
+   add the Instagram account, and generate a token with
+   `instagram_business_basic` and `instagram_business_content_publish`.
+4. Put `INSTAGRAM_ACCESS_TOKEN` and `INSTAGRAM_ACCOUNT_ID` in `.env`, then
+   check the connection: `python3 -m scripts.publish_post --check`.
+5. Create a Cloudflare R2 bucket with public access and fill the `R2_*`
+   values in `.env` (Instagram fetches the MP4 from that public URL).
+6. Optional: `python3 -m scripts.publish_scheduled --install` publishes
+   scheduled Reels every 5 minutes while the Mac is on; `--uninstall` stops it.
+   Long-lived tokens expire after about 60 days; extend them with
+   `python3 -m scripts.publish_post --refresh-token`.

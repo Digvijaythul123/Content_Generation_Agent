@@ -1,0 +1,24 @@
+id: image_reel
+display_name: One-image Reel
+content_fields:
+  - title
+  - main_point
+  - supporting_copy
+  - visual_labels
+  - design_prompt
+  - music_cue
+  - caption
+generation:
+  content_kind: post
+  prompt_template: image_reel_generation.md
+  instructions:
+    - Create one short vertical Reel built from a single striking image with overlaid text.
+    - Keep the on-screen copy readable within the first few seconds.
+    - Return a specific background-art prompt for a 9:16 vertical painting.
+    - Keep all final words in the content fields; image artwork should not invent text.
+media:
+  aspect_ratio: "9:16"
+  resolution: "1080x1920"
+  duration_seconds:
+    minimum: 8
+    maximum: 15

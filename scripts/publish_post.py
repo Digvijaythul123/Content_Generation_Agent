@@ -7,6 +7,7 @@ from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError
 from media_renderer import MediaRenderError, post_image_path
 from post_storage import PostStorageError, load_post
+from video_renderer import reel_video_path
 from scripts.review_ui import (
     ReviewUIError,
     get_art_prompt,
@@ -28,6 +29,20 @@ _ERRORS = (
     OSError,
     ValueError,
 )
+
+
+def _render_outputs(post_id):
+    """Render the image, plus the MP4 when the post is a one-image Reel."""
+    run_production_stage("post", post_id, "instagram_image")
+    print(f"Rendered {post_image_path(post_id)}")
+    stages = {stage["id"] for stage in get_pipeline("post", post_id)["stages"]}
+    if "reel_video" in stages:
+        print("Rendering the Reel video…")
+        run_production_stage("post", post_id, "reel_video")
+        print(f"Rendered {reel_video_path(post_id)}")
+        print("Upload the MP4 in the Instagram app and add music there.")
+        return True
+    return False
 
 
 def main(argv=None):
@@ -108,12 +123,18 @@ def main(argv=None):
         if args.art_file:
             with open(args.art_file, "rb") as art_file:
                 upload_artwork("post", args.post_id, art_file.read())
-            run_production_stage("post", args.post_id, "instagram_image")
-            print(f"Rendered {post_image_path(args.post_id)} with {args.art_file}")
+            print(f"Using {args.art_file} as the artwork.")
+            _render_outputs(args.post_id)
             return 0
 
         image_path = post_image_path(args.post_id)
-        if args.new_art or args.render_only or not image_path.is_file():
+        is_image_reel = load_post(args.post_id).get("format_id") == "image_reel"
+        if (
+            args.new_art
+            or args.render_only
+            or is_image_reel
+            or not image_path.is_file()
+        ):
             stages = {
                 stage["id"]: stage
                 for stage in get_pipeline("post", args.post_id)["stages"]
@@ -122,8 +143,8 @@ def main(argv=None):
             if artwork and (args.new_art or artwork["status"] != "ready"):
                 print("Painting background artwork with Gemini…")
                 run_production_stage("post", args.post_id, "artwork")
-            run_production_stage("post", args.post_id, "instagram_image")
-            print(f"Rendered {image_path}")
+            if _render_outputs(args.post_id):
+                return 0
             if not args.render_only:
                 print("Review the image, then run this command again to publish.")
             return 0

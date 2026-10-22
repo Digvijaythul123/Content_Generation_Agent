@@ -4,7 +4,9 @@ import mimetypes
 import re
 from string import Template
 
-from art_generator import artwork_path
+from dataclasses import replace
+
+from art_generator import ArtGenerationError, artwork_path, visual_style_for
 from config_loader import load_brand
 from content_models import BrandTemplate
 from post_storage import load_post, save_post
@@ -17,6 +19,11 @@ _LAYOUT_TEMPLATES = {
     "classic": INSTAGRAM_FEED_TEMPLATE,
     "quote_painting": TEMPLATE_DIRECTORY / "quote_painting.html",
 }
+IMAGE_REEL_TEMPLATE = TEMPLATE_DIRECTORY / "image_reel.html"
+IMAGE_REEL_SIZE = (1080, 1920)
+_RENDERABLE_FORMATS = ("single_page", "image_reel")
+# Dark cinematic art needs light text on a deep shadow wash.
+_NIGHT_COLORS = {"background": "#0E0C0B", "text": "#F5F1E8", "accent": "#F5C542"}
 _HIGHLIGHT_PATTERN = re.compile(r"\*\*(.+?)\*\*")
 INSTAGRAM_FEED_SIZE = (1080, 1350)
 _REQUIRED_FIELDS = ("title", "main_point", "supporting_copy")
@@ -62,6 +69,21 @@ def _art_html(artwork):
     return f'<img class="art" alt="" src="data:{mime_type};base64,{encoded}">'
 
 
+_SOURCE_PATTERN = re.compile(
+    r"^(?:Teaching|Idea|Source):\s*(.+)$", re.IGNORECASE | re.MULTILINE
+)
+
+
+def source_line(record):
+    """Return the short reference from the caption's Teaching/Source line."""
+    match = _SOURCE_PATTERN.search(str(record.get("caption") or ""))
+    if not match:
+        return ""
+    text = match.group(1).strip()
+    reference = re.search(r"\(([^()]+)\)\s*$", text)
+    return (reference.group(1) if reference else text).strip()
+
+
 def _brand_for(record):
     brand_id = record.get("brand_id")
     if not brand_id:
@@ -69,8 +91,16 @@ def _brand_for(record):
     return load_brand(brand_id)
 
 
-def build_post_html(record, brand=None, artwork=None):
-    """Return the finished 4:5 page for a single-page post record."""
+def is_image_reel(record):
+    return record.get("format_id") == "image_reel"
+
+
+def build_post_html(record, brand=None, artwork=None, layer="full"):
+    """Return the finished page for a single-page post or one-image Reel.
+
+    For one-image Reels, ``layer`` selects "background" (art only) or "text"
+    (copy on a transparent page) so the video can move them separately.
+    """
     missing = [
         field
         for field in _REQUIRED_FIELDS
@@ -81,6 +111,12 @@ def build_post_html(record, brand=None, artwork=None):
             "Cannot render a post image; missing content: " + ", ".join(missing)
         )
     template = brand.template if brand is not None else BrandTemplate()
+    try:
+        style = visual_style_for(record)
+    except ArtGenerationError as error:
+        raise MediaRenderError(str(error)) from error
+    if style and style.get("palette") == "night":
+        template = replace(template, **_NIGHT_COLORS)
     labels = [
         label.strip()
         for label in str(record.get("visual_labels") or "").replace("\n", ",").split(",")
@@ -93,13 +129,15 @@ def build_post_html(record, brand=None, artwork=None):
         if labels
         else ""
     )
-    layout = layout_for(brand)
-    if layout == "quote_painting" and artwork is None:
+    layout = "image_reel" if is_image_reel(record) else layout_for(brand)
+    if layout in ("quote_painting", "image_reel") and artwork is None:
         raise MediaRenderError(
-            "This brand's layout paints background artwork first; generate "
+            "This layout paints background artwork first; generate "
             "the artwork, then render the image."
         )
-    template_path = _LAYOUT_TEMPLATES[layout]
+    template_path = (
+        IMAGE_REEL_TEMPLATE if layout == "image_reel" else _LAYOUT_TEMPLATES[layout]
+    )
     try:
         source = template_path.read_text(encoding="utf-8")
     except OSError as error:
@@ -113,17 +151,36 @@ def build_post_html(record, brand=None, artwork=None):
         text=template.text,
         accent=template.accent,
         font_family=template.font_family,
-        art=_art_html(artwork) if layout == "quote_painting" else "",
+        art=(
+            _art_html(artwork)
+            if layout in ("quote_painting", "image_reel") and layer != "text"
+            else ""
+        ),
+        layer=layer,
         title=_copy_html(record["title"]),
         main_point=_copy_html(record["main_point"]),
         supporting_copy=_copy_html(record["supporting_copy"]),
         labels=labels_html,
         brand_name=escape(brand.display_name) if brand is not None else "",
         handle=escape(template.handle or ""),
+        footer=escape(
+            " · ".join(
+                part for part in (source_line(record), template.handle) if part
+            )
+        ),
     )
 
 
 def render_html_to_jpeg(html, output_path, size=INSTAGRAM_FEED_SIZE):
+    return _render_html(html, output_path, size, transparent=False)
+
+
+def render_html_to_png(html, output_path, size):
+    """Render a page with a transparent background, e.g. a text overlay."""
+    return _render_html(html, output_path, size, transparent=True)
+
+
+def _render_html(html, output_path, size, transparent):
     try:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
@@ -144,9 +201,14 @@ def render_html_to_jpeg(html, output_path, size=INSTAGRAM_FEED_SIZE):
                 )
                 page.set_content(html, wait_until="load")
                 overflow = page.evaluate("document.body.dataset.overflow")
-                page.screenshot(
-                    path=str(output_path), type="jpeg", quality=95
-                )
+                if transparent:
+                    page.screenshot(
+                        path=str(output_path), type="png", omit_background=True
+                    )
+                else:
+                    page.screenshot(
+                        path=str(output_path), type="jpeg", quality=95
+                    )
             finally:
                 browser.close()
     except PlaywrightError as error:
@@ -160,16 +222,24 @@ def render_html_to_jpeg(html, output_path, size=INSTAGRAM_FEED_SIZE):
 
 
 def render_post_image(post_id):
-    """Render a saved post to a 1080x1350 JPEG (Instagram's only image type)."""
+    """Render a saved post to a JPEG: 1080x1350, or 1080x1920 for image Reels."""
     record = load_post(post_id)
-    if record.get("format_id", "single_page") != "single_page":
+    if record.get("format_id", "single_page") not in _RENDERABLE_FORMATS:
         raise MediaRenderError(
-            "Only single-page posts can be rendered as Instagram images."
+            "Only single-page posts and one-image Reels can be rendered."
         )
     brand = _brand_for(record)
-    artwork = artwork_path(post_id) if layout_for(brand) == "quote_painting" else None
+    artwork = (
+        artwork_path(post_id)
+        if is_image_reel(record) or layout_for(brand) == "quote_painting"
+        else None
+    )
     html = build_post_html(record, brand, artwork)
-    output_path = render_html_to_jpeg(html, post_image_path(post_id))
+    output_path = render_html_to_jpeg(
+        html,
+        post_image_path(post_id),
+        IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE,
+    )
     try:
         record["image_path"] = str(output_path.relative_to(PROJECT_ROOT))
     except ValueError:

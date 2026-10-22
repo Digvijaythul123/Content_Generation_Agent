@@ -70,13 +70,130 @@ def load_profile_config(profile_id):
     )
 
 
-def load_profile_subtypes(profile_id):
+def _load_profile_data(profile_id):
     try:
         validate_identifier(profile_id, "Content profile")
     except ContentValidationError as error:
         raise ConfigurationError(str(error)) from error
     path = CONFIG_DIRECTORY / "content_profiles" / f"{profile_id}.yaml"
-    data = _load_mapping(path, f"Content profile {profile_id!r}")
+    return _load_mapping(path, f"Content profile {profile_id!r}")
+
+
+def load_profile_story_settings(profile_id):
+    """Return the profile's subtype label and optional Reel duration."""
+    data = _load_profile_data(profile_id)
+    label = data.get("subtype_label", "Subtype")
+    if not isinstance(label, str) or not label.strip():
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'subtype_label' must be text."
+        )
+    duration = data.get("reel_duration_seconds")
+    if duration is not None and (
+        not isinstance(duration, dict)
+        or not all(
+            isinstance(duration.get(key), int) and duration[key] > 0
+            for key in ("minimum", "maximum")
+        )
+        or duration["minimum"] > duration["maximum"]
+    ):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'reel_duration_seconds' requires "
+            "positive integer 'minimum' and 'maximum' values."
+        )
+    return {"subtype_label": label.strip(), "reel_duration_seconds": duration}
+
+
+def load_profile_thinkers(profile_id):
+    data = _load_profile_data(profile_id)
+    thinkers = data.get("thinkers", [])
+    if not isinstance(thinkers, list):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'thinkers' must be a list."
+        )
+    identifiers = set()
+    for thinker in thinkers:
+        if not isinstance(thinker, dict):
+            raise ConfigurationError(
+                f"Content profile {profile_id!r} thinkers must be mappings."
+            )
+        identifier = thinker.get("id")
+        if not isinstance(identifier, str) or not identifier:
+            raise ConfigurationError(
+                f"Content profile {profile_id!r} thinker requires a non-empty ID."
+            )
+        try:
+            validate_identifier(identifier, "Thinker")
+        except ContentValidationError as error:
+            raise ConfigurationError(str(error)) from error
+        if identifier in identifiers:
+            raise ConfigurationError(
+                f"Duplicate thinker ID {identifier!r} in content profile "
+                f"{profile_id!r}."
+            )
+        identifiers.add(identifier)
+        if not isinstance(thinker.get("name"), str) or not thinker["name"].strip():
+            raise ConfigurationError(
+                f"Thinker {identifier!r} requires a non-empty 'name'."
+            )
+        for key in ("core_ideas", "sources"):
+            values = thinker.get(key)
+            if (
+                not isinstance(values, list)
+                or not values
+                or not all(isinstance(value, str) and value for value in values)
+            ):
+                raise ConfigurationError(
+                    f"Thinker {identifier!r} requires a non-empty {key!r} list."
+                )
+        misattributions = thinker.get("misattributions", [])
+        if not isinstance(misattributions, list) or not all(
+            isinstance(value, str) for value in misattributions
+        ):
+            raise ConfigurationError(
+                f"Thinker {identifier!r} 'misattributions' must be a list of text."
+            )
+    return thinkers
+
+
+def load_profile_visual_styles(profile_id):
+    data = _load_profile_data(profile_id)
+    styles = data.get("visual_styles", [])
+    if not isinstance(styles, list):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'visual_styles' must be a list."
+        )
+    identifiers = set()
+    for style in styles:
+        if not isinstance(style, dict):
+            raise ConfigurationError(
+                f"Content profile {profile_id!r} visual styles must be mappings."
+            )
+        identifier = style.get("id")
+        if not isinstance(identifier, str) or not identifier:
+            raise ConfigurationError(
+                f"Content profile {profile_id!r} visual style requires an ID."
+            )
+        try:
+            validate_identifier(identifier, "Visual style")
+        except ContentValidationError as error:
+            raise ConfigurationError(str(error)) from error
+        if identifier in identifiers:
+            raise ConfigurationError(f"Duplicate visual style ID {identifier!r}.")
+        identifiers.add(identifier)
+        for key in ("name", "recipe"):
+            if not isinstance(style.get(key), str) or not style[key].strip():
+                raise ConfigurationError(
+                    f"Visual style {identifier!r} requires a non-empty {key!r}."
+                )
+        if style.get("palette", "day") not in ("day", "night"):
+            raise ConfigurationError(
+                f"Visual style {identifier!r} palette must be 'day' or 'night'."
+            )
+    return styles
+
+
+def load_profile_subtypes(profile_id):
+    data = _load_profile_data(profile_id)
     subtypes = data.get("subtypes", [])
     if not isinstance(subtypes, list):
         raise ConfigurationError(
@@ -238,6 +355,8 @@ def resolve_generation_request(
     category_id=None,
     comedy_subtype=None,
     qa_subtype=None,
+    thinker_id=None,
+    visual_style=None,
 ):
     if category_id is not None and not isinstance(category_id, str):
         raise ConfigurationError("Content category ID must be text.")
@@ -251,6 +370,14 @@ def resolve_generation_request(
         comedy_subtype = None
     if qa_subtype == "":
         qa_subtype = None
+    if thinker_id is not None and not isinstance(thinker_id, str):
+        raise ConfigurationError("Thinker ID must be text.")
+    if thinker_id == "":
+        thinker_id = None
+    if visual_style is not None and not isinstance(visual_style, str):
+        raise ConfigurationError("Visual style ID must be text.")
+    if visual_style == "":
+        visual_style = None
     if comedy_subtype and not category_id:
         category_id = "comedy"
     if category_id not in (None, "comedy"):
@@ -294,15 +421,35 @@ def resolve_generation_request(
         )
     )
     if qa_subtype:
-        if profile.id != "qa_engineering_ai":
-            raise ConfigurationError(
-                "QA subtypes are only available for the QA Engineering & AI profile."
-            )
         subtype_ids = {
             subtype["id"] for subtype in load_profile_subtypes(profile.id)
         }
+        if not subtype_ids:
+            raise ConfigurationError(
+                f"Content profile {profile.id!r} does not define subtypes."
+            )
         if qa_subtype not in subtype_ids:
-            raise ConfigurationError(f"Unknown QA subtype {qa_subtype!r}.")
+            label = (
+                "QA"
+                if profile.id == "qa_engineering_ai"
+                else load_profile_story_settings(profile.id)["subtype_label"]
+            )
+            raise ConfigurationError(f"Unknown {label} subtype {qa_subtype!r}.")
+    if thinker_id:
+        thinker_ids = {
+            thinker["id"] for thinker in load_profile_thinkers(profile.id)
+        }
+        if not thinker_ids:
+            raise ConfigurationError(
+                f"Content profile {profile.id!r} does not define thinkers."
+            )
+        if thinker_id not in thinker_ids:
+            raise ConfigurationError(f"Unknown thinker {thinker_id!r}.")
+    style_ids = {
+        style["id"] for style in load_profile_visual_styles(profile.id)
+    }
+    if visual_style and visual_style not in style_ids:
+        raise ConfigurationError(f"Unknown visual style {visual_style!r}.")
     content_format = load_format(
         format_id or default_context.default_format_id
     )
@@ -343,6 +490,21 @@ def resolve_generation_request(
             f"platform {platform.id!r} maximum duration."
         )
 
+    if (
+        visual_style is None
+        and style_ids
+        and content_format.content_kind == "post"
+        and qa_subtype
+    ):
+        visual_style = next(
+            (
+                subtype.get("default_visual_style")
+                for subtype in load_profile_subtypes(profile.id)
+                if subtype["id"] == qa_subtype
+            ),
+            None,
+        )
+
     return GenerationRequest(
         brand=brand,
         profile=profile,
@@ -353,4 +515,6 @@ def resolve_generation_request(
         category_id=category_id,
         comedy_subtype=comedy_subtype,
         qa_subtype=qa_subtype,
+        thinker_id=thinker_id,
+        visual_style=visual_style,
     )

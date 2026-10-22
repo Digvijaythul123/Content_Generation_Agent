@@ -2,6 +2,7 @@ id: instagram
 display_name: Instagram
 supported_format_ids:
   - reel
+  - image_reel
 constraints:
   aspect_ratio: "9:16"
   max_video_duration_seconds: 90

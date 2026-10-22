@@ -19,6 +19,8 @@ from config_loader import (
     load_platform,
     load_profile_config,
     load_profile_subtypes,
+    load_profile_thinkers,
+    load_profile_visual_styles,
 )
 from content_models import ContentValidationError, validate_instagram_caption
 from instagram_publisher import InstagramPublishError, InstagramPublisher
@@ -39,7 +41,10 @@ from media_renderer import (
     render_post_image,
 )
 from content_pipeline import generate_content
-from post_prompt import build_ready_design_prompt
+from analytics import cached_report, refresh_report
+from music_library import SILENT, list_tracks
+from video_renderer import reel_video_path, render_image_reel_video
+from post_prompt import build_post_prompt_file
 from post_storage import (
     PostStorageError,
     create_post,
@@ -148,6 +153,8 @@ def list_content_items():
                     "category_id": record.get("category_id", ""),
                     "comedy_subtype": record.get("comedy_subtype", ""),
                     "qa_subtype": record.get("qa_subtype", ""),
+                    "thinker_id": record.get("thinker_id", ""),
+                    "visual_style": record.get("visual_style", ""),
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
                     ),
@@ -268,6 +275,10 @@ def _is_instagram_post(record):
     )
 
 
+def _is_image_reel(record):
+    return record.get("format_id") == "image_reel"
+
+
 def _post_brand(record):
     brand_id = record.get("brand_id")
     if not brand_id:
@@ -279,8 +290,9 @@ def _post_brand(record):
 
 
 def _needs_artwork(record):
-    return _is_instagram_post(record) and (
-        layout_for(_post_brand(record)) == "quote_painting"
+    return _is_image_reel(record) or (
+        _is_instagram_post(record)
+        and layout_for(_post_brand(record)) == "quote_painting"
     )
 
 
@@ -311,6 +323,12 @@ def _asset_paths(content_type, content_id):
                 "Instagram image",
                 "Generated image",
                 post_image_path(content_id),
+            ),
+            (
+                "reel_video",
+                "Reel video",
+                "Generated video",
+                reel_video_path(content_id),
             ),
         ]
     if content_type != "reel":
@@ -449,8 +467,10 @@ def _stage_output_paths(content_type, content_id, record=None):
             )
         if record is None or _needs_artwork(record):
             paths["artwork"] = _artwork_output(content_id)
-        if record is None or _is_instagram_post(record):
+        if record is None or _is_instagram_post(record) or _is_image_reel(record):
             paths["instagram_image"] = post_image_path(content_id)
+        if record is None or _is_image_reel(record):
+            paths["reel_video"] = reel_video_path(content_id)
         return paths
     image_prompts = GENERATED_IMAGES_DIRECTORY / f"{content_id}_image_prompts.txt"
     legacy_image_prompts = (
@@ -517,9 +537,10 @@ def get_pipeline(content_type, content_id):
             + ([("artwork", "Artwork")] if _needs_artwork(record) else [])
             + (
                 [("instagram_image", "Instagram image")]
-                if _is_instagram_post(record)
+                if _is_instagram_post(record) or _is_image_reel(record)
                 else []
             )
+            + ([("reel_video", "Reel video")] if _is_image_reel(record) else [])
         )
         if content_type == "post"
         else [
@@ -532,7 +553,7 @@ def get_pipeline(content_type, content_id):
     for stage, label in production:
         output = files[stage]
         needs_art_first = (
-            stage == "instagram_image"
+            stage in ("instagram_image", "reel_video")
             and "artwork" in files
             and not files["artwork"].is_file()
         )
@@ -603,7 +624,7 @@ def get_pipeline(content_type, content_id):
             }
         )
     common.extend(
-        [
+        ([] if _is_image_reel(record) else [
             {
                 "id": "video",
                 "label": "Video generated",
@@ -615,13 +636,42 @@ def get_pipeline(content_type, content_id):
                     else "Video rendering is not integrated yet."
                 ),
             },
-            _publishing_stage(content_type, content_id, record, files, last_stage_events),
-        ]
+        ])
+        + [_publishing_stage(content_type, content_id, record, files, last_stage_events)]
     )
     return {"stages": common}
 
 
 def _publishing_stage(content_type, content_id, record, files, last_stage_events):
+    if content_type == "post" and _is_image_reel(record):
+        published = record.get("status") == "Published"
+        video_ready = files["reel_video"].is_file()
+        if published:
+            reason = "Posted to Instagram."
+        elif record.get("status") != "Approved":
+            reason = "Approve this content first."
+        elif not video_ready:
+            reason = "Render the Reel video first."
+        else:
+            reason = ""
+        return {
+            "id": "publishing",
+            "label": "Published",
+            "status": "ready" if published else (
+                "not_started" if video_ready and record.get("status") == "Approved"
+                else "blocked"
+            ),
+            "available": True,
+            "can_run": not published
+            and record.get("status") == "Approved"
+            and video_ready,
+            "manual": True,
+            "reason": reason,
+            "permalink": record.get("instagram_permalink"),
+            "scheduled_at": record.get("scheduled_at"),
+            "schedule_failed": record.get("schedule_failed"),
+            "connection": publishing_connection(),
+        }
     if content_type != "post" or not _is_instagram_post(record):
         return {
             "id": "publishing",
@@ -763,12 +813,17 @@ def run_production_stage(content_type, content_id, stage):
             output = generate_post_artwork(
                 content_id, art_style=brand.template.art_style if brand else None
             )
-            # A new painting makes the previous render stale.
+            # A new painting makes the previous renders stale.
             post_image_path(content_id).unlink(missing_ok=True)
+            reel_video_path(content_id).unlink(missing_ok=True)
         elif stage == "instagram_image":
             if "artwork" in output_paths and not artwork_path(content_id):
                 raise ValueError("Generate the artwork before rendering the image.")
             output = render_post_image(content_id)
+        elif stage == "reel_video":
+            if not artwork_path(content_id):
+                raise ValueError("Generate the artwork before rendering the video.")
+            output = render_image_reel_video(content_id)
         else:
             format_id = record.get("format_id", "single_page")
             platform_id = record.get("platform_id", "instagram_feed")
@@ -776,11 +831,13 @@ def run_production_stage(content_type, content_id, stage):
                 raise ValueError(
                     f"Stage is not supported for {content_type}: {stage}"
                 )
-            prompt = build_ready_design_prompt(
+            brand = _post_brand(record)
+            prompt = build_post_prompt_file(
                 record,
                 load_format(format_id),
                 load_platform(platform_id),
                 record.get("category_id"),
+                brand.template.art_style if brand else None,
             )
             output = output_paths[stage]
             GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
@@ -830,6 +887,7 @@ def upload_artwork(content_type, content_id, image_bytes):
         raise ValueError("Approve this content before adding artwork.")
     output = save_post_artwork(content_id, image_bytes)
     post_image_path(content_id).unlink(missing_ok=True)
+    reel_video_path(content_id).unlink(missing_ok=True)
     _append_history(
         content_type, content_id, "stage_ready",
         stage="artwork", source="upload", output=str(output),
@@ -911,24 +969,181 @@ def import_artwork(content_type, content_id, image_id):
     return upload_artwork(content_type, content_id, image_bytes)
 
 
+# The Reel cover frame: after every line of text has faded in.
+REEL_COVER_OFFSET_MS = 5000
+
+
+def publishing_connection():
+    """Report which publishing settings exist (not whether they are valid)."""
+    return {
+        "instagram": bool(
+            get_setting("INSTAGRAM_ACCESS_TOKEN")
+            and get_setting("INSTAGRAM_ACCOUNT_ID")
+        ),
+        "media_host": all(
+            get_setting(name)
+            for name in (
+                "R2_ACCOUNT_ID",
+                "R2_ACCESS_KEY_ID",
+                "R2_SECRET_ACCESS_KEY",
+                "R2_BUCKET",
+                "R2_PUBLIC_BASE_URL",
+            )
+        ),
+    }
+
+
+def _parse_schedule(value):
+    try:
+        moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("The schedule must be a date and time.") from error
+    if moment.tzinfo is None:
+        raise ValueError("The schedule must include a timezone.")
+    return moment.astimezone(timezone.utc)
+
+
+def update_post_settings(content_id, payload):
+    """Save review-screen changes: caption, music track, and schedule."""
+    record = load_post(content_id)
+    if not _is_image_reel(record):
+        raise ValueError("These settings apply to one-image Reels only.")
+    if record.get("status") == "Published":
+        raise ValueError("This Reel is already published.")
+    changed = []
+    if "caption" in payload:
+        caption = payload["caption"]
+        if not isinstance(caption, str):
+            raise ValueError("The caption must be text.")
+        validate_instagram_caption(strip_highlights(caption))
+        record["caption"] = caption.strip()
+        changed.append("caption")
+    if "music_track" in payload:
+        track = payload["music_track"] or None
+        names = {path.name for path in list_tracks()}
+        if track not in (None, SILENT) and track not in names:
+            raise ValueError(f"Music track {track!r} is not in the music folder.")
+        if track:
+            record["music_track"] = track
+        else:
+            record.pop("music_track", None)
+        # The rendered video carries the old audio, so render it again.
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("music_track")
+    if "scheduled_at" in payload:
+        value = payload["scheduled_at"]
+        if value:
+            if record.get("status") != "Approved":
+                raise ValueError("Approve this Reel before scheduling it.")
+            moment = _parse_schedule(value)
+            if moment <= datetime.now(timezone.utc):
+                raise ValueError("Choose a time in the future.")
+            record["scheduled_at"] = moment.isoformat()
+        else:
+            record.pop("scheduled_at", None)
+        record.pop("schedule_failed", None)
+        changed.append("scheduled_at")
+    save_post(content_id, record)
+    _append_history(
+        "post", content_id, "settings_updated", fields=changed,
+        scheduled_at=record.get("scheduled_at"),
+    )
+    return record
+
+
+def publish_due_posts(now=None, host=None, publisher=None):
+    """Publish every scheduled one-image Reel whose time has come.
+
+    A failed attempt is recorded and not retried until the Reel is
+    rescheduled, so a broken token cannot cause repeated attempts.
+    """
+    now = now or datetime.now(timezone.utc)
+    results = []
+    for path in sorted(_CONTENT_DIRECTORIES["post"].glob("post_*.json")):
+        content_id = path.stem
+        try:
+            record = load_post(content_id)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        scheduled = record.get("scheduled_at")
+        if (
+            not scheduled
+            or not _is_image_reel(record)
+            or record.get("status") != "Approved"
+            or record.get("schedule_failed")
+            or _parse_schedule(scheduled) > now
+        ):
+            continue
+        try:
+            result = publish_content(
+                "post", content_id, host=host, publisher=publisher
+            )
+            results.append((content_id, "published", result.get("permalink")))
+        except (*_STAGE_ACTION_ERRORS, ValueError) as error:
+            record = load_post(content_id)
+            record["schedule_failed"] = str(error)
+            save_post(content_id, record)
+            results.append((content_id, "failed", str(error)))
+    return results
+
+
+def mark_posted(content_type, content_id, permalink=None):
+    """Record that a one-image Reel was posted by hand in the Instagram app."""
+    if content_type != "post":
+        raise ValueError("Only posts can be marked as posted.")
+    record = load_post(content_id)
+    if not _is_image_reel(record):
+        raise ValueError("Only one-image Reels are posted by hand.")
+    if record.get("status") != "Approved":
+        raise ValueError("Only Approved, unposted content can be marked as posted.")
+    if not reel_video_path(content_id).is_file():
+        raise ValueError("Render the Reel video before marking it as posted.")
+    if permalink is not None and not isinstance(permalink, str):
+        raise ValueError("The Instagram link must be text.")
+    permalink = (permalink or "").strip() or None
+    if permalink and not re.fullmatch(
+        r"https://(www\.)?instagram\.com/\S+", permalink
+    ):
+        raise ValueError("The link must be an instagram.com URL.")
+    record.update(
+        status="Published",
+        published_manually=True,
+        published_at=datetime.now(timezone.utc).isoformat(),
+    )
+    if permalink:
+        record["instagram_permalink"] = permalink
+    save_post(content_id, record)
+    _append_history(
+        content_type, content_id, "stage_ready",
+        stage="publishing", source="manual", permalink=permalink,
+    )
+    return record
+
+
 def publish_content(
     content_type, content_id, dry_run=False, host=None, publisher=None
 ):
     """Upload an approved, rendered post and publish it to Instagram.
 
-    The image is uploaded only now, after human review; with dry_run the
-    upload happens but nothing is posted to Instagram.
+    Feed posts publish their image; one-image Reels publish their MP4 as a
+    Reel. The media is uploaded only now, after human review; with dry_run
+    the upload happens but nothing is posted to Instagram.
     """
     if content_type != "post":
-        raise ValueError("Only single-page posts can be published to Instagram.")
+        raise ValueError("Only posts can be published to Instagram.")
     record = load_post(content_id)
-    if not _is_instagram_post(record):
-        raise ValueError("Only Instagram Feed posts can be published to Instagram.")
+    is_reel = _is_image_reel(record)
+    if not (is_reel or _is_instagram_post(record)):
+        raise ValueError("Only Instagram posts and Reels can be published.")
     if record.get("status") != "Approved" or record.get("instagram_media_id"):
         raise ValueError("Only Approved, unpublished posts can be published.")
-    image_path = post_image_path(content_id)
+    image_path = reel_video_path(content_id) if is_reel else post_image_path(content_id)
     if not image_path.is_file():
-        raise ValueError("Render and review the Instagram image before publishing.")
+        raise ValueError(
+            "Render and review the Reel video before publishing."
+            if is_reel
+            else "Render and review the Instagram image before publishing."
+        )
     caption = validate_instagram_caption(strip_highlights(record.get("caption") or ""))
     stage_key = (content_type, content_id, "publishing")
     with _STAGE_LOCK:
@@ -942,6 +1157,13 @@ def publish_content(
         )
         host = host or R2MediaHost()
         key, media_url = host.upload(image_path, content_id)
+        uploaded_keys = [key]
+        cover_url = None
+        cover_path = post_image_path(content_id)
+        if is_reel and cover_path.is_file():
+            # The rendered still (with the text) becomes the grid cover.
+            cover_key, cover_url = host.upload(cover_path, content_id)
+            uploaded_keys.append(cover_key)
         if dry_run:
             _append_history(
                 content_type, content_id, "publish_dry_run",
@@ -949,7 +1171,15 @@ def publish_content(
             )
             return {"dry_run": True, "media_url": media_url}
         publisher = publisher or InstagramPublisher()
-        result = publisher.publish_image(media_url, caption)
+        if is_reel:
+            result = publisher.publish_reel(
+                media_url,
+                caption,
+                thumb_offset_ms=REEL_COVER_OFFSET_MS,
+                cover_url=cover_url,
+            )
+        else:
+            result = publisher.publish_image(media_url, caption)
         record = load_post(content_id)
         record.update(
             status="Published",
@@ -957,15 +1187,17 @@ def publish_content(
             instagram_permalink=result["permalink"],
             published_at=datetime.now(timezone.utc).isoformat(),
         )
+        record.pop("scheduled_at", None)
         save_post(content_id, record)
         _append_history(
             content_type, content_id, "stage_ready",
             stage="publishing", permalink=result["permalink"],
         )
-        try:
-            host.delete(key)  # Instagram keeps its own copy once published.
-        except MediaHostError:
-            pass
+        for uploaded_key in uploaded_keys:
+            try:
+                host.delete(uploaded_key)  # Instagram keeps its own copy.
+            except MediaHostError:
+                pass
         return {"dry_run": False, **result}
     except _STAGE_ACTION_ERRORS as error:
         _append_history(
@@ -996,6 +1228,9 @@ def regenerate_content(content_type, content_id):
             "category_id": record.get("category_id"),
             "comedy_subtype": record.get("comedy_subtype"),
             "qa_subtype": record.get("qa_subtype"),
+            "thinker_id": record.get("thinker_id"),
+            "visual_style": record.get("visual_style"),
+            "caption_language": record.get("caption_language"),
         }
     )
     _append_history(
@@ -1092,11 +1327,44 @@ def get_generation_options():
         "comedy": options["comedy_subtypes"],
         "qa_engineering_ai": options["qa_subtypes"],
     }
+    options["music_tracks"] = [path.name for path in list_tracks()]
+    options["profile_thinkers"] = {}
+    options["profile_visual_styles"] = {}
+    profile_errors = []
+    for profile in options.get("profiles", []):
+        try:
+            styles = load_profile_visual_styles(profile["id"])
+        except ConfigurationError as error:
+            profile_errors.append(str(error))
+            continue
+        if styles:
+            options["profile_visual_styles"][profile["id"]] = [
+                {"id": item["id"], "name": item["name"]} for item in styles
+            ]
+    for profile in options.get("profiles", []):
+        profile_id = profile["id"]
+        if profile_id in options["profile_subtypes"]:
+            continue
+        try:
+            subtypes = load_profile_subtypes(profile_id)
+            thinkers = load_profile_thinkers(profile_id)
+        except ConfigurationError as error:
+            profile_errors.append(str(error))
+            continue
+        if subtypes:
+            options["profile_subtypes"][profile_id] = [
+                {"id": item["id"], "name": item["name"]} for item in subtypes
+            ]
+        if thinkers:
+            options["profile_thinkers"][profile_id] = [
+                {"id": item["id"], "name": item["name"]} for item in thinkers
+            ]
     options["subtype_error"] = "; ".join(
         error
         for error in (
             options.get("category_error", ""),
             options.get("qa_subtype_error", ""),
+            *profile_errors,
         )
         if error
     )
@@ -1121,13 +1389,10 @@ def generate_and_save(payload):
         if profile_id == "comedy":
             category_id = "comedy"
             comedy_subtype = content_subtype
-        elif profile_id == "qa_engineering_ai":
+        elif profile_id:
             qa_subtype = content_subtype
         else:
-            raise ValueError(
-                "Content subtypes are only configured for Comedy and "
-                "QA Engineering & AI."
-            )
+            raise ValueError("Content subtypes require a content profile.")
 
     result = generate_content(
         brand_id=payload.get("brand_id"),
@@ -1138,6 +1403,9 @@ def generate_and_save(payload):
         category_id=category_id,
         comedy_subtype=comedy_subtype,
         qa_subtype=qa_subtype,
+        thinker_id=payload.get("thinker_id") or None,
+        visual_style=payload.get("visual_style") or None,
+        caption_language=payload.get("caption_language") or "english",
     )
     data = {
         "brand_id": (
@@ -1156,16 +1424,24 @@ def generate_and_save(payload):
             data["comedy_subtype"] = result.request.comedy_subtype
     if result.request.qa_subtype:
         data["qa_subtype"] = result.request.qa_subtype
+    if result.request.thinker_id:
+        data["thinker_id"] = result.request.thinker_id
+    if result.request.visual_style:
+        data["visual_style"] = result.request.visual_style
+    if payload.get("caption_language") == "hinglish":
+        data["caption_language"] = "hinglish"
 
     if result.request.content_format.content_kind == "post":
         content_id, file_path = create_post(data)
         prompt_path = None
         if "design_prompt" in result.content.fields:
-            prompt = build_ready_design_prompt(
-                result.content.fields,
+            brand = result.request.brand
+            prompt = build_post_prompt_file(
+                data,
                 result.request.content_format,
                 result.request.platform,
                 result.request.category_id,
+                brand.template.art_style if brand else None,
             )
             prompt_path = GENERATED_ASSETS_DIRECTORY / (
                 f"{content_id}_design_prompt.txt"
@@ -1214,15 +1490,17 @@ def generate_batch_and_save(payload):
             subtype["id"] for subtype in load_comedy_config()["subtypes"]
         )
     qa_subtype_ids = ()
-    if (
-        count > 1
-        and payload.get("profile_id") == "qa_engineering_ai"
-        and not (payload.get("content_subtype") or payload.get("qa_subtype"))
-    ):
-        qa_subtype_ids = tuple(
-            subtype["id"]
-            for subtype in load_profile_subtypes("qa_engineering_ai")
-        )
+    thinker_ids = ()
+    profile_id = payload.get("profile_id")
+    if count > 1 and profile_id and profile_id != "comedy":
+        if not (payload.get("content_subtype") or payload.get("qa_subtype")):
+            qa_subtype_ids = tuple(
+                subtype["id"] for subtype in load_profile_subtypes(profile_id)
+            )
+        if not payload.get("thinker_id"):
+            thinker_ids = tuple(
+                thinker["id"] for thinker in load_profile_thinkers(profile_id)
+            )
 
     items = []
     for index in range(count):
@@ -1240,6 +1518,8 @@ def generate_batch_and_save(payload):
             request["content_subtype"] = qa_subtype_ids[
                 index % len(qa_subtype_ids)
             ]
+        if thinker_ids:
+            request["thinker_id"] = thinker_ids[index % len(thinker_ids)]
         try:
             items.append(generate_and_save(request))
         except (
@@ -1273,6 +1553,9 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(get_generation_options())
             except ConfigurationError as error:
                 self._send_json({"error": str(error)}, status=500)
+            return
+        if request.path == "/api/performance":
+            self._send_json({"report": cached_report()})
             return
         if request.path == "/api/dashboard":
             try:
@@ -1424,6 +1707,12 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict):
             self._send_json({"error": "Request body must be a JSON object."}, 400)
             return
+        if request.path == "/api/performance/refresh":
+            try:
+                self._send_json({"report": refresh_report()})
+            except (InstagramPublishError, OSError) as error:
+                self._send_json({"error": str(error)}, 502)
+            return
         if request.path == "/api/generate":
             try:
                 results = generate_batch_and_save(payload)
@@ -1457,6 +1746,38 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"items": results}, status=201)
             return
         path_parts = request.path.strip("/").split("/")
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "settings"
+        ):
+            try:
+                record = update_post_settings(path_parts[3], payload)
+                self._send_json({"record": record})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except (PostStorageError, ReviewUIError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except (ContentValidationError, ValueError) as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:2] == ["api", "content"]
+            and path_parts[4] == "mark_posted"
+        ):
+            try:
+                record = mark_posted(
+                    path_parts[2], path_parts[3], payload.get("permalink")
+                )
+                self._send_json({"record": record})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except (PostStorageError, ReviewUIError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
         if (
             len(path_parts) == 5
             and path_parts[:2] == ["api", "content"]

@@ -137,6 +137,9 @@
     }
     .workspace-nav a:hover, .secondary:hover { border-color: var(--accent); }
     .dashboard { margin-top: 20px; }
+    .performance-table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: 14px; }
+    .performance-table th, .performance-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .performance-table th { color: var(--muted); font-weight: 600; }
     .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
     .summary-card { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
     .summary-value { font-size: 27px; font-weight: 800; line-height: 1.1; }
@@ -232,6 +235,7 @@
       <a href="#library" data-queue="Approved">Production</a>
       <a href="#library" data-tab="assets">Assets</a>
       <a href="#activity">Activity</a>
+      <a href="#performance">Performance</a>
     </nav>
 
     <section class="dashboard" id="dashboard" aria-labelledby="dashboard-heading">
@@ -248,6 +252,17 @@
       </div>
     </section>
 
+    <section class="panel generator" id="performance" aria-labelledby="performance-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="performance-heading">Performance</h2>
+          <p class="hint" id="performance-updated">Instagram views, reach, saves, and shares for posts made here.</p>
+        </div>
+        <button class="secondary" id="performance-refresh" type="button">Refresh from Instagram</button>
+      </div>
+      <div id="performance-body" class="hint">No report yet. Click "Refresh from Instagram".</div>
+    </section>
+
     <section class="panel generator" id="generate" aria-labelledby="generate-heading">
       <div class="panel-heading">
         <div>
@@ -260,6 +275,9 @@
           <label>Brand<select id="brand" name="brand_id"></select></label>
           <label>Content profile<select id="profile" name="profile_id" required></select></label>
           <label id="content-subtype-field" hidden>Content subtype<select id="content-subtype" name="content_subtype"></select></label>
+          <label id="thinker-field" hidden>Thinker<select id="thinker" name="thinker_id"></select></label>
+          <label id="visual-style-field" hidden>Visual style<select id="visual-style" name="visual_style"></select></label>
+          <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
@@ -357,9 +375,9 @@
       subtypeSelect.replaceChildren(new Option("Choose automatically", ""));
       formatSelect.replaceChildren();
       brandSelect.append(new Option("No brand", ""));
-      options.brands.forEach((option) => addOption(brandSelect, option, ""));
+      options.brands.forEach((option) => addOption(brandSelect, option, "default"));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
-      options.formats.forEach((option) => addOption(formatSelect, option, "reel"));
+      options.formats.forEach((option) => addOption(formatSelect, option, "image_reel"));
       const subtypeError = $("subtype-error");
       subtypeError.textContent = options.subtype_error || "";
       subtypeError.hidden = !options.subtype_error;
@@ -382,6 +400,24 @@
         ? previous
         : "";
       $("content-subtype-field").hidden = subtypes.length === 0;
+      const thinkers = state.options.profile_thinkers?.[profileId] || [];
+      const thinkerSelect = $("thinker");
+      const previousThinker = thinkerSelect.value;
+      thinkerSelect.replaceChildren(new Option("Choose automatically", ""));
+      thinkers.forEach((option) => addOption(thinkerSelect, option, ""));
+      thinkerSelect.value = thinkers.some((option) => option.id === previousThinker)
+        ? previousThinker
+        : "";
+      $("thinker-field").hidden = thinkers.length === 0;
+      const styles = state.options.profile_visual_styles?.[profileId] || [];
+      const styleSelect = $("visual-style");
+      const previousStyle = styleSelect.value;
+      styleSelect.replaceChildren(new Option("Match the story mode", ""));
+      styles.forEach((option) => addOption(styleSelect, option, ""));
+      styleSelect.value = styles.some((option) => option.id === previousStyle)
+        ? previousStyle
+        : "";
+      $("visual-style-field").hidden = styles.length === 0;
       const brandSelect = $("brand");
       if (profileId === "comedy" && !brandSelect.value) {
         const comedyBrand = state.options.brands.find(
@@ -515,7 +551,7 @@
         (!profile || item.profile_id === profile) &&
         (!format || item.format_id === format) &&
         (!platform || item.platform_id === platform) &&
-        (!term || `${item.id} ${item.title} ${item.profile_id} ${item.format_id} ${item.qa_subtype || ""} ${item.search_text || ""}`.toLowerCase().includes(term))
+        (!term || `${item.id} ${item.id.replace(/_0+(?=\d)/, "_")} ${item.title} ${item.profile_id} ${item.format_id} ${item.qa_subtype || ""} ${item.search_text || ""}`.toLowerCase().includes(term))
       );
       const list = $("items");
       list.replaceChildren();
@@ -550,7 +586,8 @@
           ? ` · ${item.category_id}${item.comedy_subtype ? ` / ${item.comedy_subtype}` : ""}`
           : "";
         const qaPillar = item.qa_subtype ? ` · ${item.qa_subtype}` : "";
-        meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}${category}${qaPillar}`;
+        const thinker = item.thinker_id ? ` · ${item.thinker_id}` : "";
+        meta.textContent = `${item.id} · ${item.profile_id || "profile unspecified"} · ${item.format_id || item.type}${category}${qaPillar}${thinker}`;
         button.append(top, title, meta);
         button.addEventListener("click", () => openItem(item));
         list.append(button);
@@ -897,14 +934,22 @@
     function isInstagramPost() {
       return state.selected?.type === "post"
         && String(state.record?.platform_id || "").startsWith("instagram")
-        && (state.record?.format_id || "single_page") === "single_page";
+        && ["single_page", "image_reel"].includes(state.record?.format_id || "single_page");
+    }
+
+    function isImageReel() {
+      return state.selected?.type === "post" && state.record?.format_id === "image_reel";
     }
 
     function renderInstagram(container) {
       const hint = document.createElement("p");
       hint.className = "hint";
-      hint.textContent = "Generate the artwork (if your brand uses one), render the image, check it and the caption below, then publish. "
-        + "Nothing leaves this computer until you confirm Publish.";
+      hint.textContent = isImageReel()
+        ? "Make the artwork from the text-free art prompt below (never a prompt that includes the copy), "
+          + "attach it, render the cover image, then render the Reel video. "
+          + "Download the MP4 and upload it in the Instagram app, picking music there and switching on \"Add AI label\"."
+        : "Generate the artwork (if your brand uses one), render the image, check it and the caption below, then publish. "
+          + "Nothing leaves this computer until you confirm Publish.";
       container.append(hint);
       if (state.pipeline.some((stage) => stage.id === "artwork")) {
         stageButton("artwork", "artwork", container);
@@ -915,9 +960,37 @@
       if (image) {
         const preview = document.createElement("img");
         preview.className = "instagram-preview";
+        if (isImageReel()) preview.style.aspectRatio = "9 / 16";
         preview.src = `${image.url}?v=${Date.now()}`;
         preview.alt = "Rendered Instagram post";
         container.append(preview);
+      }
+      if (isImageReel()) {
+        if (state.record.status !== "Published") container.append(musicControls());
+        stageButton("reel_video", "Reel video", container);
+        const video = state.assets.find((asset) => asset.key === "reel_video");
+        if (video) {
+          const player = document.createElement("video");
+          player.className = "instagram-preview";
+          player.style.aspectRatio = "9 / 16";
+          player.controls = true;
+          player.loop = true;
+          player.src = `${video.url}?v=${Date.now()}`;
+          const download = document.createElement("a");
+          download.href = video.url;
+          download.download = `${state.selected.id}_reel.mp4`;
+          download.textContent = "Download Reel video (MP4)";
+          container.append(player, download);
+        }
+      }
+      if (isImageReel()) {
+        if (state.record.status === "Published") {
+          if (state.record.caption) container.append(createField("caption", state.record.caption));
+          container.append(manualPostControls());
+        } else {
+          container.append(reelReviewPanel());
+        }
+        return;
       }
       if (state.record.caption) container.append(createField("caption", state.record.caption));
       const publishing = state.pipeline.find((stage) => stage.id === "publishing");
@@ -1188,6 +1261,227 @@
       renderTabContent(detail);
     }
 
+    async function saveReelSettings(changes, message) {
+      await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(changes)
+      });
+      if (message) window.alert(message);
+      await refreshItems(state.selected);
+    }
+
+    function musicControls() {
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const label = document.createElement("label");
+      label.textContent = "Music ";
+      const select = document.createElement("select");
+      select.append(new Option("Match the mood automatically", ""));
+      select.append(new Option("No music (silent)", "none"));
+      (state.options.music_tracks || []).forEach((name) => select.append(new Option(name, name)));
+      select.value = state.record.music_track || "";
+      select.addEventListener("change", async () => {
+        try {
+          await saveReelSettings({ music_track: select.value || null },
+            "Music changed. Render the Reel video again to hear it.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      label.append(select);
+      const note = document.createElement("span");
+      note.className = "message";
+      const used = state.record.video_music;
+      note.textContent = (state.options.music_tracks || []).length
+        ? (used ? `Current video uses: ${used}` : "Current video is silent.")
+        : "Add royalty-free MP3s to the project's music/ folder to enable music.";
+      if (state.record.music_cue) note.textContent += ` Mood: ${state.record.music_cue}`;
+      box.append(label, note);
+      return box;
+    }
+
+    // The page's daily posting time, 7:30 PM local; tomorrow if already past.
+    function nextPostingSlot() {
+      const slot = new Date();
+      slot.setHours(19, 30, 0, 0);
+      if (slot <= new Date()) slot.setDate(slot.getDate() + 1);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${slot.getFullYear()}-${pad(slot.getMonth() + 1)}-${pad(slot.getDate())}T${pad(slot.getHours())}:${pad(slot.getMinutes())}`;
+    }
+
+    function captionStats(text) {
+      const hashtags = (text.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length;
+      return { length: text.length, hashtags };
+    }
+
+    function reelReviewPanel() {
+      const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
+      const panel = document.createElement("section");
+      panel.className = "field";
+      const heading = document.createElement("div");
+      heading.className = "field-name";
+      heading.textContent = "Review before posting";
+      panel.append(heading);
+
+      const connection = publishing.connection || {};
+      if (!connection.instagram || !connection.media_host) {
+        const warn = document.createElement("p");
+        warn.className = "message error";
+        warn.textContent = "Instagram isn't connected yet (keys missing in .env), so Publish and Schedule will fail. "
+          + "You can still download the video and post it by hand.";
+        panel.append(warn);
+      }
+
+      const caption = document.createElement("textarea");
+      caption.rows = 9;
+      caption.value = state.record.caption || "";
+      caption.setAttribute("aria-label", "Caption");
+      const stats = document.createElement("p");
+      stats.className = "hint";
+      const updateStats = () => {
+        const { length, hashtags } = captionStats(caption.value);
+        stats.textContent = `${length}/2200 characters · ${hashtags} hashtags`
+          + (hashtags > 5 ? " — use 5 or fewer" : "");
+        stats.className = hashtags > 5 || length > 2200 ? "message error" : "hint";
+      };
+      caption.addEventListener("input", updateStats);
+      updateStats();
+      const saveCaption = makeAction("Save caption", async () => {
+        try {
+          await saveReelSettings({ caption: caption.value }, "Caption saved.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary");
+      panel.append(caption, stats, saveCaption);
+
+      const checklist = document.createElement("p");
+      checklist.className = "hint";
+      checklist.textContent = "Before posting: watch the whole video with sound, check the source line and spelling, "
+        + "and keep hashtags to 5. The cover frame is taken at 5 seconds, after all lines appear. "
+        + "Instagram may label AI imagery automatically; if the app offers an AI label for this post, turn it on.";
+      panel.append(checklist);
+
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      const publishNow = makeAction("Publish Reel now", async () => {
+        if (caption.value !== (state.record.caption || "")) {
+          window.alert("Save the caption first.");
+          return;
+        }
+        if (!window.confirm("Post this Reel to Instagram now? This cannot be undone from here.")) return;
+        publishNow.disabled = true;
+        publishNow.textContent = "Publishing… (videos can take a few minutes)";
+        try {
+          await requestJson(contentUrl(state.selected, "publish"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true })
+          });
+        } catch (error) {
+          window.alert(error.message);
+        }
+        await refreshItems(state.selected);
+      });
+      publishNow.disabled = !publishing.can_run;
+      actions.append(publishNow);
+
+      const when = document.createElement("input");
+      when.type = "datetime-local";
+      when.setAttribute("aria-label", "Schedule date and time");
+      when.value = nextPostingSlot();
+      const schedule = makeAction("Schedule", async () => {
+        if (!when.value) {
+          window.alert("Pick a date and time first.");
+          return;
+        }
+        try {
+          await saveReelSettings({ scheduled_at: new Date(when.value).toISOString() });
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary");
+      schedule.disabled = !publishing.can_run;
+      actions.append(when, schedule);
+      panel.append(actions);
+
+      if (publishing.scheduled_at) {
+        const scheduled = document.createElement("div");
+        scheduled.className = "inline-actions";
+        const text = document.createElement("span");
+        text.className = "message";
+        text.textContent = `Scheduled for ${new Date(publishing.scheduled_at).toLocaleString()}.`;
+        const cancel = makeAction("Cancel schedule", async () => {
+          try {
+            await saveReelSettings({ scheduled_at: null });
+          } catch (error) {
+            window.alert(error.message);
+          }
+        }, "secondary");
+        scheduled.append(text, cancel);
+        panel.append(scheduled);
+      }
+      if (publishing.schedule_failed) {
+        const failed = document.createElement("p");
+        failed.className = "message error";
+        failed.textContent = `The scheduled post failed: ${publishing.schedule_failed} Fix it, then schedule again.`;
+        panel.append(failed);
+      }
+      const manual = document.createElement("p");
+      manual.className = "hint";
+      manual.textContent = "Posted it yourself in the Instagram app instead? Mark it below.";
+      panel.append(manual, manualPostControls());
+      return panel;
+    }
+
+    function manualPostControls() {
+      const publishing = state.pipeline.find((stage) => stage.id === "publishing");
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      if (state.record.status === "Published") {
+        const done = document.createElement("span");
+        done.className = "message";
+        done.textContent = "Posted to Instagram. ";
+        if (state.record.instagram_permalink) {
+          const link = document.createElement("a");
+          link.href = state.record.instagram_permalink;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "View post";
+          done.append(link);
+        }
+        box.append(done);
+        return box;
+      }
+      const input = document.createElement("input");
+      input.type = "url";
+      input.placeholder = "Instagram link (optional)";
+      input.setAttribute("aria-label", "Instagram post link");
+      const button = makeAction("Mark as posted", async () => {
+        button.disabled = true;
+        try {
+          await requestJson(contentUrl(state.selected, "mark_posted"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ permalink: input.value.trim() || null })
+          });
+        } catch (error) {
+          window.alert(error.message);
+        }
+        await refreshItems(state.selected);
+      });
+      button.disabled = !publishing?.can_run;
+      box.append(input, button);
+      if (publishing?.reason) {
+        const reason = document.createElement("span");
+        reason.className = "message";
+        reason.textContent = publishing.reason;
+        box.append(reason);
+      }
+      return box;
+    }
+
     function makeAction(label, callback, className = "primary") {
       const button = document.createElement("button");
       button.type = "button";
@@ -1220,6 +1514,78 @@
         history.replaceState(null, "", `#${item.type}/${item.id}/${state.activeTab}`);
       } catch (error) {
         $("detail").textContent = error.message;
+      }
+    }
+
+    function performanceTable(headers, rows) {
+      const table = document.createElement("table");
+      table.className = "performance-table";
+      const head = table.createTHead().insertRow();
+      headers.forEach((label) => {
+        const cell = document.createElement("th");
+        cell.textContent = label;
+        head.append(cell);
+      });
+      const body = table.createTBody();
+      rows.forEach((values) => {
+        const row = body.insertRow();
+        values.forEach((value) => {
+          const cell = row.insertCell();
+          if (value instanceof Node) cell.append(value);
+          else cell.textContent = value ?? "–";
+        });
+      });
+      return table;
+    }
+
+    function renderPerformance(report) {
+      const body = $("performance-body");
+      body.replaceChildren();
+      if (!report || !report.posts.length) {
+        body.textContent = report
+          ? "No published posts with Instagram data yet."
+          : "No report yet. Click \"Refresh from Instagram\".";
+        return;
+      }
+      $("performance-updated").textContent =
+        `Updated ${new Date(report.fetched_at).toLocaleString()}. Numbers can lag a few hours.`;
+      body.className = "";
+      body.append(performanceTable(
+        ["Post", "Views", "Reach", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
+        report.posts.map((post) => {
+          const link = document.createElement("a");
+          link.href = post.permalink;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = `${post.id} · ${post.title.replaceAll("**", "")}`;
+          return [link, post.views, post.reach, post.saved, post.shares,
+            post.avg_watch_seconds, post.story_mode, post.visual_style];
+        })
+      ));
+      Object.entries(report.groups).forEach(([label, items]) => {
+        const heading = document.createElement("h3");
+        heading.textContent = `By ${label.toLowerCase()}`;
+        body.append(heading, performanceTable(
+          [label, "Posts", "Avg views", "Avg reach", "Saves", "Shares", "Avg watch (s)"],
+          items.map((item) => [item.value, item.posts, item.avg_views, item.avg_reach,
+            item.saves, item.shares, item.avg_watch_seconds])
+        ));
+      });
+    }
+
+    async function loadPerformance(refresh = false) {
+      const button = $("performance-refresh");
+      button.disabled = true;
+      try {
+        const payload = await requestJson(
+          refresh ? "/api/performance/refresh" : "/api/performance",
+          refresh ? { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" } : undefined
+        );
+        renderPerformance(payload.report);
+      } catch (error) {
+        $("performance-body").textContent = error.message;
+      } finally {
+        button.disabled = false;
       }
     }
 
@@ -1308,6 +1674,9 @@
         brand_id: $("brand").value,
         profile_id: $("profile").value,
         content_subtype: $("content-subtype").value || null,
+        thinker_id: $("thinker").value || null,
+        visual_style: $("visual-style").value || null,
+        caption_language: $("caption-language").value,
         format_id: $("format").value,
         platform_id: $("platform").value,
         count: Number($("count").value),
@@ -1369,6 +1738,8 @@
       refreshFilters();
       renderItems();
       renderDashboard(summary, activity.items);
+      $("performance-refresh").addEventListener("click", () => loadPerformance(true));
+      loadPerformance();
       const selection = location.hash.slice(1).split("/");
       if (selection.length === 3) {
         const item = state.items.find(
