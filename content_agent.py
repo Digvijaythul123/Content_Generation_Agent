@@ -9,6 +9,7 @@ from config_loader import (
 )
 import json
 import random
+import re
 from string import Template
 import warnings
 
@@ -521,3 +522,75 @@ def _short_name(thinker):
 
 def _as_bullets(values):
     return "\n".join(f"- {value}" for value in values)
+
+
+SIMPLIFY_FIELDS = ("title", "main_point", "supporting_copy", "caption")
+_SIMPLIFY_LABELS = {
+    "Title": "title",
+    "Main_point": "main_point",
+    "Supporting_copy": "supporting_copy",
+    "Caption": "caption",
+}
+
+
+def simplify_copy(record, ai_service=None, fresh=False):
+    """Suggest plain-English versions of a post's text; nothing is saved.
+
+    With ``fresh``, write new wording (a different hook and line) on the
+    same teaching instead of simplifying the current lines.
+
+    Exact quotes ("verified_quote" posts) and credit lines ("— the Buddha")
+    are kept as written; only the wording around them changes.
+    """
+    keep_quote = (record.get("subtype") or record.get("qa_subtype")) == "verified_quote"
+    current = {field: str(record.get(field) or "").strip() for field in SIMPLIFY_FIELDS}
+    keep_credit = current["supporting_copy"].startswith(("—", "-", "–"))
+    task = (
+        "Write fresh text for this Instagram post in plain English for a wide "
+        "audience: a new hook and a new main line about the same teaching "
+        "and source, with a real-life example in the caption. Do not reuse "
+        "the current lines.\n\n"
+        if fresh
+        else "Rewrite this Instagram post's text in plain English for a wide "
+        "audience. Keep the same meaning, teaching, and tone; change only "
+        "the wording.\n\n"
+    )
+    prompt = (
+        task
+        + PLAIN_ENGLISH_RULES
+        + "Rules for the rewrite:\n"
+        "- Title: 2-5 plain words.\n"
+        "- Main_point: at most 14 words.\n"
+        "- Supporting_copy: at most 12 words.\n"
+        "- Wrap one to three key words in Title, Main_point, and "
+        "Supporting_copy in **double asterisks**.\n"
+        + ("- Keep Main_point exactly as written (it is a verified quote).\n" if keep_quote else "")
+        + ("- Keep Supporting_copy exactly as written (it is a credit).\n" if keep_credit else "")
+        + "- Caption: keep any line starting with 'Teaching:', 'Source:', or "
+        "'Idea:' exactly, keep the hashtags exactly, keep the same parts in "
+        "the same order, and stay under 450 characters.\n\n"
+        "Current text:\n"
+        + "".join(f"{label}: {current[field]}\n" for label, field in _SIMPLIFY_LABELS.items())
+        + "\nReturn exactly these four sections and nothing else:\n"
+        "Title:\nMain_point:\nSupporting_copy:\nCaption:\n"
+    )
+    reply = (ai_service or AIService()).generate_reel(prompt)
+    suggestion = _parse_simplified(reply)
+    if keep_quote:
+        suggestion["main_point"] = current["main_point"]
+    if keep_credit:
+        suggestion["supporting_copy"] = current["supporting_copy"]
+    # Fall back to the current text for anything the model left out.
+    return {field: suggestion.get(field) or current[field] for field in SIMPLIFY_FIELDS}
+
+
+def _parse_simplified(reply):
+    labels = "|".join(_SIMPLIFY_LABELS)
+    parts = re.split(rf"^\s*\**({labels})\**\s*:", str(reply), flags=re.MULTILINE)
+    found = {}
+    for label, text in zip(parts[1::2], parts[2::2]):
+        text = text.strip()
+        if label != "Caption":
+            text = " ".join(text.split())
+        found[_SIMPLIFY_LABELS[label]] = text
+    return found

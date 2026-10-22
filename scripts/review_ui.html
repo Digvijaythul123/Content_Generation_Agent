@@ -1333,6 +1333,8 @@
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.textContent = "Rendering draws exactly these words, so change them here and render again. "
+        + "Only the text changes here (art, layout, music, and effect stay). Simplify or New wording "
+        + "fills in a suggestion; press again for another, edit it if needed, then Save text. "
         + "Wrap one to three key words in **double asterisks** to highlight them. "
         + "In the Poster layout the title is not shown; keep the main point short (about 14 words).";
       box.append(hint);
@@ -1354,6 +1356,54 @@
         inputs[key] = input;
         box.append(label);
       }
+      const suggest = (label, fresh) => {
+        const button = makeAction(label, async () => {
+          button.disabled = true;
+          const original = button.textContent;
+          button.textContent = "Writing…";
+          try {
+            const { suggestion } = await requestJson(
+              `/api/content/post/${encodeURIComponent(state.selected.id)}/simplify`,
+              { method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fresh }) });
+            for (const [key] of fields) {
+              inputs[key].value = suggestion[key];
+              inputs[key].dispatchEvent(new Event("input"));
+            }
+            captionBox.value = suggestion.caption;
+            captionRow.hidden = suggestion.caption === (state.record.caption || "").trim();
+          } catch (error) {
+            window.alert(error.message);
+          } finally {
+            button.disabled = false;
+            button.textContent = original;
+          }
+        }, "secondary");
+        return button;
+      };
+      const captionRow = document.createElement("div");
+      captionRow.hidden = true;
+      const captionLabel = document.createElement("label");
+      captionLabel.style.display = "block";
+      captionLabel.textContent = "Suggested caption";
+      const captionBox = document.createElement("textarea");
+      captionBox.rows = 7;
+      captionBox.style.width = "100%";
+      captionLabel.append(captionBox);
+      const useCaption = makeAction("Use this caption", async () => {
+        try {
+          await saveReelSettings({ caption: captionBox.value }, "Caption saved.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary");
+      captionRow.append(captionLabel, useCaption);
+      const suggestions = document.createElement("div");
+      suggestions.className = "inline-actions";
+      suggestions.append(
+        suggest("Simplify (same idea, plain English)", false),
+        suggest("New wording (fresh line, same teaching)", true));
+      box.append(suggestions);
       box.append(makeAction("Save text", async () => {
         const changes = {};
         for (const [key] of fields) {
@@ -1366,6 +1416,7 @@
           window.alert(error.message);
         }
       }));
+      box.append(captionRow);
       return box;
     }
 

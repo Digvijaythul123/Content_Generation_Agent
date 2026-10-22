@@ -1186,3 +1186,40 @@ def test_every_prompt_asks_for_plain_english():
 def test_one_liner_story_mode_reaches_prompt():
     prompt = _prompt_for(subtype="one_liner", thinker_id="buddha")
     assert "One-Liner (Life Lesson)" in prompt and "at most 10 simple words" in prompt
+
+
+def test_simplify_copy_suggests_plain_text_and_keeps_quotes_and_credits():
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Title: Not Just **Bad Luck**\n"
+        "Main_point: Things don't just happen. **Small causes** add up.\n"
+        "Supporting_copy: — someone else\n"
+        "Caption: Stop blaming luck.\n\nTeaching: Dependent Origination (SN 12.2)\n\n#Buddhism\n"
+    )
+    record = {
+        "title": "The **Fate** Fallacy",
+        "main_point": "Things arise from **causes** and conditions.",
+        "supporting_copy": "— inspired by the Buddha",
+        "caption": "Old caption",
+    }
+    suggestion = content_agent.simplify_copy(record, ai_service=service)
+    assert suggestion["title"] == "Not Just **Bad Luck**"
+    assert suggestion["main_point"].startswith("Things don't just happen.")
+    assert suggestion["supporting_copy"] == "— inspired by the Buddha"  # credit kept
+    assert suggestion["caption"].endswith("#Buddhism") and "\n\nTeaching:" in suggestion["caption"]
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Plain English" in prompt and "Keep Supporting_copy exactly" in prompt
+
+    service.generate_reel.return_value = "Title: Test this"
+    quote = {**record, "subtype": "verified_quote", "main_point": '"Exact words."'}
+    suggestion = content_agent.simplify_copy(quote, ai_service=service)
+    assert suggestion["main_point"] == '"Exact words."' and suggestion["caption"] == "Old caption"
+
+
+def test_fresh_wording_asks_for_new_lines_on_the_same_teaching():
+    service = Mock()
+    service.generate_reel.return_value = "Title: Let It Go"
+    record = {"title": "Old", "main_point": "Old line", "supporting_copy": "x", "caption": "c"}
+    content_agent.simplify_copy(record, ai_service=service, fresh=True)
+    prompt = service.generate_reel.call_args.args[0]
+    assert "same teaching" in prompt and "Do not reuse" in prompt

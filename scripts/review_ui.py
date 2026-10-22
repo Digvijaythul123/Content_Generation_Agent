@@ -19,6 +19,7 @@ from config_loader import (
     load_profile_thinkers,
     load_profile_visual_styles,
 )
+from content_agent import simplify_copy
 from content_models import ContentValidationError, validate_instagram_caption
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError, R2MediaHost
@@ -1108,6 +1109,16 @@ def update_post_settings(content_id, payload):
         scheduled_at=record.get("scheduled_at"),
     )
     return record
+
+
+def simplify_post_text(content_id, fresh=False):
+    """Suggest plain-English on-image text and caption for review (not saved)."""
+    record = load_post(content_id)
+    if record.get("status") == "Published":
+        raise ValueError("This post is published; its text cannot be changed.")
+    suggestion = simplify_copy(record, fresh=fresh)
+    _append_history("post", content_id, "text_suggested", fresh=fresh)
+    return suggestion
 
 
 def convert_to_reel(content_id):

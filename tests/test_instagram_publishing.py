@@ -1072,3 +1072,17 @@ def test_meteors_are_timed_flashes_in_the_upper_sky(tmp_path):
     filters = command[command.index("-filter_complex") + 1]
     assert "fade=t=in" in filters and "fade=t=out" in filters  # flares and fades
     assert ":enable='between(t," in filters
+
+
+def test_simplify_post_text_suggests_without_saving(workspace, monkeypatch):
+    workspace.write({**POST, "status": "Approved"})
+    calls = []
+    monkeypatch.setattr(
+        review_ui, "simplify_copy",
+        lambda record, fresh=False: calls.append(fresh) or {**record, "title": "New"},
+    )
+    assert review_ui.simplify_post_text("post_001", fresh=True)["title"] == "New"
+    assert calls == [True] and workspace.read()["title"] == POST["title"]  # not saved
+    workspace.write({**POST, "status": "Published"})
+    with pytest.raises(ValueError, match="published"):
+        review_ui.simplify_post_text("post_001")

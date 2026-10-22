@@ -223,6 +223,25 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "simplify"
+        ):
+            try:
+                fresh = bool(payload.get("fresh"))
+                self._send_json(
+                    {"suggestion": ui.simplify_post_text(path_parts[3], fresh=fresh)}
+                )
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except ui.AIServiceError as error:
+                self._send_json({"error": str(error)}, 502)
+            except (ui.PostStorageError, ui.ReviewUIError, OSError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
             and path_parts[4] == "convert_to_reel"
         ):
             try:
