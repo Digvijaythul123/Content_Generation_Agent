@@ -1229,8 +1229,8 @@ def test_fresh_wording_asks_for_new_lines_on_the_same_teaching():
 
 def test_dialogue_story_mode_reaches_prompt_and_asks_for_honest_labels():
     prompt = _prompt_for(subtype="dialogue", thinker_id="buddha")
-    assert "Dialogue (Buddha and student)" in prompt
-    assert 'Student: "..."' in prompt and "Disciple" not in prompt and "A retelling inspired by" in prompt
+    assert "Dialogue (Buddha and young monk)" in prompt
+    assert 'Young monk: "..."' in prompt and "Student" not in prompt and "A retelling inspired by" in prompt
 
 
 def test_visual_style_avoid_lists_never_name_text():
