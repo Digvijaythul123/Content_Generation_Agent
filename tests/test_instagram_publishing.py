@@ -884,7 +884,7 @@ def test_footer_source_line_handles_caption_variants(line, expected):
 def test_statue_and_portrait_styles_include_the_thinkers_likeness():
     base = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "epictetus"}
     statue = art_generator.build_art_prompt({**base, "visual_style": "thinker_statue"})
-    assert "The statue must portray Epictetus" in statue and "bearded" in statue
+    assert "The statue must portray Epictetus" in statue and "full beard" in statue
     portrait = art_generator.build_art_prompt({**base, "visual_style": "living_thinker"})
     assert "Likeness: Epictetus:" in portrait
     other = art_generator.build_art_prompt({**base, "visual_style": "conceptual_metaphor"})
