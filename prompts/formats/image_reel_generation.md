@@ -33,7 +33,9 @@ Voice: speak to the viewer as "you", start from something they feel or live
 plain everyday words. Write lines a viewer would send to a friend or loved
 one. Stay hopeful but honest: no false guarantees.
 
-On-screen copy (read in under 8 seconds in total):
+On-screen copy (read in under 8 seconds in total). In the default poster
+layout the Title is not shown on screen, so Main_point must work alone as the
+hook, and Supporting_copy is usually the credit (for example "— Seneca").
 - Title: a 2-5 word plain hook, often naming who it is for (for example "For
   the overthinker"); never an abstract label like "The Barrier of Certainty".
 - Main_point: the core line, at most 14 words, in second person where it fits;

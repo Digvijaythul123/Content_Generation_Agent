@@ -6,7 +6,16 @@ from string import Template
 
 from dataclasses import replace
 
-from art_generator import ArtGenerationError, artwork_path, visual_style_for
+import subprocess
+import tempfile
+from pathlib import Path
+
+from art_generator import (
+    ArtGenerationError,
+    artwork_path,
+    is_video_artwork,
+    visual_style_for,
+)
 from config_loader import load_brand
 from content_models import BrandTemplate
 from post_storage import load_post, save_post
@@ -249,6 +258,33 @@ def _render_html(html, output_path, size, transparent):
     return output_path
 
 
+# Where the still image (and the Reel cover) is taken from a motion clip.
+VIDEO_STILL_SECONDS = 2
+
+
+def ffmpeg_executable():
+    try:
+        import imageio_ffmpeg
+    except ImportError as error:
+        raise MediaRenderError(
+            "Video rendering needs ffmpeg. Run: python3 -m pip install imageio-ffmpeg"
+        ) from error
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def extract_video_frame(video, output, seconds=VIDEO_STILL_SECONDS):
+    """Save one frame of a clip as a PNG (falls back to the first frame)."""
+    for at in (seconds, 0):
+        result = subprocess.run(
+            [ffmpeg_executable(), "-y", "-loglevel", "error", "-ss", str(at),
+             "-i", str(video), "-frames:v", "1", str(output)],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0 and output.is_file() and output.stat().st_size:
+            return output
+    raise MediaRenderError(f"Could not read a frame from {video.name}.")
+
+
 def render_post_image(post_id):
     """Render a saved post to a JPEG: 1080x1350, or 1080x1920 for image Reels."""
     record = load_post(post_id)
@@ -262,12 +298,15 @@ def render_post_image(post_id):
         if is_image_reel(record) or layout_for(brand) == "quote_painting"
         else None
     )
-    html = build_post_html(record, brand, artwork)
-    output_path = render_html_to_jpeg(
-        html,
-        post_image_path(post_id),
-        IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE,
-    )
+    with tempfile.TemporaryDirectory() as folder:
+        if is_video_artwork(artwork):
+            artwork = extract_video_frame(artwork, Path(folder) / "frame.png")
+        html = build_post_html(record, brand, artwork)
+        output_path = render_html_to_jpeg(
+            html,
+            post_image_path(post_id),
+            IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE,
+        )
     try:
         record["image_path"] = str(output_path.relative_to(PROJECT_ROOT))
     except ValueError:

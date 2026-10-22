@@ -62,6 +62,10 @@
 
   /* Layers used for the video: the background moves, the text stays crisp. */
   body.layer-background .column, body.layer-background .handle { visibility: hidden; }
+  /* "chrome": the glow and fades alone, laid over a motion clip. */
+  body.layer-chrome { background: transparent; }
+  body.layer-chrome .art { display: none; }
+  body.layer-chrome .column, body.layer-chrome .handle { visibility: hidden; }
   body.layer-text { background: transparent; }
   body.layer-text .art, body.layer-text .glow, body.layer-text .foot { display: none; }
   body.only-quote .takeaway, body.only-quote .handle,

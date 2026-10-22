@@ -3,8 +3,10 @@ import tempfile
 from pathlib import Path
 
 from art_generator import artwork_path
+from art_generator import is_video_artwork
 from media_renderer import (
     IMAGE_REEL_SIZE,
+    extract_video_frame,
     reel_layout,
     MediaRenderError,
     _brand_for,
@@ -23,6 +25,11 @@ FRAME_RATE = 30
 # How far the camera pushes into the painting over the whole clip.
 ZOOM_AMOUNT = 0.08
 TEXT_FADE_SECONDS = 0.5
+# Subtle cinematic motion on the background (brightness swing, seconds per
+# breath, grain strength). Kept low so the text layers stay calm and crisp.
+LIGHT_BREATH = 0.025
+LIGHT_PERIOD = 4
+GRAIN = 6
 # The hook is on screen from the first frame (average watch time was ~2.6s),
 # then the main line and the payoff follow quickly.
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
@@ -52,25 +59,46 @@ def build_ffmpeg_command(
     output,
     seconds=DEFAULT_DURATION_SECONDS,
     music=None,
+    motion_clip=False,
+    clip_zoom=1.0,
 ):
-    """Return the ffmpeg arguments for a silent push-in Reel.
+    """Return the ffmpeg arguments for a Reel.
 
+    ``background`` is a still image (given a slow push-in) or, with
+    ``motion_clip``, a video that is looped or trimmed to length and cropped
+    from the top by ``clip_zoom`` (hiding a bottom watermark).
     ``text_layers`` is a sequence of (transparent PNG, start second) pairs;
     each layer fades in at its own start time over the moving background.
     """
     width, height = IMAGE_REEL_SIZE
     frames = seconds * FRAME_RATE
-    # Upscaling before zoompan keeps the slow push-in from jittering.
-    filters = [
-        f"[0:v]scale={width * 2}:{height * 2},"
-        f"zoompan=z='1+{ZOOM_AMOUNT}*on/{frames}':"
-        "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d=1:s={width}x{height}:fps={FRAME_RATE}[v0]"
-    ]
-    inputs = [
-        "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
-        "-i", str(background),
-    ]
+    # Free "film finish": light that breathes, a soft vignette, and fine
+    # moving grain, so the background feels like a shot from a film.
+    finish = (
+        f"eq=eval=frame:brightness='{LIGHT_BREATH}*sin(2*PI*t/{LIGHT_PERIOD})',"
+        f"vignette=angle=PI/5,noise=alls={GRAIN}:allf=t[v0]"
+    )
+    if motion_clip:
+        top = "0" if clip_zoom > 1 else f"(ih-{height})/2"
+        filters = [
+            f"[0:v]scale={round(width * clip_zoom)}:{round(height * clip_zoom)}:"
+            f"force_original_aspect_ratio=increase,"
+            f"crop={width}:{height}:(iw-{width})/2:{top},"
+            f"fps={FRAME_RATE},setsar=1,{finish}"
+        ]
+        inputs = ["-stream_loop", "-1", "-t", str(seconds), "-i", str(background)]
+    else:
+        # Upscaling before zoompan keeps the slow push-in from jittering.
+        filters = [
+            f"[0:v]scale={width * 2}:{height * 2},"
+            f"zoompan=z='1+{ZOOM_AMOUNT}*on/{frames}':"
+            "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+            f"d=1:s={width}x{height}:fps={FRAME_RATE},{finish}"
+        ]
+        inputs = [
+            "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
+            "-i", str(background),
+        ]
     for index, (layer, start) in enumerate(text_layers, start=1):
         inputs += [
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
@@ -107,6 +135,8 @@ def build_ffmpeg_command(
         *inputs,
         "-filter_complex", ";".join(filters), "-map", "[out]", *audio,
         "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+        # Cap the bitrate: grain on busy clips can otherwise bloat the file.
+        "-maxrate", "12M", "-bufsize", "24M",
         "-color_range", "tv", "-r", str(FRAME_RATE), "-t", str(seconds),
         "-movflags", "+faststart",
         str(output),
@@ -128,13 +158,30 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
         raise MediaRenderError(str(error)) from error
     output = reel_video_path(post_id)
     output.parent.mkdir(parents=True, exist_ok=True)
+    motion_clip = is_video_artwork(artwork)
+    poster = reel_layout(record) == "poster"
     with tempfile.TemporaryDirectory() as folder:
-        background = render_html_to_jpeg(
-            build_post_html(record, brand, artwork, layer="background"),
-            Path(folder) / "background.jpg",
-            IMAGE_REEL_SIZE,
-        )
-        text_layers = [
+        chrome = []
+        if motion_clip:
+            # The clip itself moves; overlay only the glow and fades on it.
+            clip = artwork
+            artwork = extract_video_frame(clip, Path(folder) / "frame.png")
+            background = clip
+            chrome = [(
+                render_html_to_png(
+                    build_post_html(record, brand, artwork, layer="chrome"),
+                    Path(folder) / "chrome.png",
+                    IMAGE_REEL_SIZE,
+                ),
+                0,
+            )]
+        else:
+            background = render_html_to_jpeg(
+                build_post_html(record, brand, artwork, layer="background"),
+                Path(folder) / "background.jpg",
+                IMAGE_REEL_SIZE,
+            )
+        text_layers = chrome + [
             (
                 render_html_to_png(
                     build_post_html(
@@ -145,12 +192,18 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 ),
                 start,
             )
-            for part, start in (
-                POSTER_REVEALS if reel_layout(record) == "poster" else TEXT_REVEALS
-            )
+            for part, start in (POSTER_REVEALS if poster else TEXT_REVEALS)
         ]
         command = build_ffmpeg_command(
-            ffmpeg_executable(), background, text_layers, output, seconds, music
+            ffmpeg_executable(),
+            background,
+            text_layers,
+            output,
+            seconds,
+            music,
+            motion_clip=motion_clip,
+            # Posters crop the bottom strip where tools put watermarks.
+            clip_zoom=1.11 if poster else 1.0,
         )
         try:
             subprocess.run(

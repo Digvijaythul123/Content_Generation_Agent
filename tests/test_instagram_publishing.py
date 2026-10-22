@@ -968,3 +968,30 @@ def test_poster_drops_old_bottom_text_area_instructions():
     prompt = art_generator.build_art_prompt(record)
     assert "Color: Amber and teal grade." in prompt and "bottom 40%" not in prompt
     assert "Setting: a road." in prompt
+
+
+def test_video_clips_are_accepted_as_reel_art_only(workspace, monkeypatch):
+    monkeypatch.setattr(art_generator, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    clip = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64
+    assert art_generator.detect_video_type(clip) == "video/mp4"
+    assert art_generator.detect_video_type(b"\x00\x00\x00\x14ftypqt  ") == "video/quicktime"
+    workspace.write(IMAGE_REEL)
+    saved = art_generator.save_post_artwork("post_001", clip)
+    assert saved.suffix == ".mp4" and art_generator.is_video_artwork(saved)
+    assert art_generator.artwork_path("post_001") == saved
+    workspace.write({**POST, "id": "post_002"})
+    with pytest.raises(ArtGenerationError, match="one-image Reels"):
+        art_generator.save_post_artwork("post_002", clip)
+
+
+def test_motion_clip_command_loops_crops_and_overlays(tmp_path):
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "clip.mp4", [(tmp_path / "chrome.png", 0)],
+        tmp_path / "out.mp4", 8, motion_clip=True, clip_zoom=1.11,
+    )
+    assert command[command.index("-stream_loop") + 1] == "-1"
+    filters = command[command.index("-filter_complex") + 1]
+    assert "force_original_aspect_ratio=increase" in filters
+    assert "crop=1080:1920:(iw-1080)/2:0" in filters
+    assert "zoompan" not in filters and "noise=" in filters
+    assert "-maxrate" in command

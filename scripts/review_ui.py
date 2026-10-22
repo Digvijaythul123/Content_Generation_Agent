@@ -27,6 +27,8 @@ from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError, R2MediaHost
 from art_generator import (
     MAX_ARTWORK_BYTES,
+    MAX_VIDEO_ARTWORK_BYTES,
+    VIDEO_ARTWORK_SUFFIXES,
     ArtGenerationError,
     artwork_path,
     build_art_prompt,
@@ -895,7 +897,15 @@ def upload_artwork(content_type, content_id, image_bytes):
     return {"stage": "artwork", "status": "ready"}
 
 
-_IMPORTABLE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
+_IMPORTABLE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov")
+
+
+def _import_size_limit(path):
+    return (
+        MAX_VIDEO_ARTWORK_BYTES
+        if path.suffix.lower() in VIDEO_ARTWORK_SUFFIXES
+        else MAX_ARTWORK_BYTES
+    )
 
 
 def _import_directories():
@@ -921,7 +931,7 @@ def list_importable_images(limit=12):
                 if not (
                     path.is_file()
                     and path.suffix.lower() in _IMPORTABLE_SUFFIXES
-                    and path.stat().st_size <= MAX_ARTWORK_BYTES
+                    and path.stat().st_size <= _import_size_limit(path)
                 ):
                     continue
                 modified = path.stat().st_mtime
@@ -1901,18 +1911,26 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
 
 
     def _handle_artwork_upload(self, content_type, content_id):
-        if self.headers.get_content_type() not in (
-            "image/png", "image/jpeg", "image/webp"
+        media_type = self.headers.get_content_type()
+        if media_type not in (
+            "image/png", "image/jpeg", "image/webp", "video/mp4", "video/quicktime"
         ):
-            self._send_json({"error": "Upload a PNG, JPEG, or WebP image."}, 415)
+            self._send_json(
+                {"error": "Upload a PNG, JPEG, or WebP image, or an MP4/MOV clip."}, 415
+            )
             return
+        limit = (
+            MAX_VIDEO_ARTWORK_BYTES if media_type.startswith("video/") else MAX_ARTWORK_BYTES
+        )
         try:
             content_length = int(self.headers.get("Content-Length", ""))
         except ValueError:
             self._send_json({"error": "Invalid Content-Length."}, 400)
             return
-        if not 0 < content_length <= MAX_ARTWORK_BYTES:
-            self._send_json({"error": "Artwork must be 15 MB or smaller."}, 413)
+        if not 0 < content_length <= limit:
+            self._send_json(
+                {"error": f"Artwork must be {limit // (1024 * 1024)} MB or smaller."}, 413
+            )
             return
         try:
             result = upload_artwork(

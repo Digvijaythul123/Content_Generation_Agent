@@ -43,6 +43,10 @@
 
   /* Layers used for the video: the background moves, the text stays crisp. */
   body.layer-background .column { visibility: hidden; }
+  /* "chrome": the glow and fades alone, laid over a motion clip. */
+  body.layer-chrome { background: transparent; }
+  body.layer-chrome .art { display: none; }
+  body.layer-chrome .column, body.layer-chrome .handle { visibility: hidden; }
   body.layer-text { background: transparent; }
   body.layer-text .art, body.layer-text .wash { display: none; }
   /* One line per layer so the video can reveal them in sequence. */

@@ -23,7 +23,16 @@ _IMAGE_SIGNATURES = {
 _GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
-_EXTENSIONS = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
+_EXTENSIONS = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+}
+# Short motion clips (for example from Meta AI) can replace a still image.
+MAX_VIDEO_ARTWORK_BYTES = 80 * 1024 * 1024
+VIDEO_ARTWORK_SUFFIXES = (".mp4", ".mov")
 
 # Text is overlaid later from the approved copy, so the art must have none.
 _ART_RULES = (
@@ -351,9 +360,20 @@ def build_art_prompt(record, art_style=None):
     return "\n\n".join(parts)
 
 
+def detect_video_type(data):
+    """Recognise MP4 and QuickTime clips by their 'ftyp' box."""
+    if data[4:8] != b"ftyp":
+        return None
+    return "video/quicktime" if data[8:10] == b"qt" else "video/mp4"
+
+
+def is_video_artwork(path):
+    return path is not None and path.suffix.lower() in VIDEO_ARTWORK_SUFFIXES
+
+
 def artwork_path(post_id):
     """Return the saved artwork for a post, or None when it has none yet."""
-    for extension in (".png", ".jpg", ".webp"):
+    for extension in (".png", ".jpg", ".webp", ".mp4", ".mov"):
         path = GENERATED_ASSETS_DIRECTORY / f"{post_id}_art{extension}"
         if path.is_file():
             return path
@@ -371,13 +391,26 @@ def generate_post_artwork(post_id, art_style=None, client=None):
 
 
 def save_post_artwork(post_id, image_bytes):
-    """Validate and store artwork bytes, e.g. from an API or a manual upload."""
-    if len(image_bytes) > MAX_ARTWORK_BYTES:
-        raise ArtGenerationError("Artwork must be 15 MB or smaller.")
-    mime_type = detect_image_type(image_bytes)
-    if mime_type is None:
-        raise ArtGenerationError("Artwork must be a PNG, JPEG, or WebP image.")
+    """Validate and store artwork bytes, e.g. from an API or a manual upload.
+
+    One-image Reels may also take a short MP4 or MOV motion clip.
+    """
     record = load_post(post_id)
+    video_type = detect_video_type(image_bytes)
+    if video_type:
+        if record.get("format_id") != "image_reel":
+            raise ArtGenerationError("Video art is only supported for one-image Reels.")
+        if len(image_bytes) > MAX_VIDEO_ARTWORK_BYTES:
+            raise ArtGenerationError("Video art must be 80 MB or smaller.")
+        mime_type = video_type
+    else:
+        if len(image_bytes) > MAX_ARTWORK_BYTES:
+            raise ArtGenerationError("Artwork must be 15 MB or smaller.")
+        mime_type = detect_image_type(image_bytes)
+        if mime_type is None:
+            raise ArtGenerationError(
+                "Artwork must be a PNG, JPEG, or WebP image, or an MP4/MOV clip."
+            )
     extension = _EXTENSIONS[mime_type]
     GENERATED_ASSETS_DIRECTORY.mkdir(parents=True, exist_ok=True)
     previous = artwork_path(post_id)
