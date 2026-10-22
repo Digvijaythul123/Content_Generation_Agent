@@ -557,6 +557,20 @@ INSTAGRAM_MAX_HASHTAGS = 5
 _HASHTAG_PATTERN = re.compile(r"(?<!\w)#\w+")
 
 
+def tidy_caption(caption):
+    """Put the source line and the hashtag block on their own lines."""
+    text = re.sub(r"[ \t]*(?<!\n)\b(Teaching:|Source:)", r"\n\n\1", caption.strip())
+    # Close the source line at its first sentence end inside the paragraph.
+    text = re.sub(
+        r"^((?:Teaching|Source):[^\n]*?\))\.?[ \t]+(?=\S)",
+        r"\1\n\n",
+        text,
+        flags=re.MULTILINE,
+    )
+    text = re.sub(r"[ \t]+((?:#\w+\s*){2,})$", r"\n\n\1", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 def trim_hashtags(caption, limit=None):
     """Drop hashtags beyond the limit, keeping the first ones in order."""
     limit = INSTAGRAM_MAX_HASHTAGS if limit is None else limit

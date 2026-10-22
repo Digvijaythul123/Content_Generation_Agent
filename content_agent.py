@@ -245,16 +245,27 @@ class ContentAgent:
                     0,
                     "Verified quote to use (copy the wording exactly, in "
                     f"quotation marks, as Main_point): \"{quote['text']}\"\n"
-                    f"Supporting_copy must be: — {thinker['name']}, "
+                    f"Supporting_copy must be: — {_short_name(thinker)}, "
                     f"{quote['source']}\n"
                     f"In the caption, write 'Source: {quote['source']}'.",
+                )
+            elif not quote_mode and thinker.get("quotes"):
+                options = "\n".join(
+                    f"- \"{item['text']}\" ({item['source']})"
+                    for item in thinker["quotes"]
+                )
+                thinker_lines.append(
+                    "Verified quotes (the only words you may put in quotation "
+                    f"marks or credit as '— {_short_name(thinker)}'; use one "
+                    "verbatim if it fits):\n" + options + "\nAnything else "
+                    f"must be credited as '— inspired by {_short_name(thinker)}'."
                 )
             elif quote_mode:
                 thinker_lines.insert(
                     0,
                     "No verified quote is on file for this thinker. Do not "
                     "quote them: paraphrase one core idea in your own words "
-                    f"and set Supporting_copy to '— inspired by {thinker['name']}'.",
+                    f"and set Supporting_copy to '— inspired by {_short_name(thinker)}'.",
                 )
             prompt = "\n".join(thinker_lines) + prompt
         elif self.category_id != "comedy":
@@ -427,6 +438,11 @@ class ContentAgent:
             "caption.\n\n" + caption
         )
         return self.ai_service.generate_reel(prompt).strip()
+
+
+def _short_name(thinker):
+    """'The Buddha (Siddhartha Gautama)' -> 'The Buddha' for on-screen credits."""
+    return thinker["name"].split(" (")[0]
 
 
 def _as_bullets(values):

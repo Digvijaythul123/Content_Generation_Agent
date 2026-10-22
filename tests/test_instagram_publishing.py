@@ -903,3 +903,17 @@ def test_footer_skips_source_already_in_the_attribution(tmp_path):
               "caption": "Hook\n\nTeaching: X (Source: Discourses 2.17)\n\n#a"}
     html = build_post_html(record, brand, artwork=art)
     assert '<div class="handle">@demo</div>' in html
+
+
+def test_tidy_caption_splits_one_paragraph_into_parts():
+    from content_models import tidy_caption
+
+    caption = ("Hook here. Try this today. Teaching: Imagined suffering "
+               "(Letters to Lucilius 13.4). Send this to a friend. #a #b #c")
+    assert tidy_caption(caption) == (
+        "Hook here. Try this today.\n\n"
+        "Teaching: Imagined suffering (Letters to Lucilius 13.4)\n\n"
+        "Send this to a friend.\n\n#a #b #c"
+    )
+    already = "Hook.\n\nTeaching: X (Y 1)\n\nWhy?\n\n#a #b"
+    assert tidy_caption(already) == already

@@ -28,10 +28,18 @@ together tell the story or pose the question. Make it intellectually honest
 and understandable without the caption. Avoid unsupported factual claims,
 invented quotations, and generic motivation.
 
+Voice: speak to the viewer as "you", start from something they feel or live
+(overthinking, conflict, comparison, setbacks, fear of judgment), and use
+plain everyday words. Write lines a viewer would send to a friend or loved
+one. Stay hopeful but honest: no false guarantees.
+
 On-screen copy (read in under 8 seconds in total):
-- Title: a 2-6 word hook that stops the scroll.
-- Main_point: the core line of the story or idea, at most 22 words.
-- Supporting_copy: a short payoff, twist, or open question, at most 14 words.
+- Title: a 2-5 word plain hook, often naming who it is for (for example "For
+  the overthinker"); never an abstract label like "The Barrier of Certainty".
+- Main_point: the core line, at most 14 words, in second person where it fits;
+  a paradox, contrast, or permission works best. For a verified quote, use
+  the exact quote even if longer.
+- Supporting_copy: a short payoff, twist, credit, or question, at most 12 words.
 Copy devices that earn rereads and comments, used only when they fit: a
 twist that reverses the reading ("Now read that right to left"), a single
 story moment with its lesson, or a list of short parallel lines.
@@ -66,14 +74,16 @@ Do not name copyrighted songs.
 
 Write the caption for Instagram: open with a one-line hook, add one or two
 short lines of context, name the teaching and its reference (for example
-"Teaching: The Second Arrow (SN 36.6)"), end with one question that invites
-comments, then exactly 5 hashtags: one broad niche tag (for example
+"Teaching: The Second Arrow (SN 36.6)"), end with either one question that invites
+comments or a share prompt such as "Send this to someone who needs it today",
+then exactly 5 hashtags: one broad niche tag (for example
 #Buddhism), one tag for the source or thinker (for example #Dhammapada), one
 everyday-angle tag (for example #Mindfulness), #CriticalThinking, and one more
 tag specific to the post. Keep the whole caption, hashtags included, under
 450 characters so it can also be shared to Threads (500-character limit):
 one hook line, one short line with the test or counterpoint, the source line,
-the question, and the hashtags.
+the question or share prompt, and the hashtags. Put each of those parts on
+its own line, with a blank line between parts.
 
 Output exactly in this format:
 

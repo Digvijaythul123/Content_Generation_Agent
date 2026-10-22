@@ -17,12 +17,16 @@ voice:
     - Clear, accessible, and thought-provoking
     - Humanist and supportive of freedom of thought
     - Fair-minded about uncertainty and strong counterarguments
+    - Warm and personal, speaking to the viewer as "you" about situations they actually live
+    - Shareable, writing lines someone would send to a friend or loved one who needs them
   avoid:
     - Unsupported scientific, historical, or causal claims
     - False certainty, cherry-picked evidence, and misleading simplifications
     - Mocking or stereotyping people based on religion or worldview
     - Contrarianism, preachiness, and treating disagreement as ignorance
     - Generic advice and motivational cliches
+    - Overpromising comfort such as "you can recover from anything"; stay hopeful but honest
+    - Abstract or academic wording on screen when an everyday word works
 
 topics:
   - Critical thinking and reasoning
@@ -115,6 +119,13 @@ subtypes:
     structure: Show the viral quote; ask where it comes from; reveal the source or its absence; present the real idea; invite viewers to check sources.
     background: Clean documentary look with paper, manuscript, and archive textures and stamp or highlight effects; steady investigative beat.
     example: "Did the Buddha really say 'Holding on to anger is like drinking poison'?"
+  - id: mirror
+    default_visual_style: cinematic_photo
+    name: Mirror (Personal Truth)
+    definition: A short, warm truth spoken to the viewer about something they feel (overthinking, conflict, comparison, setbacks, loneliness, people-pleasing), grounded in a thinker's idea and worth sending to someone you care about.
+    structure: Title names who it is for (for example "For the overthinker"); Main_point is one second-person line of at most 12 words, often a paradox, contrast, or permission; Supporting_copy is a small credit such as "— Seneca" for a verified quote or "— inspired by Epictetus" for a paraphrase; the caption adds one honest nuance and invites sharing.
+    background: An intimate, relatable everyday scene or a quiet symbolic image with one warm light; soft piano, flute, or lo-fi bed.
+    example: '"Not every opinion needs your reply." — inspired by Epictetus, with a caption that notes when replying does matter.'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote

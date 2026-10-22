@@ -5,6 +5,7 @@ from content_models import (
     GeneratedContent,
     GenerationRequest,
     THREADS_MAX_CHARACTERS,
+    tidy_caption,
     trim_hashtags,
     validate_instagram_caption,
 )
@@ -90,7 +91,7 @@ def generate_content(
             f"{request.content_format.id!r}: {error}"
         ) from error
     if request.platform.id.startswith("instagram") and "caption" in content.fields:
-        trimmed = trim_hashtags(content.fields["caption"])
+        trimmed = tidy_caption(trim_hashtags(content.fields["caption"]))
         if trimmed != content.fields["caption"]:
             content = GeneratedContent(
                 fields={**content.fields, "caption": trimmed},

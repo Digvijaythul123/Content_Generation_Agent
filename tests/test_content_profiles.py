@@ -1073,7 +1073,7 @@ def test_verified_quote_mode_uses_exact_quote_or_paraphrases_honestly():
 
     osho = _prompt_for(qa_subtype="verified_quote", thinker_id="osho")
     assert "No verified quote is on file" in osho
-    assert "inspired by Osho (Rajneesh)" in osho
+    assert "inspired by Osho'" in osho
 
 
 def test_critical_lens_is_applied_to_every_concept():
@@ -1126,3 +1126,10 @@ def test_long_captions_are_shortened_once_for_threads():
     assert content_pipeline._fit_caption_for_threads(
         Agent("Hook.\nWhy?\n#a #b"), long_caption) == long_caption
     assert content_pipeline._fit_caption_for_threads(Agent("x"), "short #a") == "short #a"
+
+
+def test_other_modes_may_only_quote_verified_lines():
+    prompt = _prompt_for(qa_subtype="mirror", thinker_id="seneca")
+    assert "We suffer more often in imagination than in reality." in prompt
+    assert "inspired by Seneca" in prompt
+    assert "Selected Story mode: Mirror" in prompt
