@@ -1,6 +1,6 @@
 id: rational_thoughts
 display_name: Buddha's Teachings
-language: English
+language: Simple, everyday English that a 12-year-old or a second-language reader understands on the first read
 
 audience:
   description: Buddhists of every tradition worldwide, and anyone drawn to the Buddha's teaching, meditation, and mindfulness, who want real, sourced teachings they can practise in daily life
@@ -25,7 +25,8 @@ voice:
     - Exaggerated promises about enlightenment, health, wealth, or success
     - Preachiness, guilt, and moralising
     - Generic motivational cliches presented as Buddhist teaching
-    - Abstract or academic wording on screen when an everyday word works
+    - Abstract, academic, or fancy words (paradox, universal, perspective, orientation) when an everyday word works
+    - Long sentences; keep each to one idea
 
 topics:
   - The Four Noble Truths and the Noble Eightfold Path in daily life
@@ -129,6 +130,13 @@ subtypes:
     structure: Title names who it is for (for example "For the overthinker"); Main_point is one second-person line of at most 12 words, often a paradox, contrast, or permission; Supporting_copy is a small credit such as "— Seneca" for a verified quote or "— inspired by Epictetus" for a paraphrase; the caption adds one honest nuance and invites sharing.
     background: An intimate, relatable everyday scene or a quiet symbolic image with one warm light; soft piano, flute, or lo-fi bed.
     example: '"Not every opinion needs your reply." — inspired by Epictetus, with a caption that notes when replying does matter.'
+  - id: one_liner
+    default_visual_style: golden_light
+    name: One-Liner (Life Lesson)
+    definition: One short, simple line that carries a deep life lesson from the teaching, easy enough for anyone to understand on the first read and true enough to remember for years.
+    structure: Title is a 2-4 word plain hook; Main_point is the one-liner itself, at most 10 simple words, a whole life lesson in everyday language (a contrast or a turn works best); Supporting_copy is a small credit such as "— inspired by the Buddha" with the source; the caption explains the lesson in two or three short, plain sentences with one real-life example, then names the teaching and source.
+    background: One calm, open image with a single warm light and lots of empty sky, so the line stands alone; soft flute or a gentle drone.
+    example: '"You don''t lose what you let go. You lose what you hold too tight." — inspired by the Buddha, with a caption about a friendship that ended because one person held on too hard.'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote

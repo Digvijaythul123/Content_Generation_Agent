@@ -1175,3 +1175,14 @@ def test_legacy_qa_subtype_name_still_works():
         profile_id="qa_engineering_ai", qa_subtype="llm_testing"
     )
     assert request.subtype == "llm_testing" and request.qa_subtype == "llm_testing"
+
+
+def test_every_prompt_asks_for_plain_english():
+    prompt = _prompt_for()
+    assert "Plain English" in prompt and "12-year-old" in prompt
+    assert "second-language reader" in prompt
+
+
+def test_one_liner_story_mode_reaches_prompt():
+    prompt = _prompt_for(subtype="one_liner", thinker_id="buddha")
+    assert "One-Liner (Life Lesson)" in prompt and "at most 10 simple words" in prompt

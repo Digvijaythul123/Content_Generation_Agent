@@ -25,6 +25,26 @@ CAPTION_LANGUAGES = ("english", "hinglish")
 VERIFIED_QUOTE_MODE = "verified_quote"
 
 
+
+PLAIN_ENGLISH_RULES = (
+    "Plain English (most important, for every on-screen line and the "
+    "caption): write so a 12-year-old, or someone who learned English as a "
+    "second language, understands it on the first read.\n"
+    "- Use short, common words: \"sad\" not \"melancholy\", \"everyone\" not "
+    "\"universal\", \"part\" not \"fragment\", \"change\" not "
+    "\"transformation\", \"wanting\" not \"craving\".\n"
+    "- Short sentences, about 12 words or fewer, one idea each.\n"
+    "- No abstract or academic words (paradox, orientation, inherent, "
+    "transaction, perspective, systemic, fallacy) and no idioms that do not "
+    "translate.\n"
+    "- Say what happens in real life (\"you check your phone again\") rather "
+    "than naming a concept.\n"
+    "- A Pali or Sanskrit word may appear once, followed by its simple "
+    "meaning, for example \"metta (loving-kindness)\".\n"
+    "- Verified quotes stay exactly as written; explain them simply in the "
+    "caption instead.\n\n"
+)
+
 class ContentAgent:
 
     def __init__(
@@ -134,6 +154,7 @@ class ContentAgent:
             self._subtype_section,
             self._comedy_section,
             self._caption_language_section,
+            self._plain_english_section,
             self._brief_section,
         ):
             prompt = section() + prompt
@@ -467,6 +488,11 @@ class ContentAgent:
             "idea warmly. Keep every other caption line and all on-screen "
             "copy in English.\n\n"
         )
+
+    def _plain_english_section(self):
+        # Many viewers read English as a second language; plain words reach
+        # them, and the wider audience the page is aiming for.
+        return PLAIN_ENGLISH_RULES
 
     def _brief_section(self):
         if not self.brief:
