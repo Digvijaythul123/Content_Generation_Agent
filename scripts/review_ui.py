@@ -15,6 +15,7 @@ from config_loader import (
     load_platform,
     load_profile_config,
     load_profile_subtypes,
+    load_focus_thinkers,
     load_profile_thinkers,
     load_profile_visual_styles,
 )
@@ -1531,7 +1532,7 @@ def generate_batch_and_save(payload):
             )
         if not payload.get("thinker_id"):
             thinker_ids = tuple(
-                thinker["id"] for thinker in load_profile_thinkers(profile_id)
+                thinker["id"] for thinker in load_focus_thinkers(profile_id)
             )
 
     items = []

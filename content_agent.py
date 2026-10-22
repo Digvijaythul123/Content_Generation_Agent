@@ -1,6 +1,7 @@
 from ai_service import AIService
 from config_loader import (
     load_comedy_config,
+    load_focus_thinkers,
     load_profile_story_settings,
     load_profile_subtypes,
     load_profile_thinkers,
@@ -212,7 +213,7 @@ class ContentAgent:
         if not self.thinker_id:
             if self.category_id == "comedy":
                 return ""
-            thinkers = load_profile_thinkers(profile["id"])
+            thinkers = load_focus_thinkers(profile["id"])
             if not thinkers:
                 return ""
             return (

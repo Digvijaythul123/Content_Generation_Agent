@@ -1,42 +1,41 @@
 id: rational_thoughts
-display_name: Critical Thinking / Rational Thoughts
+display_name: Buddha's Teachings
 language: English
 
 audience:
-  description: Curious people interested in challenging beliefs through reason, science, critical thinking, secularism, humanism, and freedom of thought
+  description: Buddhists of every tradition worldwide, and anyone drawn to the Buddha's teaching, meditation, and mindfulness, who want real, sourced teachings they can practise in daily life
 
 objectives:
-  - Challenge beliefs and popular claims with reason, evidence, science, and clear argument
-  - Explain complex ideas accessibly while distinguishing established findings from uncertainty
-  - Advocate secularism, humanism, and freedom of thought without demeaning people who disagree
-  - Encourage curiosity, intellectual humility, and independent thought rather than presenting enlightenment as certainty
+  - Share the Buddha's real teachings accurately, with sources, in a warm and practical way
+  - Help viewers apply one teaching to their own life today (overthinking, anger, grief, comparison, fear)
+  - Respect every Buddhist tradition (Theravada, Mahayana, Zen, Tibetan) and label which tradition a teaching comes from
+  - Gently correct fake or misattributed "Buddha quotes" without mocking anyone's faith
 
 voice:
   traits:
-    - Curious, analytical, and evidence-led
-    - Clear, accessible, and thought-provoking
-    - Humanist and supportive of freedom of thought
-    - Fair-minded about uncertainty and strong counterarguments
+    - Warm, calm, and compassionate
+    - Clear, simple, and practical
+    - Accurate and sourced, in the Buddha's own "come and see" spirit
+    - Respectful of devotion and of every tradition
     - Warm and personal, speaking to the viewer as "you" about situations they actually live
     - Shareable, writing lines someone would send to a friend or loved one who needs them
   avoid:
-    - Unsupported scientific, historical, or causal claims
-    - False certainty, cherry-picked evidence, and misleading simplifications
-    - Mocking or stereotyping people based on religion or worldview
-    - Contrarianism, preachiness, and treating disagreement as ignorance
-    - Generic advice and motivational cliches
-    - Overpromising comfort such as "you can recover from anything"; stay hopeful but honest
+    - Invented or misattributed quotations
+    - Mocking or belittling beliefs, devotion, rituals, or any tradition
+    - Exaggerated promises about enlightenment, health, wealth, or success
+    - Preachiness, guilt, and moralising
+    - Generic motivational cliches presented as Buddhist teaching
     - Abstract or academic wording on screen when an everyday word works
 
 topics:
-  - Critical thinking and reasoning
-  - Scientific literacy, evidence, and the limits of scientific knowledge
-  - Cognitive biases, skepticism, and decision making
-  - Secularism, humanism, ethics, and freedom of thought
-  - Philosophy, meaning, and questions about human existence
-  - Evaluating claims, misinformation, and pseudoscience
-  - Correlation, causation, and confounding factors
-  - Human behavior, culture, and popular beliefs
+  - The Four Noble Truths and the Noble Eightfold Path in daily life
+  - Impermanence, non-self, and letting go
+  - Mind training, mindfulness, and meditation
+  - Anger, fear, grief, and overthinking
+  - Loving-kindness, compassion, joy, and equanimity
+  - Right speech, generosity, gratitude, and good friendship
+  - Stories and parables from the Buddha's life and the Jatakas
+  - Teachings from later traditions (Zen, Mahayana, Tibetan), clearly labelled
 
 visual:
   image_style:
@@ -64,11 +63,15 @@ visual:
 
 # Applied to every post: thinkers are voices to examine, not authorities.
 critical_lens:
-  - Treat every idea, including the featured thinker's, as a claim to examine, not a commandment.
-  - Give the viewer one concrete way to test, check, or apply the idea in their own life.
-  - Name a limit, counterpoint, or context where it matters (where the thinker was wrong, contested, or a product of their time).
-  - Separate evidence from belief and opinion; never present a paraphrase as a quotation.
-  - Celebrate questioning rather than obedience; no guru worship, including of the featured thinker.
+  - Present teachings the way the Buddha invited, as practices to test in one's own life (Kalama Sutta), not as dogma.
+  - Give the viewer one concrete way to practise or reflect on the teaching today.
+  - Quote only verified wording, name the source, and label the tradition (early Buddhism, Mahayana, Zen, Tibetan).
+  - Correct fake "Buddha quotes" gently and kindly; never mock beliefs, devotion, or practitioners.
+  - Stay honest and humble; no exaggerated promises about enlightenment, health, or wealth.
+
+# The page focuses on the Buddha; other thinkers stay available when chosen.
+focus_thinkers:
+  - buddha
 
 # Story Reels: one real idea from one thinker, told in a selected story mode.
 subtype_label: Story mode
@@ -115,7 +118,7 @@ subtypes:
   - id: myth_buster
     default_visual_style: thinker_statue
     name: Myth Buster
-    definition: A popular quote or claim attributed to the thinker is checked against what the source actually says.
+    definition: A popular quote or claim attributed to the Buddha is gently checked against what the texts actually say, then the real teaching is shared.
     structure: Show the viral quote; ask where it comes from; reveal the source or its absence; present the real idea; invite viewers to check sources.
     background: Clean documentary look with paper, manuscript, and archive textures and stamp or highlight effects; steady investigative beat.
     example: "Did the Buddha really say 'Holding on to anger is like drinking poison'?"
@@ -184,6 +187,11 @@ thinkers:
       # Later traditions (label as the tradition, never as the Buddha's words)
       - A full cup cannot receive anything new (Zen story of Nan-in and the professor)
       - The finger pointing at the moon is not the moon (Zen and Mahayana teaching image)
+      - Form is emptiness, emptiness is form; nothing exists on its own (Heart Sutra, Mahayana)
+      - You cannot cover the world in leather, but you can wear sandals; guard your own mind (Shantideva, Bodhicaryavatara 5.13, Tibetan and Mahayana)
+      - The burning house - skilful means to lead people to safety (Lotus Sutra parable, Mahayana)
+      - Drive all blames into one - look at your own reaction first (Atisha's mind-training slogans, Tibetan)
+      - Finding the ox - the path of taming the mind in ten stages (Zen ox-herding pictures)
     sources:
       - Pali Canon discourses (Digha, Majjhima, Samyutta, and Anguttara Nikayas)
       - Kalama Sutta (Anguttara Nikaya 3.65)
@@ -209,134 +217,6 @@ thinkers:
         source: 'Dhammapada 204 (tr. Buddharakkhita)'
     portrayal: A human teacher and reasoner, not a deity or miracle worker; calm, wry, and respectful; no caricature.
     setting: Forests, riverbanks, village paths, and monastic groves of the Gangetic plain; saffron robes, alms bowls, oil lamps.
-  - id: socrates
-    name: Socrates
-    era: 470-399 BCE, Athens
-    core_ideas:
-      - Wisdom begins with recognizing what you do not know
-      - Question definitions; confident people often cannot define what they claim to know
-      - The unexamined life is not worth living
-      - It is better to suffer injustice than to commit it
-    sources:
-      - Plato, Apology
-      - Plato, Euthyphro
-      - Plato, Crito and Gorgias
-    misattributions:
-      - '"I know that I know nothing" (a later compression of Apology 21d)'
-      - '"Strong minds discuss ideas, average minds discuss events..." (modern, not Socrates)'
-    quotes:
-      - text: 'The unexamined life is not worth living for a human being.'
-        source: 'Plato, Apology 38a (tr. Grube)'
-    portrayal: Barefoot, playful, persistent questioner; never smug.
-    setting: Athenian agora, stone colonnades, olive trees, marketplaces, dusty sandals.
-  - id: epicurus
-    name: Epicurus
-    era: 341-270 BCE, Athens
-    core_ideas:
-      - A good life is calm pleasure, friendship, and freedom from fear, not luxury
-      - Death is nothing to us; where death is, we are not
-      - Distinguish natural and necessary desires from empty ones
-      - Fear of gods and punishment is unnecessary for a good life
-    sources:
-      - Letter to Menoeceus
-      - Principal Doctrines
-      - Vatican Sayings
-    misattributions:
-      - The "Epicurean paradox" of evil is attributed to him by Lactantius; there is no surviving text by Epicurus
-    quotes:
-      - text: 'Death is nothing to us.'
-        source: 'Principal Doctrines 2'
-      - text: 'Of all the means which wisdom acquires to ensure happiness throughout the whole of life, by far the most important is friendship.'
-        source: 'Principal Doctrines 27'
-    portrayal: A warm host in a garden, not a glutton.
-    setting: A simple walled garden near Athens, shared meals of bread and olives, friends talking under trees.
-  - id: diogenes
-    name: Diogenes of Sinope
-    era: c. 412-323 BCE, Athens and Corinth
-    core_ideas:
-      - Most social conventions and status symbols are unnecessary
-      - Live simply and according to nature
-      - Expose hypocrisy through action rather than argument
-    sources:
-      - Diogenes Laertius, Lives of Eminent Philosophers, Book VI
-    misattributions:
-      - Many anecdotes are later legends; present them as stories told about him
-    quotes:
-      - text: 'I am a citizen of the world.'
-        source: 'Diogenes Laertius, Lives of Eminent Philosophers VI.63'
-    portrayal: A cheeky provocateur with a lamp and a barrel; witty, not cruel.
-    setting: A large clay jar on a busy Greek street, a lamp in daylight, marble statues, crowded markets.
-  - id: laozi
-    name: Laozi
-    era: Traditionally 6th century BCE, China (historicity uncertain)
-    core_ideas:
-      - Soft and yielding things overcome hard and rigid things, like water
-      - Those who know do not speak; those who speak do not know
-      - Knowing others is intelligence; knowing yourself is wisdom
-      - Act without forcing (wu wei)
-    sources:
-      - Tao Te Ching (Daodejing), chapters 8, 33, 56, 78
-    misattributions:
-      - '"A journey of a thousand miles begins with a single step" is a loose translation of chapter 64'
-      - Many modern "Lao Tzu" quotes on social media are not in the text
-    quotes:
-      - text: 'Knowing others is intelligence; knowing yourself is true wisdom.'
-        source: 'Tao Te Ching, chapter 33'
-    portrayal: A quiet, gently humorous old sage; note that his historicity is uncertain.
-    setting: Misty mountains, flowing rivers, bamboo, a mountain pass, an ox, ink-wash landscapes.
-  - id: charvaka
-    name: Charvaka (Lokayata) school
-    era: c. 6th century BCE onward, India
-    core_ideas:
-      - Perception is the primary valid source of knowledge
-      - Skepticism about the afterlife, rebirth, and ritual sacrifice
-      - Rituals mainly benefit those who perform and sell them
-    sources:
-      - Fragments preserved in Madhavacharya's Sarva-darshana-sangraha (14th century)
-      - References in Buddhist, Jain, and Hindu texts that critiqued the school
-    misattributions:
-      - Their own texts are lost; most surviving lines come from opponents, so present them as reported views
-    quotes:
-      - text: 'While life is yours, live joyously; none can escape Death''s searching eye.'
-        source: 'Reported in Sarva-darshana-sangraha (tr. Cowell and Gough)'
-    portrayal: Sharp, earthy, materialist debaters; do not reduce them to hedonism.
-    setting: Ancient Indian debate courts, village fire-ritual grounds, dusty marketplaces, palm-leaf manuscripts.
-  - id: hume
-    name: David Hume
-    era: 1711-1776, Scotland
-    core_ideas:
-      - A wise person proportions belief to the evidence
-      - Extraordinary miracle claims require weighing testimony against the uniformity of experience
-      - We infer causation from habit and constant conjunction, not from seeing necessity
-      - You cannot derive an "ought" purely from an "is"
-    sources:
-      - An Enquiry Concerning Human Understanding (Section X, Of Miracles)
-      - A Treatise of Human Nature (Book III)
-    misattributions:
-      - '"Extraordinary claims require extraordinary evidence" is Sagan''s phrasing, though inspired by Hume'
-    quotes:
-      - text: 'A wise man, therefore, proportions his belief to the evidence.'
-        source: 'An Enquiry Concerning Human Understanding, Section X'
-    portrayal: Genial, good-humored, and modest.
-    setting: 18th-century Edinburgh, candlelit study, cobbled streets, coffee houses, quill and paper.
-  - id: russell
-    name: Bertrand Russell
-    era: 1872-1970, Britain
-    core_ideas:
-      - The burden of proof lies with the person making an unfalsifiable claim (the celestial teapot)
-      - Fools and fanatics are cocksure while wise people are full of doubt
-      - Do not feel absolutely certain of anything
-    sources:
-      - '"Is There a God?" (1952), the teapot analogy'
-      - '"The Triumph of Stupidity" (1933)'
-      - '"A Liberal Decalogue" (1951)'
-    misattributions:
-      - The doubt line is a paraphrase; the original says "the stupid are cocksure while the intelligent are full of doubt"
-    quotes:
-      - text: 'The fundamental cause of the trouble is that in the modern world the stupid are cocksure while the intelligent are full of doubt.'
-        source: '"The Triumph of Stupidity" (1933)'
-    portrayal: Dry, witty, precise; a pipe and a raised eyebrow.
-    setting: Mid-century English study, books, a lecture hall, a teapot orbiting among planets.
   - id: ambedkar
     name: B. R. Ambedkar
     era: 1891-1956, India
@@ -356,144 +236,6 @@ thinkers:
         source: 'Closing message, All-India Depressed Classes Conference, Nagpur (1942)'
     portrayal: A scholar and reformer of quiet resolve; treat caste themes with care and accuracy.
     setting: Libraries, the Constituent Assembly hall, Indian towns and villages, a blue-and-white palette.
-  - id: sagan
-    name: Carl Sagan
-    era: 1934-1996, United States
-    core_ideas:
-      - Extraordinary claims require extraordinary evidence
-      - Use a baloney detection kit to evaluate claims
-      - The Pale Blue Dot shows our shared fragility and smallness
-      - Science is a way of thinking, not just a body of knowledge
-    sources:
-      - The Demon-Haunted World (1995)
-      - Pale Blue Dot (1994)
-      - Cosmos (1980)
-    misattributions:
-      - '"Somewhere, something incredible is waiting to be known" is often misattributed; avoid it'
-    quotes:
-      - text: 'Extraordinary claims require extraordinary evidence.'
-        source: 'Cosmos (1980)'
-    portrayal: Gentle wonder plus rigorous skepticism.
-    setting: Observatories, starfields, the Voyager probe, Earth as a pale blue dot, a 1980s TV studio.
-  - id: marcus_aurelius
-    name: Marcus Aurelius
-    era: 121-180 CE, Roman Empire
-    core_ideas:
-      - You control your judgments and actions, not outside events
-      - Act rightly now instead of debating what a good person is
-      - Everything changes; hold possessions and status lightly
-      - Obstacles can become the material for action
-      - Remember mortality to live with focus and humility
-    sources:
-      - Meditations (private notebooks, written c. 170-180 CE)
-    quotes:
-      - text: 'Waste no more time arguing about what a good man should be. Be one.'
-        source: 'Meditations 10.16'
-      - text: 'If it is not right, do not do it; if it is not true, do not say it.'
-        source: 'Meditations 12.17'
-    misattributions:
-      - '"Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth." (not in the Meditations)'
-    portrayal: A tired, self-critical emperor writing notes to himself, not a motivational guru; note that he also ruled an empire at war.
-    setting: Roman army camps on the Danube frontier, lamplit tents, marble Rome.
-  - id: seneca
-    name: Seneca
-    era: c. 4 BCE-65 CE, Rome
-    core_ideas:
-      - Most suffering comes from imagined fears rather than events
-      - Life is long enough if we stop wasting it
-      - Practice hardship briefly so it loses its power over you
-      - Anger is a temporary madness worth delaying
-    sources:
-      - Letters to Lucilius (Epistulae Morales)
-      - On the Shortness of Life
-      - On Anger
-    quotes:
-      - text: 'We suffer more often in imagination than in reality.'
-        source: 'Letters to Lucilius 13.4'
-      - text: 'It is not that we have a short time to live, but that we waste a lot of it.'
-        source: 'On the Shortness of Life 1'
-    misattributions:
-      - '"Luck is what happens when preparation meets opportunity" (not Seneca)'
-    portrayal: A sharp writer who preached simplicity while being one of Rome's richest men; acknowledge the tension honestly.
-    setting: A Roman villa study with scrolls and wax tablets, Mediterranean light.
-  - id: epictetus
-    name: Epictetus
-    era: c. 50-135 CE, Greece and Rome
-    core_ideas:
-      - We are disturbed not by events but by our judgments about them
-      - Separate what is in your control from what is not
-      - You cannot learn what you think you already know
-      - Freedom is an inner discipline, not a social status
-    sources:
-      - Enchiridion (Handbook, recorded by Arrian)
-      - Discourses (recorded by Arrian)
-    quotes:
-      - text: 'Men are disturbed not by things, but by the views which they take of things.'
-        source: 'Enchiridion 5'
-      - text: 'It is impossible for a man to learn what he thinks he already knows.'
-        source: 'Discourses 2.17'
-    misattributions:
-      - Many "Epictetus" lines online are modern paraphrases; check the Enchiridion or Discourses before quoting.
-    portrayal: A former slave with a lame leg who became a teacher; plain-spoken and demanding.
-    setting: The school at Nicopolis, stone benches, simple oil lamps.
-  - id: kabir
-    name: Kabir
-    era: 15th century, Varanasi, India
-    core_ideas:
-      - Rituals, scriptures, and caste do not make anyone holy; sincerity and love do
-      - Look for faults in yourself before judging others
-      - Book learning without understanding is empty
-      - The divine, if anywhere, is within, not in temples or mosques
-    sources:
-      - Kabir's dohas (couplets) as collected in the Bijak and the Guru Granth Sahib
-    quotes:
-      - text: 'Bura jo dekhan main chala, bura na milya koi; jo dil khoja aapna, mujhsa bura na koi. (I set out to find the wicked and found none; when I searched my own heart, I found no one worse than me.)'
-        source: 'Kabir, doha'
-      - text: 'Pothi padhi padhi jag mua, pandit bhaya na koi; dhai aakhar prem ka, padhe so pandit hoi. (The world died reading books and no one became wise; whoever learns the two and a half letters of love becomes wise.)'
-        source: 'Kabir, doha'
-    misattributions:
-      - Many couplets shared as Kabir online are modern; check standard collections before quoting.
-    portrayal: A weaver-poet who mocked hypocrisy in every religion; witty, blunt, never preachy.
-    setting: Varanasi lanes, river ghats, handlooms and spun cotton.
-  - id: vivekananda
-    name: Swami Vivekananda
-    era: 1863-1902, India
-    core_ideas:
-      - Strength, self-reliance, and education over fear and fatalism
-      - Test ideas through experience instead of blind belief
-      - Serve people as the highest form of worship
-      - Focus the mind on one idea and pursue it fully
-    sources:
-      - The Complete Works of Swami Vivekananda (including Raja Yoga, 1896)
-    quotes:
-      - text: 'Arise, awake, and stop not till the goal is reached.'
-        source: 'Complete Works (adapted from Katha Upanishad 1.3.14)'
-      - text: 'Take up one idea. Make that one idea your life; think of it, dream of it, live on that idea.'
-        source: 'Raja Yoga (1896)'
-    misattributions:
-      - '"Talk to yourself once in a day, otherwise you may miss meeting an excellent person in this world." (unverified)'
-    portrayal: Emphasize his rational, reformist, education-first side; he was also a religious monk, so do not present him as a secular thinker.
-    setting: Late 19th-century Kolkata, the Chicago Parliament of Religions hall (1893).
-  - id: bhagat_singh
-    name: Bhagat Singh
-    era: 1907-1931, India
-    core_ideas:
-      - Progress requires criticizing and challenging inherited beliefs
-      - Reason and independent thinking over blind faith
-      - Courage to examine your own convictions, even near death
-      - Ideas outlive individuals
-    sources:
-      - '"Why I Am an Atheist" (written in Lahore jail, 1930)'
-      - Jail notebook and letters
-    quotes:
-      - text: 'Any man who stands for progress has to criticize, disbelieve and challenge every item of the old faith.'
-        source: '"Why I Am an Atheist" (1930)'
-      - text: 'Criticism and independent thinking are the two indispensable qualities of a revolutionary.'
-        source: '"Why I Am an Atheist" (1930)'
-    misattributions:
-      - Many slogans attributed to him online are unsourced; quote "Why I Am an Atheist" or his letters directly.
-    portrayal: A young, widely read revolutionary thinker; focus on his reasoning, not on glorifying violence.
-    setting: 1920s Lahore, prison cells with books, typewritten pamphlets.
   - id: phule
     name: Mahatma Jyotirao Phule
     era: 1827-1890, Pune, India

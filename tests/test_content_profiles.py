@@ -22,15 +22,10 @@ def test_loads_rational_thoughts_profile():
     profile = load_profile("rational_thoughts")
 
     assert profile["id"] == "rational_thoughts"
-    assert profile["display_name"] == "Critical Thinking / Rational Thoughts"
-    assert profile["audience"]["description"] == (
-        "Curious people interested in challenging beliefs through reason, "
-        "science, critical thinking, secularism, humanism, and freedom of thought"
-    )
-    assert any("secularism" in topic.lower() for topic in profile["topics"])
-    assert any("humanism" in topic.lower() for topic in profile["topics"])
-    assert any("freedom of thought" in topic.lower() for topic in profile["topics"])
-
+    assert profile["display_name"] == "Buddha's Teachings"
+    assert "Buddhists of every tradition" in profile["audience"]["description"]
+    assert any("Impermanence" in topic for topic in profile["topics"])
+    assert any("later traditions" in topic for topic in profile["topics"])
 
 def test_rational_thoughts_prompt_uses_instagram_bio_guidance():
     request = resolve_generation_request(
@@ -52,9 +47,9 @@ def test_rational_thoughts_prompt_uses_instagram_bio_guidance():
         agent.generate_content()
 
     prompt = service.generate_reel.call_args.args[0]
-    assert "challenging beliefs through reason, science, critical thinking" in prompt
-    assert "Advocate secularism, humanism, and freedom of thought" in prompt
-    assert "Mocking or stereotyping people based on religion or worldview" in prompt
+    assert "Buddhists of every tradition worldwide" in prompt
+    assert "Respect every Buddhist tradition" in prompt
+    assert "Mocking or belittling beliefs, devotion, rituals, or any tradition" in prompt
 
 
 def test_loads_comedy_profile():
@@ -878,7 +873,7 @@ def test_rational_thoughts_defines_story_modes_and_thinkers():
     settings = load_profile_story_settings("rational_thoughts")
     assert settings["subtype_label"] == "Story mode"
     assert settings["reel_duration_seconds"] == {"minimum": 30, "maximum": 60}
-    assert any("claim to examine" in line for line in settings["critical_lens"])
+    assert any("Kalama Sutta" in line for line in settings["critical_lens"])
 
 
 def test_thinker_and_story_mode_are_validated_for_rational_thoughts():
@@ -962,7 +957,8 @@ def test_main_story_batch_rotates_modes_and_thinkers(tmp_path, monkeypatch):
         for path in sorted(reels_dir.glob("*.json"))
     ]
     assert len({record["subtype"] for record in records}) == 6
-    assert len({record["thinker_id"] for record in records}) == 6
+    # The page focuses on the Buddha, so rotation keeps to the focus list.
+    assert {record["thinker_id"] for record in records} == {"buddha"}
 
 
 def test_story_mode_picks_default_visual_style_for_posts_only():
@@ -1064,12 +1060,12 @@ def _prompt_for(**kwargs):
 def test_verified_quote_mode_uses_exact_quote_or_paraphrases_honestly():
     from config_loader import load_profile_thinkers
 
-    epictetus = next(
-        t for t in load_profile_thinkers("rational_thoughts") if t["id"] == "epictetus"
+    buddha = next(
+        t for t in load_profile_thinkers("rational_thoughts") if t["id"] == "buddha"
     )
-    prompt = _prompt_for(subtype="verified_quote", thinker_id="epictetus")
-    assert any(quote["text"] in prompt for quote in epictetus["quotes"])
-    assert "Supporting_copy must be: — Epictetus" in prompt
+    prompt = _prompt_for(subtype="verified_quote", thinker_id="buddha")
+    assert any(quote["text"] in prompt for quote in buddha["quotes"])
+    assert "Supporting_copy must be: — The Buddha" in prompt
 
     osho = _prompt_for(subtype="verified_quote", thinker_id="osho")
     assert "No verified quote is on file" in osho
@@ -1077,10 +1073,10 @@ def test_verified_quote_mode_uses_exact_quote_or_paraphrases_honestly():
 
 
 def test_critical_lens_is_applied_to_every_concept():
-    prompt = _prompt_for(thinker_id="marcus_aurelius")
+    prompt = _prompt_for(thinker_id="ambedkar")
     assert "Critical-thinking lens" in prompt
-    assert "no guru worship" in prompt
-    assert "Marcus Aurelius" in prompt
+    assert "never mock beliefs, devotion, or practitioners" in prompt
+    assert "B. R. Ambedkar" in prompt
 
 
 def test_pipeline_rotates_thinkers_when_none_chosen(monkeypatch):
@@ -1129,9 +1125,9 @@ def test_long_captions_are_shortened_once_for_threads():
 
 
 def test_other_modes_may_only_quote_verified_lines():
-    prompt = _prompt_for(subtype="mirror", thinker_id="seneca")
-    assert "We suffer more often in imagination than in reality." in prompt
-    assert "inspired by Seneca" in prompt
+    prompt = _prompt_for(subtype="mirror", thinker_id="buddha")
+    assert "Hatred is never appeased by hatred in this world." in prompt
+    assert "inspired by The Buddha" in prompt
     assert "Selected Story mode: Mirror" in prompt
 
 

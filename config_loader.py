@@ -215,6 +215,20 @@ def load_profile_visual_styles(profile_id):
     return styles
 
 
+def load_focus_thinkers(profile_id):
+    """Thinkers used when none is chosen: the profile's focus, or all of them."""
+    thinkers = load_profile_thinkers(profile_id)
+    focus = _load_profile_data(profile_id).get("focus_thinkers") or []
+    if not isinstance(focus, list) or not all(isinstance(item, str) for item in focus):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'focus_thinkers' must be a list of IDs."
+        )
+    unknown = set(focus) - {thinker["id"] for thinker in thinkers}
+    if unknown:
+        raise ConfigurationError(f"Unknown focus thinkers: {sorted(unknown)}.")
+    return [thinker for thinker in thinkers if thinker["id"] in focus] or thinkers
+
+
 def load_profile_subtypes(profile_id):
     data = _load_profile_data(profile_id)
     subtypes = data.get("subtypes", [])

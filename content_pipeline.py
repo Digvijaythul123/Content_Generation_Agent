@@ -12,7 +12,7 @@ from content_models import (
 import random
 import re
 
-from config_loader import load_profile_thinkers, resolve_generation_request
+from config_loader import load_focus_thinkers, resolve_generation_request
 from content_agent import ContentAgent
 
 
@@ -116,7 +116,7 @@ def _pick_thinker(profile_id, story_mode):
 
     Verified-quote drafts only pick thinkers with quotes on file.
     """
-    thinkers = load_profile_thinkers(profile_id)
+    thinkers = load_focus_thinkers(profile_id)
     if story_mode == "verified_quote":
         thinkers = [thinker for thinker in thinkers if thinker.get("quotes")]
     return random.choice(thinkers)["id"] if thinkers else None

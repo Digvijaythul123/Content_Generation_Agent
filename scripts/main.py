@@ -5,7 +5,7 @@ from config_loader import (
     load_brand,
     load_comedy_config,
     load_profile_subtypes,
-    load_profile_thinkers,
+    load_focus_thinkers,
 )
 from content_pipeline import generate_content
 from post_prompt import build_post_prompt_file
@@ -204,7 +204,7 @@ def main(argv=None):
             )
         if args.thinker is None:
             thinker_ids = tuple(
-                thinker["id"] for thinker in load_profile_thinkers(profile_id)
+                thinker["id"] for thinker in load_focus_thinkers(profile_id)
             )
     for index in range(args.count):
         comedy_subtype = args.comedy_subtype

@@ -882,12 +882,12 @@ def test_footer_source_line_handles_caption_variants(line, expected):
 
 
 def test_portrait_styles_name_the_thinker_and_invite_a_reference():
-    base = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "epictetus"}
+    base = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "buddha"}
     statue = art_generator.build_art_prompt({**base, "visual_style": "thinker_statue"})
-    assert "Depict as a statue or bust of Epictetus" in statue
+    assert "Depict as a statue or bust of The Buddha" in statue
     assert "If a reference image is attached, match the face" in statue
     portrait = art_generator.build_art_prompt({**base, "visual_style": "living_thinker"})
-    assert "Depict Epictetus the way they are widely recognised" in portrait
+    assert "Depict The Buddha the way they are widely recognised" in portrait
     other = art_generator.build_art_prompt({**base, "visual_style": "conceptual_metaphor"})
     assert "Depict" not in other
 

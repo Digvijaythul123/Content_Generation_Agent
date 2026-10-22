@@ -81,8 +81,8 @@ short lines of context, name the teaching and its reference (for example
 "Teaching: The Second Arrow (SN 36.6)"), end with either one question that invites
 comments or a share prompt such as "Send this to someone who needs it today",
 then exactly 5 hashtags: one broad niche tag (for example
-#Buddhism), one tag for the source or thinker (for example #Dhammapada), one
-everyday-angle tag (for example #Mindfulness), #CriticalThinking, and one more
+#Buddhism), one tag for the source or tradition (for example #Dhammapada or
+#Zen), one everyday-angle tag (for example #Mindfulness), #Dharma, and one more
 tag specific to the post. Keep the whole caption, hashtags included, under
 450 characters so it can also be shared to Threads (500-character limit):
 one hook line, one short line with the test or counterpoint, the source line,
