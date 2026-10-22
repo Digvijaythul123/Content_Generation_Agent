@@ -54,9 +54,9 @@ no multi-scene video provider or 3D system is implemented.
   section builders (brand, format, thinker, story mode, lens, style, duration)
   and turn Comedy into ordinary profile configuration.
 
-### Configurable text model — [NEXT]
-- Move the Ollama endpoint/model from source into `.env` settings so a model
-  change or outage does not need a code change.
+### Configurable text model — [CURRENT]
+- Already supported: `MODEL_ENDPOINT` and `MODEL_NAME` in `.env` override the
+  Ollama-compatible defaults in `app_settings.py`.
 
 ### Runtime upgrade — [NEXT]
 - Upgrade from Python 3.9 to 3.11+ (boto3 drops 3.9 support in April 2026).

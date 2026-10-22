@@ -83,7 +83,8 @@ one-image Reel (image_reel format):
 - A macOS LaunchAgent runs `scripts/publish_scheduled.py` every minute: it
   publishes due Reels and refreshes the long-lived token weekly.
 - `analytics.py` reads per-post insights for posts made with the project.
-- `ai_service.py` uses a fixed endpoint/model. Do not claim a provider-neutral
+- `ai_service.py` calls an Ollama-compatible endpoint; `MODEL_ENDPOINT` and
+  `MODEL_NAME` in `.env` override the defaults. Do not claim a provider-neutral
   adapter exists yet. Image art is made by hand in an image tool or through
   the optional Gemini/Cloudflare image clients in `art_generator.py`.
 

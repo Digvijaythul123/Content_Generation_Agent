@@ -37,7 +37,8 @@ browser snapshots removed from git (kept on disk).
 - Scheduling depends on the Mac being on; posts go out when it wakes.
 - Local content (drafts, art, renders, history) is not backed up by git.
 - Python 3.9: boto3 support ends April 2026; upgrade to 3.11+.
-- The text model endpoint is fixed in source.
+- The text model is a single Ollama-compatible endpoint (configurable through
+  `MODEL_ENDPOINT` and `MODEL_NAME` in `.env`); there is no fallback model.
 
 ## Executive summary (17 Oct 2026 audit)
 

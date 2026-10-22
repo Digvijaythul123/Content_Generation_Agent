@@ -66,8 +66,8 @@ future scope explicitly; they do not imply unbuilt features exist.
   watch time per post, grouped by story mode, visual style, and thinker.
 
 Artwork is created by hand in an image tool (Gemini, Meta AI) from the
-generated art prompt, or by the optional image API. The text model is fixed in
-source (Ollama-compatible endpoint). Multi-scene AI video generation is not
+generated art prompt, or by the optional image API. The text model is an
+Ollama-compatible endpoint set by `MODEL_ENDPOINT` and `MODEL_NAME` in `.env`. Multi-scene AI video generation is not
 implemented.
 
 ## 3. Product users

@@ -52,7 +52,8 @@ Brief + Brand + Content Profile + Format + Platform
     -> LinkedIn text post: ready-to-publish post copy
 ```
 
-**[CURRENT]** The model client uses a fixed Ollama-compatible endpoint/model.
+**[CURRENT]** The model client calls an Ollama-compatible endpoint; set
+`MODEL_ENDPOINT` and `MODEL_NAME` in `.env` to change it.
 Content and text assets are stored locally. The visual preparation pipeline
 creates prompts only; it does not create images, animation, or video. The
 single-page workflow saves records under `generated_posts/` and design prompts
