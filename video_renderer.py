@@ -88,13 +88,17 @@ def build_ffmpeg_command(
     if music is not None:
         # Loop short tracks, then fade in and out so the Reel loops cleanly.
         inputs += ["-stream_loop", "-1", "-i", str(music)]
+        # Skip a silent intro, even out loudness for phone speakers, then
+        # fade in and out so the Reel loops cleanly.
         filters.append(
-            f"[{len(text_layers) + 1}:a]atrim=0:{seconds},"
+            f"[{len(text_layers) + 1}:a]"
+            "silenceremove=start_periods=1:start_threshold=-45dB,"
+            f"atrim=0:{seconds},asetpts=PTS-STARTPTS,"
+            "loudnorm=I=-16:TP=-1.5:LRA=11,"
             "afade=t=in:st=0:d=0.5,"
-            f"afade=t=out:st={max(seconds - 1.5, 0)}:d=1.5,"
-            "volume=0.9[aout]"
+            f"afade=t=out:st={max(seconds - 1.5, 0)}:d=1.5[aout]"
         )
-        audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k"]
+        audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k", "-ar", "44100"]
     return [
         ffmpeg, "-y", "-loglevel", "error",
         *inputs,
