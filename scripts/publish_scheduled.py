@@ -1,7 +1,7 @@
 """Publish scheduled one-image Reels whose time has come.
 
-Run it by hand, or install it as a macOS LaunchAgent that runs every five
-minutes (and once after the Mac wakes):
+Run it by hand, or install it as a macOS LaunchAgent that runs every
+minute (and once after the Mac wakes):
 
     python3 -m scripts.publish_scheduled            # publish what is due now
     python3 -m scripts.publish_scheduled --install  # run automatically
@@ -28,7 +28,7 @@ LABEL = "com.dagnosticbeing.publish-scheduled"
 PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LOG_PATH = GENERATED_ASSETS_DIRECTORY / "scheduler.log"
 LOCK_PATH = GENERATED_ASSETS_DIRECTORY / ".scheduler.lock"
-INTERVAL_SECONDS = 300
+INTERVAL_SECONDS = 60
 ENV_PATH = PROJECT_ROOT / ".env"
 TOKEN_STATE_PATH = GENERATED_ASSETS_DIRECTORY / ".token_refresh.json"
 # Long-lived tokens last ~60 days; refreshing weekly keeps a wide margin.
@@ -143,7 +143,7 @@ def uninstall():
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--install", action="store_true", help="Run every 5 minutes.")
+    group.add_argument("--install", action="store_true", help="Run every minute.")
     group.add_argument("--uninstall", action="store_true", help="Stop running automatically.")
     args = parser.parse_args(argv)
     if args.install:

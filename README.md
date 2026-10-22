@@ -256,6 +256,6 @@ Kubernetes, event buses, or distributed systems for this project.
 5. Create a Cloudflare R2 bucket with public access and fill the `R2_*`
    values in `.env` (Instagram fetches the MP4 from that public URL).
 6. Optional: `python3 -m scripts.publish_scheduled --install` publishes
-   scheduled Reels every 5 minutes while the Mac is on; `--uninstall` stops it.
+   scheduled Reels every minute while the Mac is on; `--uninstall` stops it.
    Long-lived tokens expire after about 60 days; extend them with
    `python3 -m scripts.publish_post --refresh-token`.
