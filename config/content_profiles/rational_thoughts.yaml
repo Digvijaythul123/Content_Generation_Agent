@@ -139,23 +139,24 @@ subtypes:
     example: '"You don''t lose what you let go. You lose what you hold too tight." — inspired by the Buddha, with a caption about a friendship that ended because one person held on too hard.'
   - id: dialogue
     default_visual_style: narrative_painting
-    name: Dialogue (Buddha and disciple)
-    definition: A two-line conversation between the Buddha and a disciple, in plain words, where the Buddha answers with a question or one line of wisdom that turns the disciple's thinking around.
+    name: Dialogue (Buddha and student)
+    definition: A two-line conversation between the Buddha and a student, in plain words, where the Buddha answers with a question or one line of wisdom that turns the student's thinking around.
     structure: >-
       Title is a 2-4 word plain hook naming the struggle (for example "When
-      anger stays"); Main_point is the disciple's line, written as
-      'Disciple: "..."', at most 10 simple words, usually a question about a
+      anger stays"); Main_point is the student's line, written as
+      'Student: "..."', at most 10 simple words, usually a question about a
       feeling people live with; Supporting_copy is the Buddha's reply,
       written as 'Buddha: "..."', at most 10 simple words, a question back
       or a short life lesson with a turn. Prefer a real exchange from the
       suttas (for example Ananda on good friendship, SN 45.2, or Kisa Gotami
       and the mustard seed), kept close to the text and cited; use a real
-      disciple's name only for a real exchange, otherwise write "Disciple".
+      student's name (for example Ananda) only for a real exchange,
+      otherwise write "Student".
       Never present an invented line as the Buddha's exact words; the
       caption says "A retelling inspired by" the teaching and gives its
       source, then one plain sentence on how to use it today.
-    background: One quiet story moment with the Buddha and one disciple, the disciple looking up or bowing and the Buddha calm and kind, in a forest grove, a riverbank, or by lamplight; soft flute or a slow drone.
-    example: 'Disciple: "Why does my anger keep coming back?" Buddha: "Because you keep feeding it." Caption: a retelling inspired by the Buddha''s teaching on anger (Dhammapada 3-5).'
+    background: One quiet story moment with the Buddha and one student, the student looking up or bowing and the Buddha calm and kind, in a forest grove, a riverbank, or by lamplight; soft flute or a slow drone.
+    example: 'Student: "Why does my anger keep coming back?" Buddha: "Because you keep feeding it." Caption: a retelling inspired by the Buddha''s teaching on anger (Dhammapada 3-5).'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote

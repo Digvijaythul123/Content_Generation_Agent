@@ -5,6 +5,7 @@ import re
 from string import Template
 
 from dataclasses import replace
+from functools import lru_cache
 
 import subprocess
 import tempfile
@@ -122,6 +123,55 @@ def _brand_for(record):
     return load_brand(brand_id)
 
 
+# Average brightness (0-255) of the art behind poster text: above LIGHT the
+# text turns dark; between MID and LIGHT the shade behind it gets stronger.
+TONE_LIGHT = 150
+TONE_MID = 105
+
+
+@lru_cache(maxsize=32)
+def _region_brightness(path, modified, size, region):
+    """Average luminance of a region of the art as the page crops it."""
+    width, height = size
+    left, top, region_width, region_height = region
+    # Match the poster's crop: cover the frame, then zoom 1.11 from the top.
+    zoom_w, zoom_h = round(width * 1.11), round(height * 1.11)
+    result = subprocess.run(
+        [ffmpeg_executable(), "-loglevel", "error", "-i", path, "-vf",
+         f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+         f"crop={width}:{height}:(iw-{width})/2:ih-{height},"
+         f"scale={zoom_w}:{zoom_h},crop={width}:{height}:(iw-{width})/2:0,"
+         f"crop={region_width}:{region_height}:{left}:{top},"
+         "scale=1:1:flags=area,format=gray",
+         "-frames:v", "1", "-f", "rawvideo", "-"],
+        capture_output=True,
+    )
+    if result.returncode or not result.stdout:
+        return None
+    return result.stdout[0]
+
+
+def text_tone(artwork, record):
+    """'light', 'mid', or 'dark' for the art behind a poster's words."""
+    if artwork is None:
+        return "dark"
+    if is_image_reel(record):
+        size, region = IMAGE_REEL_SIZE, (90, 250, 900, 640)
+    else:
+        size, region = INSTAGRAM_FEED_SIZE, (80, 90, 920, 520)
+    try:
+        brightness = _region_brightness(
+            str(artwork), artwork.stat().st_mtime, size, region
+        )
+    except (OSError, MediaRenderError):
+        return "dark"
+    if brightness is None:
+        return "dark"
+    if brightness > TONE_LIGHT:
+        return "light"
+    return "mid" if brightness > TONE_MID else "dark"
+
+
 def is_image_reel(record):
     return record.get("format_id") == "image_reel"
 
@@ -207,6 +257,11 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             else ""
         ),
         layer=layer,
+        tone=(
+            text_tone(artwork, record)
+            if template_path in (IMAGE_REEL_POSTER_TEMPLATE, FEED_POSTER_TEMPLATE)
+            else "dark"
+        ),
         title=_copy_html(record["title"]),
         main_point=_copy_html(record["main_point"]),
         supporting_copy=_copy_html(record["supporting_copy"]),

@@ -44,8 +44,8 @@
   }
   .quote .hl { font-size: 1.16em; font-weight: 700; color: $accent; }
   .takeaway {
-    margin-top: 28px; font-size: 36px; font-style: italic; line-height: 1.3;
-    opacity: .92; text-shadow: 0 2px 14px $background_rgba_soft;
+    margin-top: 28px; font-size: 42px; font-style: italic; line-height: 1.3;
+    text-shadow: 0 2px 14px $background_rgba_soft;
   }
   .takeaway .hl { font-weight: 700; }
   /* Small brand mark near the bottom edge. */
@@ -60,6 +60,27 @@
   }
   .handle svg { width: 34px; height: 34px; margin-right: -8px; }
 
+  /* Bright skies get dark text and a light glow; mid-tone skies get a
+     stronger shade. The renderer measures the art behind the words. */
+  body.tone-light { color: #2A1A0F; }
+  body.tone-light .quote .hl { color: #8E1B1B; }
+  body.tone-light .glow {
+    background: radial-gradient(ellipse 80% 62% at 50% 34%,
+      rgba(255, 247, 232, .62) 0%, rgba(255, 247, 232, .3) 45%, transparent 76%);
+  }
+  body.tone-light .quote, body.tone-light .takeaway {
+    text-shadow: 0 1px 16px rgba(255, 248, 236, .85), 0 0 3px rgba(255, 248, 236, .6);
+  }
+  body.tone-mid .glow {
+    background: radial-gradient(ellipse 80% 62% at 50% 34%,
+      $background_rgba_strong 0%, $background_rgba_soft 45%, transparent 78%);
+  }
+  body.tone-mid .quote, body.tone-mid .takeaway {
+    text-shadow: 0 2px 18px $background_rgba_strong, 0 0 4px $background_rgba_soft;
+  }
+  /* The handle sits lower, over the art, so it keeps its own shadow. */
+  body.tone-light .handle { color: #FFF8EC; }
+
   /* Layers used for the video: the background moves, the text stays crisp. */
   body.layer-background .column, body.layer-background .handle { visibility: hidden; }
   /* "chrome": the glow and fades alone, laid over a motion clip. */
@@ -73,7 +94,7 @@
   body.only-title .column, body.only-title .handle { visibility: hidden; }
 </style>
 </head>
-<body class="layer-$layer">
+<body class="layer-$layer tone-$tone">
 $art
 <div class="glow"></div>
 <div class="foot"></div>

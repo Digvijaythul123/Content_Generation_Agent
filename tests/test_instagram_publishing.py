@@ -1086,3 +1086,15 @@ def test_simplify_post_text_suggests_without_saving(workspace, monkeypatch):
     workspace.write({**POST, "status": "Published"})
     with pytest.raises(ValueError, match="published"):
         review_ui.simplify_post_text("post_001")
+
+
+def test_poster_text_turns_dark_on_bright_art(tmp_path, monkeypatch):
+    import media_renderer
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    record = {**IMAGE_REEL, "layout": "poster"}
+    for brightness, tone in ((200, "light"), (120, "mid"), (60, "dark"), (None, "dark")):
+        monkeypatch.setattr(media_renderer, "_region_brightness", lambda *a, b=brightness: b)
+        assert media_renderer.text_tone(art, record) == tone
+        assert f"tone-{tone}" in build_post_html(record, artwork=art)
+    assert media_renderer.text_tone(None, record) == "dark"
