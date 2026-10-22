@@ -14,8 +14,8 @@ generation with readable scene-text export, profile-aware image prompt
 generation, master video prompt composition, and configured single-page
 Instagram Feed post generation with a separate design prompt.
 
-**[CURRENT] since 22 Oct 2026:** a great-thinkers content system (18
-thinkers, 8 story modes, verified quotes, critical-thinking lens); the
+**[CURRENT] since 22 Oct 2026:** a Buddha-focused teachings system (the Buddha by default, plus Ambedkar, Phule, and
+Osho; 8 story modes; verified quotes; all traditions labelled); the
 one-image Reel format with Poster/Panel layouts and 12 visual styles; local
 rendering of cover images and 8-second MP4s (still or attached clip, music,
 film finish); Instagram publishing with scheduling, AI label, text covers, and

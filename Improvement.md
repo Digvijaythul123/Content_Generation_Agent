@@ -8,7 +8,7 @@ recommendation.
 ## Status update — 22 Oct 2026
 
 Since the audit below, the project gained one-image Reel rendering, Instagram
-publishing and scheduling, analytics, and the great-thinkers content system
+publishing and scheduling, analytics, and the Buddha-focused teachings system
 (see README and 01–04 docs). Test suite: **171 passed**. The sections after
 this update are the **17 Oct audit**; some findings may already be resolved
 and were not all re-verified.

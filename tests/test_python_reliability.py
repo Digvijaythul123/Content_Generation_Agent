@@ -1,5 +1,6 @@
 import json
 import importlib
+from pathlib import Path
 import sys
 from unittest.mock import Mock, patch
 
@@ -13,6 +14,9 @@ from profile_loader import load_profile
 import reel_storage
 from reel_storage import ReelStorageError, create_reel, load_reel, save_reel
 from scripts import review_ui
+
+# Sample content records used by tests (independent of the user's content).
+FIXTURES_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
 def test_create_reel_uses_first_available_filename_and_does_not_overwrite(
@@ -1128,7 +1132,7 @@ def test_storyboard_preserves_reel_018_timed_beats_and_content(
     videos_directory = tmp_path / "generated_videos"
     reels_directory.mkdir()
     (reels_directory / "reel_018.json").write_text(
-        (reel_storage.GENERATED_REELS_DIRECTORY / "reel_018.json").read_text(
+        (FIXTURES_DIRECTORY / "reel_018.json").read_text(
             encoding="utf-8"
         ),
         encoding="utf-8",
@@ -1232,7 +1236,7 @@ def test_master_prompt_uses_storyboard_timing_and_separates_visuals(
     reels_directory.mkdir()
     images_directory.mkdir()
     (reels_directory / "reel_018.json").write_text(
-        (reel_storage.GENERATED_REELS_DIRECTORY / "reel_018.json").read_text(
+        (FIXTURES_DIRECTORY / "reel_018.json").read_text(
             encoding="utf-8"
         ),
         encoding="utf-8",

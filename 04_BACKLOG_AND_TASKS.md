@@ -29,9 +29,9 @@ video prompt composition; a configured 4:5 single-page format and Instagram
 Feed platform with separate post storage/design-prompt output; and a combined
 Reel preparation command.
 
-**[CURRENT] since 22 Oct 2026:** the great-thinkers content system (18
-thinkers, 8 story modes, 26 verified quotes, critical-thinking lens, Mirror
-voice, Threads-safe captions, Hinglish option); the one-image Reel format
+**[CURRENT] since 22 Oct 2026:** the Buddha-focused teachings system (the Buddha by default
+plus Ambedkar, Phule, and Osho; 8 story modes; verified quotes; all
+traditions labelled; Mirror voice, Threads-safe captions, Hinglish option); the one-image Reel format
 (Poster/Panel layouts, 12 visual styles, cinematic art prompts, still or MP4
 clip art); local rendering with music and a film finish; Instagram publishing
 with scheduling, AI label, text covers, token refresh, and "Mark as posted";

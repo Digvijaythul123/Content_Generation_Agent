@@ -45,10 +45,12 @@ future scope explicitly; they do not imply unbuilt features exist.
   readable scene-text export for compatibility.
 - AI image-prompt generation and master video prompt composition.
 - Local file-based workflow and automated tests.
-- **Great-thinkers content (Critical Thinking profile):** a library of 18
-  thinkers (ideas, sources, known misattributions), 8 story modes (including
-  Mirror and Verified Quote), 26 curated verified quotes, a critical-thinking
-  lens on every concept, a personal second-person voice, captions capped at
+- **Buddha's teachings content (profile `rational_thoughts`, "Buddha's
+  Teachings"):** a worldwide Buddhist audience, all traditions labelled, the
+  Buddha by default plus Ambedkar, Phule, and Osho (ideas, sources, known
+  misattributions), 8 story modes (including
+  Mirror and Verified Quote), curated verified quotes, a lens in the Buddha's own "test it in your life"
+  spirit, a personal second-person voice, captions capped at
   5 hashtags and 500 characters (Threads-compatible), and an optional
   Hinglish caption line.
 - **One-image Reel format:** a 9:16 Reel built from one artwork (a still or
@@ -234,7 +236,7 @@ asset references.
   format applicability, and test examples. Avoid duplicating prompt text
   across scripts.
 - **[CURRENT] Visual style references:** 12 visual styles with recipes and
-  "avoid" lists live in the Critical Thinking profile configuration.
+  "avoid" lists live in the Buddha's Teachings profile configuration.
 - **[FUTURE] Character Library:** reusable character identity and approved
   visual references; owned by a brand or shared library with explicit reuse
   permissions.
