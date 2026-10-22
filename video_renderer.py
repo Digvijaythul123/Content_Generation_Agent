@@ -1,3 +1,4 @@
+import random
 import subprocess
 import tempfile
 from pathlib import Path
@@ -31,42 +32,174 @@ TEXT_FADE_SECONDS = 0.5
 LIGHT_BREATH = 0.025
 LIGHT_PERIOD = 4
 GRAIN = 6
-# Optional drifting sparks: (seed, specks, max radius px, rise px/second).
-SPARK_LAYERS = ((7, 70, 3.2, 46), (19, 30, 6.5, 24))
-_SPARK_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
-html, body {{ margin: 0; width: 1080px; height: 3840px; background: transparent; }}
-</style></head><body><canvas id="c" width="1080" height="3840"></canvas><script>
+# Optional overlay effects. Each layer is drawn once as a tileable
+# transparent PNG and scrolled by ffmpeg so it loops seamlessly under the
+# text: (kind, seed, count, size range, alpha range, x and y speed in px/s;
+# positive y falls, negative y rises). For "meteor", count is the number of
+# shooting stars spread over the clip.
+VIDEO_EFFECTS = {
+    "sparks": (
+        ("spark", 7, 70, (0.8, 4.0), (0.25, 0.85), 0, -46),
+        ("spark", 19, 30, (0.8, 7.3), (0.25, 0.85), 0, -24),
+    ),
+    "meteors": (
+        ("star", 23, 160, (0.6, 1.8), (0.15, 0.6), 0, 0),
+        # Meteors are timed flashes across the sky, not a looping layer.
+        ("meteor", 5, 7, (260, 420), (0.7, 0.95), -900, 620),
+    ),
+    "rain": (
+        ("rain", 3, 150, (40, 90), (0.18, 0.35), 0, 1500),
+        ("rain", 11, 60, (90, 170), (0.3, 0.5), 0, 2300),
+    ),
+    "sunlight": (
+        ("beam", 13, 4, (120, 260), (0.10, 0.20), 14, 0),
+        ("beam", 29, 3, (80, 180), (0.08, 0.16), -9, 0),
+    ),
+}
+EFFECT_NAMES = {
+    "sparks": "Drifting sparks",
+    "meteors": "Meteor shower",
+    "rain": "Rain",
+    "sunlight": "Sunlight rays",
+}
+_EFFECT_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
+html, body {{ margin: 0; width: {width}px; height: {height}px; background: transparent; }}
+</style></head><body><canvas id="c" width="{width}" height="{height}"></canvas><script>
 let seed = {seed};
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const ctx = document.getElementById("c").getContext("2d");
-const specks = [];
-for (let i = 0; i < {count}; i++) specks.push([
-  rand() * 1080, rand() * 1920, 0.8 + rand() * {radius}, 0.25 + rand() * 0.6
+const draw = {{
+  spark(x, y, r, a) {{
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    g.addColorStop(0, `rgba(255, 214, 140, ${{a}})`);
+    g.addColorStop(1, "rgba(255, 214, 140, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r * 3, 0, Math.PI * 2); ctx.fill();
+  }},
+  star(x, y, r, a) {{
+    if (y > 1100) return;  // stars only in the sky
+    ctx.fillStyle = `rgba(255, 250, 235, ${{a}})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }},
+  meteor(x, y, len, a) {{
+    // The tail trails up and to the right of the head, against the motion.
+    const tx = x + 0.825 * len, ty = y - 0.565 * len;
+    const g = ctx.createLinearGradient(x, y, tx, ty);
+    g.addColorStop(0, `rgba(255, 248, 225, ${{a}})`);
+    g.addColorStop(0.15, `rgba(255, 220, 160, ${{a * 0.6}})`);
+    g.addColorStop(1, "rgba(255, 210, 150, 0)");
+    ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke();
+    const h = ctx.createRadialGradient(x, y, 0, x, y, 14);
+    h.addColorStop(0, `rgba(255, 255, 240, ${{a}})`);
+    h.addColorStop(1, "rgba(255, 255, 240, 0)");
+    ctx.fillStyle = h; ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+  }},
+  rain(x, y, len, a) {{
+    ctx.strokeStyle = `rgba(215, 228, 255, ${{a}})`;
+    ctx.lineWidth = len > 90 ? 2.2 : 1.4; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - len * 0.06, y + len); ctx.stroke();
+  }},
+  beam(x, y, w, a) {{
+    // A soft shaft of light falling from above, leaning slightly.
+    ctx.save();
+    ctx.filter = "blur(28px)";
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(x, -120); ctx.rotate(-0.32);
+    const g = ctx.createLinearGradient(0, 0, 0, 2100);
+    g.addColorStop(0, `rgba(255, 228, 165, ${{a}})`);
+    g.addColorStop(0.55, `rgba(255, 220, 150, ${{a * 0.45}})`);
+    g.addColorStop(1, "rgba(255, 220, 150, 0)");
+    ctx.fillStyle = g; ctx.fillRect(-w / 2, 0, w, 2100);
+    ctx.restore();
+  }},
+}};
+const items = [];
+for (let i = 0; i < {count}; i++) items.push([
+  rand() * 1080, rand() * 1920,
+  {size_low} + rand() * ({size_high} - {size_low}),
+  {alpha_low} + rand() * ({alpha_high} - {alpha_low}),
 ]);
-// Draw the same 1920px tile twice so the upward scroll loops seamlessly.
-for (const offset of [0, 1920]) for (const [x, y, r, a] of specks) {{
-  const g = ctx.createRadialGradient(x, y + offset, 0, x, y + offset, r * 3);
-  g.addColorStop(0, `rgba(255, 214, 140, ${{a}})`);
-  g.addColorStop(1, "rgba(255, 214, 140, 0)");
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y + offset, r * 3, 0, Math.PI * 2); ctx.fill();
-}}
+// Repeat the 1080x1920 tile along each moving axis so the scroll loops.
+for (const ox of {x_offsets}) for (const oy of {y_offsets})
+  for (const [x, y, s, a] of items) draw.{kind}(x + ox, y + oy, s, a);
 </script></body></html>"""
 
 
-def render_spark_layers(folder):
-    """Draw the spark layers once as tall transparent PNG strips."""
-    return [
-        (
-            render_html_to_png(
-                _SPARK_HTML.format(seed=seed, count=count, radius=radius),
-                folder / f"sparks_{seed}.png",
-                (1080, 3840),
-            ),
-            speed,
+def _scroll(speed, period):
+    """ffmpeg overlay position that scrolls a doubled tile by ``speed``."""
+    if speed > 0:
+        return f"-{period}+mod(t*{speed},{period})"
+    if speed < 0:
+        return f"-mod(t*{-speed},{period})"
+    return "0"
+
+
+def effect_for(record):
+    """The record's overlay effect name, or None (legacy ``sparks: true``)."""
+    effect = record.get("effect")
+    if effect in VIDEO_EFFECTS:
+        return effect
+    return "sparks" if record.get("sparks") and effect is None else None
+
+
+METEOR_SECONDS = 0.6
+_METEOR_TILE = (480, 340)
+
+
+def _meteor_events(strip, seed, count, speed, seconds=DEFAULT_DURATION_SECONDS):
+    """Shooting stars: each crosses the upper sky once, then disappears."""
+    vx, vy = speed
+    rand = random.Random(seed)
+    gap = seconds / count
+    events = []
+    for index in range(count):
+        start = round(index * gap + rand.uniform(0.1, gap * 0.6), 2)
+        x = rand.randint(380, 1180)
+        y = rand.randint(-260, 200)
+        events.append((
+            strip,
+            f"{x}-{-vx}*(t-{start})",
+            f"{y}+{vy}*(t-{start})",
+            f"between(t,{start},{round(start + METEOR_SECONDS, 2)})",
+        ))
+    return events
+
+
+def render_effect_layers(effect, folder, seconds=DEFAULT_DURATION_SECONDS):
+    """Draw an effect's layers as PNG strips: (path, x expr, y expr[, enable])."""
+    layers = []
+    for index, (kind, seed, count, size, alpha, vx, vy) in enumerate(VIDEO_EFFECTS[effect]):
+        if kind == "meteor":
+            width, height = _METEOR_TILE
+            html = _EFFECT_HTML.format(
+                width=width, height=height, seed=seed, count=1, kind=kind,
+                size_low=size[1], size_high=size[1],
+                alpha_low=alpha[1], alpha_high=alpha[1],
+                x_offsets="[0]", y_offsets="[0]",
+            ).replace("rand() * 1080, rand() * 1920,", "16, 324,")
+            strip = render_html_to_png(
+                html, folder / f"{effect}_{index}.png", (width, height)
+            )
+            layers += _meteor_events(strip, seed, count, (vx, vy), seconds)
+            continue
+        width = 2160 if vx else 1080
+        height = 3840 if vy else 1920
+        x_offsets = "[-1080, 0, 1080, 2160]" if vx else "[-1080, 0, 1080]"
+        y_offsets = "[-1920, 0, 1920, 3840]" if vy else "[0]"
+        html = _EFFECT_HTML.format(
+            width=width, height=height, seed=seed, count=count, kind=kind,
+            size_low=size[0], size_high=size[1],
+            alpha_low=alpha[0], alpha_high=alpha[1],
+            x_offsets=x_offsets, y_offsets=y_offsets,
         )
-        for seed, count, radius, speed in SPARK_LAYERS
-    ]
+        strip = render_html_to_png(
+            html, folder / f"{effect}_{index}.png", (width, height)
+        )
+        layers.append((strip, _scroll(vx, 1080), _scroll(vy, 1920)))
+    return layers
+
+
 # The hook is on screen from the first frame (average watch time was ~2.6s),
 # then the main line and the payoff follow quickly.
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
@@ -87,7 +220,7 @@ def build_ffmpeg_command(
     music=None,
     motion_clip=False,
     clip_zoom=1.0,
-    sparks=(),
+    effects=(),
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -126,17 +259,18 @@ def build_ffmpeg_command(
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
             "-i", str(background),
         ]
-    # Sparks rise over the background but stay under the glow and text.
+    # Effects move over the background but stay under the glow and text.
     previous = "vbase"
-    first_spark = len(text_layers) + 1
-    for offset, (strip, speed) in enumerate(sparks):
-        index = first_spark + offset
-        label = "v0" if offset == len(sparks) - 1 else f"vs{offset}"
+    first_effect = len(text_layers) + 1
+    for offset, (strip, x, y, *enable) in enumerate(effects):
+        index = first_effect + offset
+        label = "v0" if offset == len(effects) - 1 else f"ve{offset}"
+        timing = f":enable='{enable[0]}'" if enable else ""
         filters.append(
-            f"[{previous}][{index}:v]overlay=0:'-mod(t*{speed},1920)':format=auto[{label}]"
+            f"[{previous}][{index}:v]overlay=x='{x}':y='{y}':format=auto{timing}[{label}]"
         )
         previous = label
-    if not sparks:
+    if not effects:
         filters[0] = filters[0].replace("[vbase]", "[v0]")
     for index, (layer, start) in enumerate(text_layers, start=1):
         inputs += [
@@ -154,7 +288,7 @@ def build_ffmpeg_command(
     filters.append(
         f"[v{len(text_layers)}]scale=out_range=tv,format=yuv420p[out]"
     )
-    for strip, _ in sparks:
+    for strip, *_ in effects:
         inputs += [
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
             "-i", str(strip),
@@ -166,7 +300,7 @@ def build_ffmpeg_command(
         # Skip a silent intro, even out loudness for phone speakers, then
         # fade in and out so the Reel loops cleanly.
         filters.append(
-            f"[{len(text_layers) + len(sparks) + 1}:a]"
+            f"[{len(text_layers) + len(effects) + 1}:a]"
             "silenceremove=start_periods=1:start_threshold=-45dB,"
             f"atrim=0:{seconds},asetpts=PTS-STARTPTS,"
             "loudnorm=I=-16:TP=-1.5:LRA=11,"
@@ -248,7 +382,11 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             motion_clip=motion_clip,
             # Posters crop the bottom strip where tools put watermarks.
             clip_zoom=1.11 if poster else 1.0,
-            sparks=render_spark_layers(Path(folder)) if record.get("sparks") else (),
+            effects=(
+                render_effect_layers(effect_for(record), Path(folder), seconds)
+                if effect_for(record)
+                else ()
+            ),
         )
         try:
             subprocess.run(

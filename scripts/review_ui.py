@@ -42,7 +42,7 @@ from media_renderer import (
 from content_pipeline import generate_content
 from analytics import cached_report, refresh_report
 from music_library import SILENT, list_tracks
-from video_renderer import reel_video_path, render_image_reel_video
+from video_renderer import VIDEO_EFFECTS, reel_video_path, render_image_reel_video
 from post_prompt import build_post_prompt_file
 from post_storage import (
     PostStorageError,
@@ -1078,6 +1078,17 @@ def update_post_settings(content_id, payload):
         # The rendered video carries the old effect, so render it again.
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("sparks")
+    if "effect" in payload:
+        effect = payload["effect"] or None
+        if effect is not None and effect not in VIDEO_EFFECTS:
+            raise ValueError(
+                "Effect must be one of: " + ", ".join(VIDEO_EFFECTS) + ", or none."
+            )
+        record["effect"] = effect
+        record.pop("sparks", None)
+        # The rendered video carries the old effect, so render it again.
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("effect")
     if "scheduled_at" in payload:
         value = payload["scheduled_at"]
         if value:

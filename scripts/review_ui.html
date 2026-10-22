@@ -1440,20 +1440,25 @@
       });
       layoutLabel.append(layoutSelect);
       box.append(layoutLabel);
-      const sparksLabel = document.createElement("label");
-      const sparks = document.createElement("input");
-      sparks.type = "checkbox";
-      sparks.checked = Boolean(state.record.sparks);
-      sparks.addEventListener("change", async () => {
+      const effectLabel = document.createElement("label");
+      effectLabel.textContent = "Effect ";
+      const effect = document.createElement("select");
+      for (const [value, name] of [["", "None"], ["sparks", "Drifting sparks"],
+        ["meteors", "Meteor shower"], ["rain", "Rain"], ["sunlight", "Sunlight rays"]]) {
+        effect.append(new Option(name, value));
+      }
+      // Older Reels saved the sparks effect as "sparks: true".
+      effect.value = state.record.effect ?? (state.record.sparks ? "sparks" : "");
+      effect.addEventListener("change", async () => {
         try {
-          await saveReelSettings({ sparks: sparks.checked },
+          await saveReelSettings({ effect: effect.value || null },
             "Effect changed. Render the Reel video again to see it.");
         } catch (error) {
           window.alert(error.message);
         }
       });
-      sparksLabel.append(sparks, " Drifting sparks");
-      box.append(sparksLabel);
+      effectLabel.append(effect);
+      box.append(effectLabel);
       const note = document.createElement("span");
       note.className = "message";
       const used = state.record.video_music;

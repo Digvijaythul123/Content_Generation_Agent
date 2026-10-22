@@ -999,22 +999,39 @@ def test_motion_clip_command_loops_crops_and_overlays(tmp_path):
     assert "-maxrate" in command
 
 
-def test_sparks_overlay_rises_under_the_text_and_can_be_toggled(tmp_path, workspace, monkeypatch):
+def test_effect_overlays_move_under_the_text_and_can_be_chosen(tmp_path, workspace, monkeypatch):
     command = video_renderer.build_ffmpeg_command(
         "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8,
-        tmp_path / "m.mp3", sparks=[(tmp_path / "s1.png", 46), (tmp_path / "s2.png", 24)],
+        tmp_path / "m.mp3",
+        effects=[(tmp_path / "s1.png", "0", "-mod(t*46,1920)"),
+                 (tmp_path / "s2.png", "-mod(t*540,1080)", "-1920+mod(t*370,1920)")],
     )
     filters = command[command.index("-filter_complex") + 1]
-    assert "overlay=0:'-mod(t*46,1920)'" in filters and "[vs0]" in filters
-    assert filters.index("mod(t*24") < filters.index("[v0][t1]")  # sparks under text
-    assert "[4:a]" in filters  # music index shifts past the spark inputs
+    assert "overlay=x='0':y='-mod(t*46,1920)'" in filters and "[ve0]" in filters
+    assert filters.index("mod(t*370") < filters.index("[v0][t1]")  # effects under text
+    assert "[4:a]" in filters  # music index shifts past the effect inputs
     plain = video_renderer.build_ffmpeg_command(
         "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8)
     assert "vbase" not in plain[plain.index("-filter_complex") + 1]
 
+    assert video_renderer._scroll(-46, 1920) == "-mod(t*46,1920)"
+    assert video_renderer._scroll(1500, 1920) == "-1920+mod(t*1500,1920)"
+    assert video_renderer._scroll(0, 1080) == "0"
+    assert video_renderer.effect_for({"sparks": True}) == "sparks"  # legacy records
+    assert video_renderer.effect_for({"sparks": True, "effect": "rain"}) == "rain"
+    assert video_renderer.effect_for({}) is None
+    assert set(video_renderer.VIDEO_EFFECTS) == {"sparks", "meteors", "rain", "sunlight"}
+
     _reel_workspace(workspace, monkeypatch)
     review_ui.update_post_settings("post_001", {"sparks": True})
     assert workspace.read()["sparks"] is True
+    review_ui.update_post_settings("post_001", {"effect": "meteors"})
+    record = workspace.read()
+    assert record["effect"] == "meteors" and "sparks" not in record
+    with pytest.raises(ValueError, match="Effect must be"):
+        review_ui.update_post_settings("post_001", {"effect": "snow"})
+    review_ui.update_post_settings("post_001", {"effect": None})
+    assert video_renderer.effect_for(workspace.read()) is None
     assert not video_renderer.reel_video_path("post_001").exists()
 
 
@@ -1039,3 +1056,16 @@ def test_feed_post_poster_layout_and_conversion_to_reel(tmp_path, workspace, mon
     record = review_ui.convert_to_reel("post_001")
     assert record["format_id"] == "image_reel" and record["platform_id"] == "instagram"
     assert record["music_cue"] and workspace.read()["layout"] == "poster"
+
+
+def test_meteors_are_timed_flashes_in_the_upper_sky(tmp_path):
+    events = video_renderer._meteor_events(tmp_path / "m.png", 5, 7, (-900, 620), 8)
+    assert len(events) == 7
+    starts = [float(enable.split(",")[1]) for _, _, _, enable in events]
+    assert starts == sorted(starts) and all(0 < start < 8 for start in starts)
+    for _, x, y, enable in events:
+        assert x.split("-")[0].isdigit() and "620*(t-" in y and enable.startswith("between(t,")
+        assert int(y.split("+")[0]) <= 200  # starts high, so it stays in the sky
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [], tmp_path / "o.mp4", 8, effects=events[:1])
+    assert ":enable='between(t," in command[command.index("-filter_complex") + 1]

@@ -172,6 +172,9 @@ In the review UI's Instagram tab, unpublished posts also have:
   that the render draws (re-rendering alone redraws the same saved words).
 - **Layout** for feed posts: *Poster* (`templates/feed_poster.html`, words
   over open space at the top) or *Standard* (the brand layout).
+- **Effect** for Reels (video only): drifting sparks, meteor shower
+  (shooting stars across the upper sky), rain, or sunlight rays. Each moves
+  under the text; change it and render the video again.
 - **Convert to Reel**: feed posts are still images, so this turns one into a
   one-image Reel for video and music; add new 9:16 art afterwards.
 
