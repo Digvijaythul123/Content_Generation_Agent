@@ -14,3 +14,15 @@ __pycache__/
 .idea/
 
 *.log
+
+# Local content and media: kept on this Mac, not in git.
+generated_assets/
+generated_posts/
+generated_videos/
+generated_reels/
+generated_images/
+creative_assets/
+.playwright-mcp/
+# Licensed tracks must not be redistributed; keep only the README.
+music/*
+!music/README.md
