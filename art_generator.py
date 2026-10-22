@@ -35,10 +35,24 @@ _ART_RULES = (
 )
 _IMAGE_REEL_ART_RULES = (
     "Background artwork for a 9:16 vertical Instagram Reel. "
-    "Make the main subject large, filling about 60% of the upper frame. "
-    "{text_area} The camera slowly pushes in, so keep the subject away from "
-    "the edges. Absolutely no text, letters, numbers, captions, signatures, "
-    "watermarks, logos, or frames anywhere in the image."
+    "{composition} {text_area} The camera slowly pushes in, so keep the "
+    "subject away from the edges. Absolutely no text, letters, numbers, "
+    "captions, signatures, watermarks, logos, or frames anywhere in the image."
+)
+_POSTER_COMPOSITION = (
+    "Place the main subject in the lower 55% of the frame, large and clear."
+)
+_POSTER_TEXT_AREA = (
+    "Keep the upper 35% open, luminous, and uncluttered (open sky, soft mist, "
+    "or a gentle beam of light) so text can be overlaid there later."
+)
+_PANEL_COMPOSITION = "Make the main subject large, filling about 60% of the upper frame."
+# Every Reel should look like a frame from a high-end film, not a stock image.
+_CINEMATIC_QUALITY = (
+    "Quality: a cinematic, high-end image with layered depth (foreground, "
+    "subject, background), volumetric light and atmospheric perspective, a "
+    "rich film-like color grade, crisp fine detail, and a masterful, "
+    "uncluttered composition."
 )
 _TEXT_AREAS = {
     "night": (
@@ -304,14 +318,31 @@ def build_art_prompt(record, art_style=None):
     style = visual_style_for(record)
     if art_aspect_ratio(record) == "9:16":
         palette = style.get("palette", "day") if style else "day"
-        parts = [_IMAGE_REEL_ART_RULES.format(text_area=_TEXT_AREAS[palette])]
+        if record.get("layout") == "poster":
+            rules = _IMAGE_REEL_ART_RULES.format(
+                composition=_POSTER_COMPOSITION, text_area=_POSTER_TEXT_AREA
+            )
+        else:
+            rules = _IMAGE_REEL_ART_RULES.format(
+                composition=_PANEL_COMPOSITION, text_area=_TEXT_AREAS[palette]
+            )
+        parts = [rules, _CINEMATIC_QUALITY]
     else:
         parts = [_ART_RULES]
     if style:
         parts.append(f"Visual style: {' '.join(style['recipe'].split())}")
     elif art_style:
         parts.append(f"Visual style: {art_style}")
-    parts.append(f"Scene: {_without_blocked_names(description, record)}")
+    scene = _without_blocked_names(description, record)
+    if record.get("layout") == "poster":
+        # Older scenes reserved the bottom for text; posters use the top.
+        scene = re.sub(
+            r"[,;]?\s*(?:with\s+)?(?:the\s+)?(?:lower|bottom)\s+\d+%[^.\n]*",
+            "",
+            scene,
+            flags=re.IGNORECASE,
+        )
+    parts.append(f"Scene: {scene}")
     likeness = _thinker_likeness(record, style)
     if likeness:
         parts.append(f"Likeness: {likeness}")

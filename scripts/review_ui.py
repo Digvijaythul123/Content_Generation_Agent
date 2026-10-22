@@ -1030,6 +1030,14 @@ def update_post_settings(content_id, payload):
         # The rendered video carries the old audio, so render it again.
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("music_track")
+    if "layout" in payload:
+        if payload["layout"] not in ("poster", "panel"):
+            raise ValueError("Layout must be 'poster' or 'panel'.")
+        record["layout"] = payload["layout"]
+        # Both renders show the old layout, so render them again.
+        post_image_path(content_id).unlink(missing_ok=True)
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("layout")
     if "scheduled_at" in payload:
         value = payload["scheduled_at"]
         if value:
@@ -1432,6 +1440,8 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if payload.get("caption_language") == "hinglish":
         data["caption_language"] = "hinglish"
+    if result.request.content_format.id == "image_reel":
+        data["layout"] = "poster"
 
     if result.request.content_format.content_kind == "post":
         content_id, file_path = create_post(data)

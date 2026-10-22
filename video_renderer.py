@@ -5,6 +5,7 @@ from pathlib import Path
 from art_generator import artwork_path
 from media_renderer import (
     IMAGE_REEL_SIZE,
+    reel_layout,
     MediaRenderError,
     _brand_for,
     build_post_html,
@@ -25,6 +26,8 @@ TEXT_FADE_SECONDS = 0.5
 # The hook is on screen from the first frame (average watch time was ~2.6s),
 # then the main line and the payoff follow quickly.
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
+# Posters have no title on screen: the quote is the hook from frame one.
+POSTER_REVEALS = (("quote", 0), ("takeaway", 1.5))
 
 
 def reel_video_path(post_id):
@@ -142,7 +145,9 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 ),
                 start,
             )
-            for part, start in TEXT_REVEALS
+            for part, start in (
+                POSTER_REVEALS if reel_layout(record) == "poster" else TEXT_REVEALS
+            )
         ]
         command = build_ffmpeg_command(
             ffmpeg_executable(), background, text_layers, output, seconds, music

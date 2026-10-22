@@ -927,3 +927,44 @@ def test_blocked_names_never_reach_the_art_prompt():
     assert "Osho" not in prompt and "Rajneesh" not in prompt
     assert "Depict an elderly Indian mystic" in prompt
     assert "the mystic in his later years" in prompt
+
+
+def test_poster_layout_puts_quote_on_top_without_title(tmp_path):
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    record = {**IMAGE_REEL, "layout": "poster", "title": "Hidden hook",
+              "main_point": "We suffer more in **imagination**.",
+              "supporting_copy": "— Seneca"}
+    html = build_post_html(record, artwork=art)
+    assert "Didot" in html and 'class="glow"' in html
+    assert ".title { display: none; }" in html
+    assert '<span class="hl">imagination</span>' in html
+    panel = build_post_html({**record, "layout": "panel"}, artwork=art)
+    assert "Didot" not in panel
+
+
+def test_poster_art_prompt_opens_the_sky_and_asks_for_cinematic_quality():
+    poster = art_generator.build_art_prompt({**IMAGE_REEL, "layout": "poster"})
+    assert "lower 55%" in poster and "upper 35% open, luminous" in poster
+    assert "Quality: a cinematic, high-end image" in poster
+    panel = art_generator.build_art_prompt({**IMAGE_REEL})
+    assert "upper 35%" not in panel and "Quality: a cinematic" in panel
+
+
+def test_poster_video_reveals_quote_first_and_layout_can_be_switched(workspace, monkeypatch):
+    assert video_renderer.POSTER_REVEALS[0] == ("quote", 0)
+    _reel_workspace(workspace, monkeypatch)
+    workspace.render()
+    review_ui.update_post_settings("post_001", {"layout": "poster"})
+    assert workspace.read()["layout"] == "poster"
+    assert not media_renderer.post_image_path("post_001").exists()
+    with pytest.raises(ValueError, match="Layout"):
+        review_ui.update_post_settings("post_001", {"layout": "grid"})
+
+
+def test_poster_drops_old_bottom_text_area_instructions():
+    record = {**IMAGE_REEL, "layout": "poster",
+              "design_prompt": "Color: Amber and teal grade, with the bottom 40% fading into deep, rich shadows.\nSetting: a road."}
+    prompt = art_generator.build_art_prompt(record)
+    assert "Color: Amber and teal grade." in prompt and "bottom 40%" not in prompt
+    assert "Setting: a road." in prompt

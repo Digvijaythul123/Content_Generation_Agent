@@ -1290,6 +1290,22 @@
         }
       });
       label.append(select);
+      const layoutLabel = document.createElement("label");
+      layoutLabel.textContent = "Layout ";
+      const layoutSelect = document.createElement("select");
+      layoutSelect.append(new Option("Poster (text over open sky)", "poster"));
+      layoutSelect.append(new Option("Panel (text on a dark band)", "panel"));
+      layoutSelect.value = state.record.layout || "panel";
+      layoutSelect.addEventListener("change", async () => {
+        try {
+          await saveReelSettings({ layout: layoutSelect.value },
+            "Layout changed. Render the Instagram image and Reel video again.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      layoutLabel.append(layoutSelect);
+      box.append(layoutLabel);
       const note = document.createElement("span");
       note.className = "message";
       const used = state.record.video_music;

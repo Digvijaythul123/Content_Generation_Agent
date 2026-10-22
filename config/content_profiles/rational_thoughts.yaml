@@ -120,7 +120,7 @@ subtypes:
     background: Clean documentary look with paper, manuscript, and archive textures and stamp or highlight effects; steady investigative beat.
     example: "Did the Buddha really say 'Holding on to anger is like drinking poison'?"
   - id: mirror
-    default_visual_style: cinematic_photo
+    default_visual_style: golden_light
     name: Mirror (Personal Truth)
     definition: A short, warm truth spoken to the viewer about something they feel (overthinking, conflict, comparison, setbacks, loneliness, people-pleasing), grounded in a thinker's idea and worth sending to someone you care about.
     structure: Title names who it is for (for example "For the overthinker"); Main_point is one second-person line of at most 12 words, often a paradox, contrast, or permission; Supporting_copy is a small credit such as "— Seneca" for a verified quote or "— inspired by Epictetus" for a paraphrase; the caption adds one honest nuance and invites sharing.
@@ -633,3 +633,22 @@ visual_styles:
       sleeve) interacting with an animal or object; a single small glow of
       light at the point of contact.
     avoid: full-body figures, busy backgrounds, harsh shading, text or seals
+  - id: golden_light
+    name: Golden light (uplifting)
+    palette: day
+    recipe: >-
+      Cinematic, uplifting golden-hour scene: a radiant low sun behind the
+      subject, god rays through mist or trees, warm amber and honey tones,
+      drifting clouds or birds, luminous atmospheric haze, rich detail in
+      robes, rock, water, and foliage, like a still from an epic film.
+    avoid: muddy colors, flat midday light, cluttered sky behind the text area, oversaturated orange, plastic skin
+  - id: ink_gold
+    name: Ink and gold
+    palette: day
+    recipe: >-
+      East Asian ink-wash painting in black, white, and soft grey with gold
+      leaf as the only accent: swirling ink waves and clouds framing the
+      subject, misty layered mountains, a few floating gold lotus petals and
+      sparks, strong light-versus-dark contrast that tells the idea, dramatic
+      yet elegant composition.
+    avoid: colors other than black, grey, white, and gold; calligraphy; seals; clutter in the text area

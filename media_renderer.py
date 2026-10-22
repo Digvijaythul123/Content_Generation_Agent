@@ -20,6 +20,10 @@ _LAYOUT_TEMPLATES = {
     "quote_painting": TEMPLATE_DIRECTORY / "quote_painting.html",
 }
 IMAGE_REEL_TEMPLATE = TEMPLATE_DIRECTORY / "image_reel.html"
+IMAGE_REEL_POSTER_TEMPLATE = TEMPLATE_DIRECTORY / "image_reel_poster.html"
+# "poster" puts the words over open sky in the top third; "panel" uses a
+# dark band at the bottom. Records without a layout keep the panel look.
+IMAGE_REEL_LAYOUTS = ("poster", "panel")
 IMAGE_REEL_SIZE = (1080, 1920)
 _RENDERABLE_FORMATS = ("single_page", "image_reel")
 # Dark cinematic art needs light text on a deep shadow wash.
@@ -41,8 +45,14 @@ def layout_for(brand):
     return brand.template.layout if brand is not None else "classic"
 
 
+def _curly_quotes(text):
+    """Typeset straight double quotes as curly ones (“…”)."""
+    return re.sub(r'"([^"]*)"', "\u201c\\1\u201d", text)
+
+
 def _copy_html(text):
     """Escape copy and render **keyword** markers as highlighted words."""
+    text = _curly_quotes(text)
     marked = _HIGHLIGHT_PATTERN.sub(
         lambda match: f"\0{match.group(1)}\1", text.strip()
     ).replace("**", "")
@@ -106,6 +116,11 @@ def is_image_reel(record):
     return record.get("format_id") == "image_reel"
 
 
+def reel_layout(record):
+    layout = record.get("layout") or "panel"
+    return layout if layout in IMAGE_REEL_LAYOUTS else "panel"
+
+
 def build_post_html(record, brand=None, artwork=None, layer="full"):
     """Return the finished page for a single-page post or one-image Reel.
 
@@ -146,9 +161,14 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             "This layout paints background artwork first; generate "
             "the artwork, then render the image."
         )
-    template_path = (
-        IMAGE_REEL_TEMPLATE if layout == "image_reel" else _LAYOUT_TEMPLATES[layout]
-    )
+    if layout == "image_reel":
+        template_path = (
+            IMAGE_REEL_POSTER_TEMPLATE
+            if reel_layout(record) == "poster"
+            else IMAGE_REEL_TEMPLATE
+        )
+    else:
+        template_path = _LAYOUT_TEMPLATES[layout]
     try:
         source = template_path.read_text(encoding="utf-8")
     except OSError as error:
@@ -159,6 +179,7 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         background=template.background,
         background_rgba_strong=_rgba(template.background, 0.88),
         background_rgba_soft=_rgba(template.background, 0.55),
+        background_rgba_faint=_rgba(template.background, 0.22),
         text=template.text,
         accent=template.accent,
         font_family=template.font_family,

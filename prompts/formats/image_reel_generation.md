@@ -53,8 +53,8 @@ Visual_labels: write "None".
 
 Design_prompt (90-130 words): a wordless, realistic scene for a 9:16 vertical
 frame, written as six labelled parts on one line each:
-Subject: who or what, with expression and age; make the subject large, filling
-about 60% of the upper frame. If a thinker appears, name them (for example
+Subject: who or what, with expression and age; make the subject large and
+clear in the lower half of the frame, often seen from behind or in profile. If a thinker appears, name them (for example
 "Osho in his later years") instead of describing their face; the image tool
 knows famous figures, and a reference photo can be attached for likeness.
 Pose: body position and hand gesture.
@@ -62,8 +62,8 @@ Shot: shot type, camera angle, and lens (for example "medium close-up, eye
 level, 85mm, shallow depth of field").
 Lighting: one key light with its direction and color, plus rim or fill light.
 Setting: place, era, atmosphere (mist, dust, smoke, god-rays), and textures.
-Color: the color grade, with the lower 40% falling into deep natural shadow
-for text.
+Color: the color grade and mood (warm golden light works well), with the upper
+third kept open and luminous (sky, mist, or a soft light beam) for text.
 Prefer compositions that age well: a back view or silhouette rim-lit against
 the light, a hand or object in macro, or a statue in profile often looks more
 real than a front-facing face. Showing only part of a revered figure (a

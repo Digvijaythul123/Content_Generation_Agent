@@ -43,6 +43,8 @@ def _save_result(result, caption_language="english"):
         data["visual_style"] = result.request.visual_style
     if caption_language != "english":
         data["caption_language"] = caption_language
+    if result.request.content_format.id == "image_reel":
+        data["layout"] = "poster"
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)
