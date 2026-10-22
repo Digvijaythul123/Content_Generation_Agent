@@ -70,7 +70,10 @@ short lines of context, name the teaching and its reference (for example
 comments, then exactly 5 hashtags: one broad niche tag (for example
 #Buddhism), one tag for the source or thinker (for example #Dhammapada), one
 everyday-angle tag (for example #Mindfulness), #CriticalThinking, and one more
-tag specific to the post. Keep the caption under 2,200 characters.
+tag specific to the post. Keep the whole caption, hashtags included, under
+450 characters so it can also be shared to Threads (500-character limit):
+one hook line, one short line with the test or counterpoint, the source line,
+the question, and the hashtags.
 
 Output exactly in this format:
 

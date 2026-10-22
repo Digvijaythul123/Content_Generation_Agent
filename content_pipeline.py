@@ -4,10 +4,12 @@ from content_models import (
     ContentValidationError,
     GeneratedContent,
     GenerationRequest,
+    THREADS_MAX_CHARACTERS,
     trim_hashtags,
     validate_instagram_caption,
 )
 import random
+import re
 
 from config_loader import load_profile_thinkers, resolve_generation_request
 from content_agent import ContentAgent
@@ -95,6 +97,13 @@ def generate_content(
                 raw_content=content.raw_content,
                 profile_id=content.profile_id,
             )
+        shorter = _fit_caption_for_threads(agent, content.fields["caption"])
+        if shorter != content.fields["caption"]:
+            content = GeneratedContent(
+                fields={**content.fields, "caption": shorter},
+                raw_content=content.raw_content,
+                profile_id=content.profile_id,
+            )
         validate_instagram_caption(content.fields["caption"])
     return GenerationResult(request=request, content=content)
 
@@ -108,3 +117,30 @@ def _pick_thinker(profile_id, story_mode):
     if story_mode == "verified_quote":
         thinkers = [thinker for thinker in thinkers if thinker.get("quotes")]
     return random.choice(thinkers)["id"] if thinkers else None
+
+
+def _fit_caption_for_threads(agent, caption):
+    """Shorten an over-long caption once, keeping its source and hashtags.
+
+    Instagram allows 2,200 characters but sharing to Threads fails above
+    500; the shorter version is used only if nothing essential was lost.
+    """
+    if len(caption) <= THREADS_MAX_CHARACTERS:
+        return caption
+    try:
+        shorter = agent.shorten_caption(caption, THREADS_MAX_CHARACTERS)
+    except Exception:  # A failed retry keeps the original caption.
+        return caption
+    keep = [
+        line for line in caption.splitlines()
+        if line.startswith(("Teaching:", "Source:"))
+    ]
+    tags = re.findall(r"(?<!\w)#\w+", caption)
+    if (
+        not shorter
+        or len(shorter) > THREADS_MAX_CHARACTERS
+        or any(line not in shorter for line in keep)
+        or any(tag not in shorter for tag in tags)
+    ):
+        return caption
+    return shorter

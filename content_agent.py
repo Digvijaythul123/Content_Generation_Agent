@@ -417,6 +417,17 @@ class ContentAgent:
 
         return self.ai_service.generate_reel(prompt)
 
+    def shorten_caption(self, caption, limit):
+        """Ask the model for a shorter caption that keeps sources and tags."""
+        prompt = (
+            f"Shorten this Instagram caption to under {limit - 50} characters, "
+            "hashtags included. Keep any line starting with 'Teaching:' or "
+            "'Source:' exactly as written, keep the hashtags exactly, keep one "
+            "closing question, and keep the meaning honest. Return only the "
+            "caption.\n\n" + caption
+        )
+        return self.ai_service.generate_reel(prompt).strip()
+
 
 def _as_bullets(values):
     return "\n".join(f"- {value}" for value in values)

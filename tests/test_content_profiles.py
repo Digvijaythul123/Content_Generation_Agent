@@ -1107,3 +1107,22 @@ def test_pipeline_rotates_thinkers_when_none_chosen(monkeypatch):
         platform_id="instagram", brief="Write about the news",
     )
     assert seen[1] is None  # a brief lets the model choose freely
+
+
+def test_long_captions_are_shortened_once_for_threads():
+    import content_pipeline
+
+    long_caption = "Hook line. " + "More detail. " * 45 + "\nTeaching: X (Y 1)\nWhy?\n#a #b"
+    good = "Hook line.\nTeaching: X (Y 1)\nWhy?\n#a #b"
+
+    class Agent:
+        def __init__(self, reply):
+            self.reply = reply
+        def shorten_caption(self, caption, limit):
+            return self.reply
+
+    assert content_pipeline._fit_caption_for_threads(Agent(good), long_caption) == good
+    # A shorter version that drops the source line is rejected.
+    assert content_pipeline._fit_caption_for_threads(
+        Agent("Hook.\nWhy?\n#a #b"), long_caption) == long_caption
+    assert content_pipeline._fit_caption_for_threads(Agent("x"), "short #a") == "short #a"

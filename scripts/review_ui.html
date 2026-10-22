@@ -1341,9 +1341,10 @@
       stats.className = "hint";
       const updateStats = () => {
         const { length, hashtags } = captionStats(caption.value);
-        stats.textContent = `${length}/2200 characters · ${hashtags} hashtags`
-          + (hashtags > 5 ? " — use 5 or fewer" : "");
-        stats.className = hashtags > 5 || length > 2200 ? "message error" : "hint";
+        stats.textContent = `${length}/2200 characters (Threads: ${length}/500) · ${hashtags} hashtags`
+          + (hashtags > 5 ? " — use 5 or fewer" : "")
+          + (length > 500 ? " — too long to share to Threads" : "");
+        stats.className = hashtags > 5 || length > 500 ? "message error" : "hint";
       };
       caption.addEventListener("input", updateStats);
       updateStats();

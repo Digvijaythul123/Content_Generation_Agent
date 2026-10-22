@@ -550,6 +550,8 @@ def _optional_string_list(data: Mapping[str, Any], key: str, brand_id: str):
 
 
 INSTAGRAM_CAPTION_MAX_CHARACTERS = 2200
+# Threads rejects longer posts, so captions shared there must stay within it.
+THREADS_MAX_CHARACTERS = 500
 # Instagram now caps posts at 5 hashtags; a few precise tags work best.
 INSTAGRAM_MAX_HASHTAGS = 5
 _HASHTAG_PATTERN = re.compile(r"(?<!\w)#\w+")
