@@ -1,8 +1,0 @@
-{"timestamp": "2026-10-17T04:31:23.556428+00:00", "content_type": "reel", "content_id": "reel_023", "event": "content_generated", "title": "The \"Quick Nap\" Gamble"}
-{"timestamp": "2026-10-17T04:31:37.264859+00:00", "content_type": "reel", "content_id": "reel_023", "event": "review_decision", "decision": "Approved", "reason": ""}
-{"timestamp": "2026-10-17T04:31:41.928284+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_started", "stage": "scene_plan"}
-{"timestamp": "2026-10-17T04:31:41.930136+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_ready", "stage": "scene_plan", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_videos/reel_023_storyboard.json"}
-{"timestamp": "2026-10-17T04:31:44.603376+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_started", "stage": "image_prompts"}
-{"timestamp": "2026-10-17T04:31:48.175593+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_ready", "stage": "image_prompts", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_images/reel_023_image_prompts.txt"}
-{"timestamp": "2026-10-17T04:31:49.800947+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_started", "stage": "video_prompt"}
-{"timestamp": "2026-10-17T04:31:49.817872+00:00", "content_type": "reel", "content_id": "reel_023", "event": "stage_ready", "stage": "video_prompt", "output": "/Users/digvijay.thul/Content_Generation_Agent/generated_videos/reel_023_master_prompt.txt"}

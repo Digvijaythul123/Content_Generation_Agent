@@ -5,7 +5,41 @@ It is a review and improvement backlog, not a record of changes already made.
 No cleanup, deletion, or implementation work is implied by listing a
 recommendation.
 
-## Executive summary
+## Status update — 22 Oct 2026
+
+Since the audit below, the project gained one-image Reel rendering, Instagram
+publishing and scheduling, analytics, and the great-thinkers content system
+(see README and 01–04 docs). Test suite: **171 passed**. The sections after
+this update are the **17 Oct audit**; some findings may already be resolved
+and were not all re-verified.
+
+### Strengths now
+- A complete, proven pipeline: idea, sourced copy, art prompt, render, video,
+  review, publish, measure (posts published automatically through the API).
+- Content integrity built in: verified quotes only, critical-thinking lens,
+  source footers, AI label, Threads-safe captions.
+- Safety at the right points: publish confirmation, no retry loops on failed
+  scheduled posts, secrets kept out of git, scheduler lock against duplicates.
+
+### Current technical debt (highest impact first)
+1. `scripts/review_ui.py` is about 2,000 lines (HTTP, pipeline, publishing).
+2. `qa_subtype` (111 uses) also carries Critical Thinking story modes; rename.
+3. `content_agent.generate_content` is a 321-line prompt builder; split it.
+4. Comedy still has hard-coded branches instead of configuration.
+5. About 1,000 lines of multi-scene Reel tooling are unused by the current
+   one-image Reel workflow.
+
+Resolved on 22 Oct 2026: planning docs updated to current state; duplicate
+`ffmpeg_executable` helpers merged; previously tracked generated files and
+browser snapshots removed from git (kept on disk).
+
+### Operational risks
+- Scheduling depends on the Mac being on; posts go out when it wakes.
+- Local content (drafts, art, renders, history) is not backed up by git.
+- Python 3.9: boto3 support ends April 2026; upgrade to 3.11+.
+- The text model endpoint is fixed in source.
+
+## Executive summary (17 Oct 2026 audit)
 
 The repository is a useful local-first content authoring and review prototype.
 Its modular-monolith direction, YAML configuration, local JSON records,

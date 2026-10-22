@@ -45,10 +45,30 @@ future scope explicitly; they do not imply unbuilt features exist.
   readable scene-text export for compatibility.
 - AI image-prompt generation and master video prompt composition.
 - Local file-based workflow and automated tests.
+- **Great-thinkers content (Critical Thinking profile):** a library of 18
+  thinkers (ideas, sources, known misattributions), 8 story modes (including
+  Mirror and Verified Quote), 26 curated verified quotes, a critical-thinking
+  lens on every concept, a personal second-person voice, captions capped at
+  5 hashtags and 500 characters (Threads-compatible), and an optional
+  Hinglish caption line.
+- **One-image Reel format:** a 9:16 Reel built from one artwork (a still or
+  an MP4/MOV motion clip), with Poster (text over open sky) and Panel (text on
+  a dark band) layouts, 12 visual styles, cinematic art prompts, and a
+  source/handle footer.
+- **Rendering:** a 1080x1920 cover image and an 8-second MP4 with a
+  first-frame hook, staggered text reveals, a free film finish (push-in,
+  breathing light, vignette, grain), and royalty-free music matched to mood.
+- **Instagram publishing:** one-click or scheduled publishing through the
+  Instagram API (via Cloudflare R2), text covers, the AI-content label,
+  weekly token refresh, a per-minute macOS scheduler, and a manual
+  "Mark as posted" path.
+- **Analytics:** a Performance report of views, reach, saves, shares, and
+  watch time per post, grouped by story mode, visual style, and thinker.
 
-Generated visual outputs are text prompts, not image or video assets. The
-current provider/model is fixed in source. Publishing, scheduling, analytics,
-and rendered video generation are not implemented.
+Artwork is created by hand in an image tool (Gemini, Meta AI) from the
+generated art prompt, or by the optional image API. The text model is fixed in
+source (Ollama-compatible endpoint). Multi-scene AI video generation is not
+implemented.
 
 ## 3. Product users
 
@@ -126,20 +146,34 @@ formats subject to its configured capabilities.
    camera, voiceover, and music.
 7. Keep human review between content generation and production preparation.
 
+### [CURRENT] Production and distribution (one-image Reels)
+
+1. Generate a text-free, cinematic art prompt per post (subject placement
+   per layout, style recipe, thinker named or replaced by an unnamed role
+   when image tools refuse a public figure).
+2. Accept artwork as an image or a short MP4/MOV clip and render a cover
+   image and an 8-second MP4 with text, footer, film finish, and music.
+3. Review the caption (hashtag and Threads length checks), music, and layout
+   before posting; publishing always needs explicit confirmation or a
+   schedule.
+4. Publish Reels through the Instagram API with a text cover and the AI label;
+   record the permalink and status; never retry a failed scheduled post
+   until it is rescheduled.
+5. Refresh the Instagram token automatically and report post performance.
+
 ### [FUTURE] Video production and distribution
 
 1. Integrate one or more video-generation providers through a provider-neutral
-   contract.
+   contract (today, clips from tools such as Meta AI are attached by hand).
 2. Track generation requests, provider responses, costs/limits where exposed,
    failures, and rendered media paths or references.
 3. Support reusable 3D characters, recurring characters, environments,
    visual styles, voices, and music identities.
 4. Create platform-specific rendered variants without embedding platform
    logic in the editorial profile.
-5. Add publishing adapters, scheduling, and platform status after explicit
-   permission and account requirements are established.
-6. Add analytics and optimization linked to content versions and published
-   variants.
+5. Add publishing adapters for further platforms (Instagram is current).
+6. Extend analytics into optimization suggestions linked to content versions,
+   always human-reviewed.
 
 ## 6. Short-form video production requirements
 
@@ -173,8 +207,9 @@ Status at each stage:
 | Storyboard | [NEXT] | Define editable scene-to-shot plans, timing, intent, and continuity. |
 | Character/environment/camera/voice/music plans | [NEXT] | Begin as optional structured plans; do not require 3D. |
 | Master video prompt | [CURRENT] | Text prompt composition exists; versioning and richer contracts are [NEXT]. |
-| Video generation and rendered asset | [FUTURE] | No rendering provider is currently integrated. |
-| Platform variants/publishing | [FUTURE] | No publishing integration exists. |
+| Video generation and rendered asset | [CURRENT] / [FUTURE] | One-image Reels render to MP4 locally (still or attached clip). Multi-scene AI video generation is [FUTURE]. |
+| Platform variants/publishing | [CURRENT] | Instagram Reels and Feed posts publish through the Instagram API with scheduling. Other platforms are [FUTURE]. |
+| Analytics | [CURRENT] | Per-post Instagram insights grouped by story mode, style, and thinker. |
 
 ## 7. 3D and recurring-story requirements
 
@@ -198,8 +233,8 @@ asset references.
 - **[NEXT] Prompt registry:** stable prompt IDs, version history, profile/
   format applicability, and test examples. Avoid duplicating prompt text
   across scripts.
-- **[NEXT] Visual style references:** profile or brand-level defaults stored
-  as simple configuration and prompt assets.
+- **[CURRENT] Visual style references:** 12 visual styles with recipes and
+  "avoid" lists live in the Critical Thinking profile configuration.
 - **[FUTURE] Character Library:** reusable character identity and approved
   visual references; owned by a brand or shared library with explicit reuse
   permissions.
@@ -207,8 +242,8 @@ asset references.
   guidance; owned by a brand/story world or explicitly shared.
 - **[FUTURE] Voice Library:** voice identity, pronunciation, language, and
   rights/consent metadata.
-- **[FUTURE] Music Library:** approved music/style references and licensing
-  metadata.
+- **[CURRENT] Music folder:** royalty-free tracks in `music/` (not in git),
+  matched to each post's mood by file name. **[FUTURE]** licensing metadata.
 
 Asset ownership, permission, version, and provenance must be explicit before
 cross-brand reuse or generated commercial use.
@@ -267,8 +302,8 @@ a general plugin framework before a second provider is needed.
 
 - Multi-tenant SaaS, billing, team administration, microservices, Kubernetes,
   event buses, and distributed processing.
-- Automatic publishing before platform access, approval, and failure behavior
-  are verified.
+- Publishing without human approval: every post is reviewed and either
+  published with confirmation or explicitly scheduled.
 - A custom 3D renderer or video editor before a provider-backed workflow is
   validated.
 - Autonomous optimization that changes brand or editorial policy without

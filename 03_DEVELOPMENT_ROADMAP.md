@@ -14,8 +14,15 @@ generation with readable scene-text export, profile-aware image prompt
 generation, master video prompt composition, and configured single-page
 Instagram Feed post generation with a separate design prompt.
 
-**Not current:** richer editable visual/continuity plans, rendered video, 3D
-assets, publishing, scheduling, or analytics.
+**[CURRENT] since 22 Oct 2026:** a great-thinkers content system (18
+thinkers, 8 story modes, verified quotes, critical-thinking lens); the
+one-image Reel format with Poster/Panel layouts and 12 visual styles; local
+rendering of cover images and 8-second MP4s (still or attached clip, music,
+film finish); Instagram publishing with scheduling, AI label, text covers, and
+token refresh; and a per-post Performance report.
+
+**Not current:** richer editable visual/continuity plans, multi-scene AI video
+generation, 3D assets, and publishing to platforms other than Instagram.
 
 ## Phase 1 — Multi-profile content generation
 
@@ -50,7 +57,8 @@ brand catalog breadth and evaluation remain incomplete.
 
 ## Phase 3 — Multi-format support
 
-**Status: [NEXT]** Reel is currently the only configured format.
+**Status: [CURRENT/NEXT]** Reel, one-image Reel, single-page post, and
+LinkedIn text post are configured; YouTube Short, Carousel, and Thread remain.
 
 - **Objectives:** separate content shape from profile and platform.
 - **Deliverables:** reusable format schema and validators; prioritize
@@ -82,7 +90,9 @@ current; expanded visual planning and human editing/review remain.
 
 ## Phase 5 — AI video generation
 
-**Status: [FUTURE]** No video renderer/provider is integrated.
+**Status: [CURRENT/FUTURE]** One-image Reels render locally to MP4 and can
+use a hand-attached AI clip (for example from Meta AI) as moving art. No
+multi-scene video provider is integrated.
 
 - **Objectives:** render approved plans through a provider-neutral boundary.
 - **Deliverables:** normalized video request/result contract; one provider
@@ -97,7 +107,8 @@ current; expanded visual planning and human editing/review remain.
 
 ## Phase 6 — Character and asset system
 
-**Status: [FUTURE]** No character, environment, voice, or music library exists.
+**Status: [FUTURE]** A thinker library, visual-style library, and local music
+folder exist; no character, environment, or voice library exists.
 
 - **Objectives:** support reusable identities and continuity for episodic,
   educational, and comedy storytelling, including possible 3D production.
@@ -113,7 +124,9 @@ current; expanded visual planning and human editing/review remain.
 
 ## Phase 7 — Publishing and distribution
 
-**Status: [FUTURE]** No platform publishing or scheduling is implemented.
+**Status: [CURRENT]** for Instagram: approved Reels and Feed posts publish
+through the Instagram API with confirmation, scheduling (macOS LaunchAgent),
+AI label, text cover, and weekly token refresh. Other platforms are [FUTURE].
 
 - **Objectives:** distribute only approved and validated content.
 - **Deliverables:** platform capability contracts; one verified publishing
@@ -128,7 +141,9 @@ current; expanded visual planning and human editing/review remain.
 
 ## Phase 8 — Analytics and optimization
 
-**Status: [FUTURE]** No analytics collection or optimization exists.
+**Status: [CURRENT/FUTURE]** A Performance report reads per-post insights and
+groups them by story mode, visual style, and thinker. Automated optimization
+is [FUTURE] and must stay human-reviewed.
 
 - **Objectives:** understand content outcomes without uncontrolled policy
   changes.

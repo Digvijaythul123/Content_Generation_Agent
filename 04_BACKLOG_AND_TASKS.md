@@ -29,12 +29,58 @@ video prompt composition; a configured 4:5 single-page format and Instagram
 Feed platform with separate post storage/design-prompt output; and a combined
 Reel preparation command.
 
-Generated media is not rendered: visual stages currently create text
-prompts. The basic storyboard contract does not yet provide rich visual plans
-or human editing/review. No video provider, 3D system, publishing, scheduler,
-or analytics is implemented.
+**[CURRENT] since 22 Oct 2026:** the great-thinkers content system (18
+thinkers, 8 story modes, 26 verified quotes, critical-thinking lens, Mirror
+voice, Threads-safe captions, Hinglish option); the one-image Reel format
+(Poster/Panel layouts, 12 visual styles, cinematic art prompts, still or MP4
+clip art); local rendering with music and a film finish; Instagram publishing
+with scheduling, AI label, text covers, token refresh, and "Mark as posted";
+and a Performance report. Multi-scene Reels still produce text prompts only;
+no multi-scene video provider or 3D system is implemented.
 
-## High Priority
+## High Priority — code health and operations (from the 22 Oct 2026 review)
+
+### Split the review UI module — [NEXT]
+- `scripts/review_ui.py` (about 2,000 lines) mixes HTTP handling, pipeline
+  status, publishing, and settings. Split into server, API handlers, and
+  pipeline/publishing services without changing behavior; keep tests green.
+
+### Rename the subtype field — [NEXT]
+- `qa_subtype` now carries Critical Thinking story modes as well as QA topic
+  pillars. Rename to `subtype` (or `story_mode`) and keep old records readable.
+
+### Break up prompt assembly — [NEXT]
+- `content_agent.generate_content` is one long function. Split it into small
+  section builders (brand, format, thinker, story mode, lens, style, duration)
+  and turn Comedy into ordinary profile configuration.
+
+### Configurable text model — [NEXT]
+- Move the Ollama endpoint/model from source into `.env` settings so a model
+  change or outage does not need a code change.
+
+### Runtime upgrade — [NEXT]
+- Upgrade from Python 3.9 to 3.11+ (boto3 drops 3.9 support in April 2026).
+
+### Back up local content — [NEXT]
+- Drafts, art, renders, and history are local only (ignored by git). Add a
+  documented backup (Time Machine or an iCloud copy) or an export command.
+
+### Scheduler availability — [FUTURE]
+- Scheduling depends on the Mac being on. Consider a cloud scheduler only if
+  late posts become a real problem.
+
+## Medium Priority — growth features
+
+- Drifting sparks/dust overlay for more motion in still-image Reels (free,
+  local ffmpeg).
+- One-click art with Cloudflare Workers AI (free tier) through the existing
+  `ART_PROVIDER=cloudflare` client.
+- A "Scheduled" queue view in the review UI.
+- Optional unnamed roles (`art_alias`) for further thinkers when image tools
+  refuse them by name.
+- Archive or remove the unused multi-scene Reel pipeline if it stays unused.
+
+## High Priority — original backlog
 
 ### Content profiles and prompt registry — [NEXT]
 

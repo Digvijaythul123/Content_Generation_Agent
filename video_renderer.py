@@ -7,6 +7,7 @@ from art_generator import is_video_artwork
 from media_renderer import (
     IMAGE_REEL_SIZE,
     extract_video_frame,
+    ffmpeg_executable,
     reel_layout,
     MediaRenderError,
     _brand_for,
@@ -39,17 +40,6 @@ POSTER_REVEALS = (("quote", 0), ("takeaway", 1.5))
 
 def reel_video_path(post_id):
     return GENERATED_ASSETS_DIRECTORY / f"{post_id}_reel.mp4"
-
-
-def ffmpeg_executable():
-    try:
-        import imageio_ffmpeg
-    except ImportError as error:
-        raise MediaRenderError(
-            "Video rendering needs ffmpeg. Run: "
-            "python3 -m pip install imageio-ffmpeg"
-        ) from error
-    return imageio_ffmpeg.get_ffmpeg_exe()
 
 
 def build_ffmpeg_command(

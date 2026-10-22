@@ -40,6 +40,18 @@ LinkedIn text CLI -> content pipeline -> generated_posts/*.json
 local review UI -> draft generation, shared review decisions, and local history
                -> format-aware pipeline status and production-stage actions
                -> asset links for generated prompts and scene files
+
+one-image Reel (image_reel format):
+  content pipeline (thinker rotation, story mode, critical lens, caption tidy,
+                    5-hashtag cap, Threads fit) -> generated_posts/*.json
+  art_generator.py -> text-free art prompt (layout, style, likeness/alias)
+  artwork (image or MP4/MOV clip, attached in the UI) -> generated_assets/
+  media_renderer.py + templates/image_reel_poster.html | image_reel.html
+                   -> generated_assets/*_instagram.jpg (cover)
+  video_renderer.py (ffmpeg) + music_library.py -> generated_assets/*_reel.mp4
+  review UI publish/schedule -> media_host.py (R2) -> instagram_publisher.py
+  scripts/publish_scheduled.py (LaunchAgent, every minute; token refresh)
+  analytics.py -> generated_assets/performance.json -> UI Performance section
 ```
 
 ### [CURRENT] Components and limits
@@ -61,11 +73,19 @@ local review UI -> draft generation, shared review decisions, and local history
   posts; CLI review commands remain available for Reels.
 - The browser UI derives production readiness from existing artifacts and
   records review/stage events in per-content JSONL history files.
-- Storyboard preparation produces validated JSON plus a readable text export.
-  Image/video rendering, scheduler, publisher, analytics, and an external asset
-  library do not exist.
+- Storyboard preparation produces validated JSON plus a readable text export
+  (multi-scene Reels; not the current focus).
+- One-image Reels are rendered locally: Playwright renders the HTML layers
+  and ffmpeg (bundled via imageio-ffmpeg) composes the MP4 and music.
+- Publishing uses the Instagram API with Instagram Login; media is uploaded
+  to Cloudflare R2 and deleted after Instagram fetches it. Credentials live in
+  `.env` only. Saved statuses now include Published.
+- A macOS LaunchAgent runs `scripts/publish_scheduled.py` every minute: it
+  publishes due Reels and refreshes the long-lived token weekly.
+- `analytics.py` reads per-post insights for posts made with the project.
 - `ai_service.py` uses a fixed endpoint/model. Do not claim a provider-neutral
-  adapter exists yet.
+  adapter exists yet. Image art is made by hand in an image tool or through
+  the optional Gemini/Cloudflare image clients in `art_generator.py`.
 
 ## 3. Domain boundaries
 
@@ -125,6 +145,13 @@ content_models.py                # current validated domain/config models
 content_pipeline.py              # current generation orchestration
 content_agent.py                 # current prompt assembly/model call
 ai_service.py                    # current fixed model endpoint client
+art_generator.py                 # art prompts, image clients, artwork storage
+media_renderer.py                # HTML -> cover image (poster/panel layouts)
+video_renderer.py                # ffmpeg Reel video (still or clip, music)
+music_library.py                 # royalty-free track selection
+instagram_publisher.py           # Instagram API (posts, Reels, insights)
+media_host.py                    # Cloudflare R2 upload/delete
+analytics.py                     # performance report
 reel_storage.py                  # current local JSON operations
 generated_reels/                 # current local JSON drafts
 generated_posts/                 # current single-page post JSON drafts
@@ -151,9 +178,10 @@ to empty architectural layers.
 | Storyboard | [CURRENT] | JSON records preserve timing, visual beats, narration/dialogue, sound, and camera notes; UI exposes the output and stage action. |
 | Character/environment/camera/voice/music plans | [NEXT] | Start with optional plan fields/config; avoid assuming 3D. |
 | Master video prompt | [CURRENT] | A composed text prompt is saved; registry/version provenance is [NEXT]. |
-| AI video generation / rendered asset | [FUTURE] | Define only after storyboard and provider requirements are proven. |
-| Platform variants and publishing | [FUTURE] | Requires rendered assets, verified platform constraints, and approval gates. |
-| Analytics | [FUTURE] | Link metrics to content version and published variant if built. |
+| One-image Reel render | [CURRENT] | Cover image and 8-second MP4 from a still or an attached clip, with music and film finish. |
+| AI video generation (multi-scene) | [FUTURE] | Define only after storyboard and provider requirements are proven. |
+| Publishing | [CURRENT] | Instagram (Reels and Feed) with approval, confirmation, scheduling, AI label, and text cover. Other platforms are [FUTURE]. |
+| Analytics | [CURRENT] | Per-post insights linked to story mode, visual style, and thinker. |
 
 ## 6. Near-term design
 
@@ -260,6 +288,8 @@ configuration.
 - Surface model, filesystem, and provider errors explicitly.
 - Keep model and video generation calls bounded by timeouts.
 - Never report a text prompt as a rendered media asset.
-- Keep human approval ahead of any future publishing stage.
+- Keep human approval ahead of publishing; live publishing needs explicit
+  confirmation or a deliberate schedule, and failed scheduled posts are not
+  retried automatically.
 - Test legacy JSON reads, prompt context, configuration, and each contract
   with fixtures and mocked provider calls.
