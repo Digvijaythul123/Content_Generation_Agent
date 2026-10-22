@@ -371,7 +371,9 @@ thinkers:
     quotes:
       - text: 'Educate, agitate, organize.'
         source: 'Closing message, All-India Depressed Classes Conference, Nagpur (1942)'
-    statue: 'Head and shoulders of B. R. Ambedkar: round glasses, neatly combed hair, clean-shaven, in a three-piece suit and tie.'
+    statue: 'Head and shoulders of B. R. Ambedkar: round glasses, receding hairline, clean-shaven, in a three-piece suit and tie, holding a book.'
+    appearance: 'A dignified Indian scholar with round wire-rimmed glasses, a receding hairline, a full clean-shaven face, wearing a three-piece suit and tie, often holding a thick book; 1940s.'
+    portrait_style: painterly
     portrayal: A scholar and reformer of quiet resolve; treat caste themes with care and accuracy.
     setting: Libraries, the Constituent Assembly hall, Indian towns and villages, a blue-and-white palette.
   - id: sagan
@@ -499,9 +501,10 @@ thinkers:
         source: 'Raja Yoga (1896)'
     misattributions:
       - '"Talk to yourself once in a day, otherwise you may miss meeting an excellent person in this world." (unverified)'
-    statue: 'Head and shoulders of a young Indian monk with a round face and strong gaze, wearing a saffron turban and robe, clean-shaven.'
+    statue: 'Head and shoulders of a young Indian monk with a broad face, large eyes, a turban with a hanging tail, and arms folded across his chest.'
+    portrait_style: painterly
     portrayal: Emphasize his rational, reformist, education-first side; he was also a religious monk, so do not present him as a secular thinker.
-    appearance: A young Indian monk in a saffron turban and long saffron robe, arms folded, confident gaze.
+    appearance: 'A broad-faced young Indian monk with large expressive eyes and a strong, calm gaze, clean-shaven, wearing a saffron turban tied with a hanging tail and a long saffron robe, arms folded across his chest in his famous 1893 Chicago pose.'
     setting: Late 19th-century Kolkata, the Chicago Parliament of Religions hall (1893).
   - id: bhagat_singh
     name: Bhagat Singh
@@ -521,9 +524,10 @@ thinkers:
         source: '"Why I Am an Atheist" (1930)'
     misattributions:
       - Many slogans attributed to him online are unsourced; quote "Why I Am an Atheist" or his letters directly.
-    statue: 'Head and shoulders of a young Indian man in his early twenties with a thin moustache and a felt fedora hat, in a 1920s coat.'
+    statue: 'Head and shoulders of a slim young Indian man with a thin moustache and a tilted felt fedora, in a collared shirt and coat.'
+    portrait_style: painterly
     portrayal: A young, widely read revolutionary thinker; focus on his reasoning, not on glorifying violence.
-    appearance: A young Indian man in his early twenties with a thin moustache and a felt hat, reading in a jail cell.
+    appearance: 'A slim young Indian man in his early twenties with sharp features, a thin moustache, and a felt fedora tilted slightly, wearing a collared shirt and coat, with a direct, confident gaze; 1929 Lahore.'
     setting: 1920s Lahore, prison cells with books, typewritten pamphlets.
   - id: phule
     name: Mahatma Jyotirao Phule
@@ -542,9 +546,10 @@ thinkers:
         source: 'Shetkaryacha Asud (1883)'
     misattributions:
       - Check English quotes against Gulamgiri or Shetkaryacha Asud before using them.
-    statue: 'Head and shoulders of a 19th-century Maharashtrian man with a moustache, wearing a white pagadi turban and a white shawl.'
+    statue: 'Head and shoulders of a 19th-century Maharashtrian man with a thick moustache, a white pheta turban, and a shawl.'
+    portrait_style: painterly
     portrayal: A reformer who, with Savitribai Phule, opened schools for girls and the oppressed; practical and fearless.
-    appearance: A 19th-century Maharashtrian man in a white pagadi turban and white clothes, standing at a modest schoolroom.
+    appearance: 'A 19th-century Maharashtrian reformer with a thick moustache and a serious, kind gaze, wearing a white pheta turban, a white angarkha, and a shawl over his shoulders, standing near a modest schoolroom.'
     setting: 1850s Pune, the first girls' school at Bhide Wada, slates and chalk.
   - id: osho
     name: Osho (Rajneesh)
@@ -558,9 +563,10 @@ thinkers:
       - Talks published as books (for example The Book of Secrets; Courage)
     misattributions:
       - A huge number of "Osho quotes" online are paraphrases or invented; only quote wording checked against a specific book.
-    statue: 'Head and shoulders of an older Indian man with a long flowing white beard, large calm eyes, and a knitted cap, in a simple robe.'
+    statue: 'Head and shoulders of an elderly Indian man with a very long wispy flowing beard, a tall knitted cap, and large intense eyes, in a flowing robe.'
+    portrait_style: painterly
     portrayal: Engage his ideas critically; he is controversial (including the Rajneeshpuram events of the 1980s), so never present him as an unquestionable guru.
-    appearance: An older Indian man with a long white beard in a simple robe and knitted cap, speaking calmly.
+    appearance: 'An elderly Indian man with a very long, wispy white beard flowing down his chest, a bald crown under a tall, soft knitted woollen cap, large dark luminous eyes with an intense, direct gaze, wearing a flowing robe (white or deep maroon), seated in an armchair with one hand raised mid-gesture as he speaks.'
     setting: A quiet ashram garden in Pune, simple meditation hall.
 
 # Art direction for posts. A story mode picks a default; the user can override.
@@ -612,8 +618,8 @@ visual_styles:
     name: Painterly parchment
     palette: day
     recipe: >-
-      Warm painterly illustration in the style of a classical Buddhist
-      devotional painting on aged cream parchment. Soft golden-hour light,
+      Warm painterly portrait in a classical fine-art style, like a
+      museum oil or gouache painting on aged cream paper. Soft golden-hour light,
       muted ochre, saffron, terracotta and sepia tones, gentle brush texture,
       high detail on the figure, soft vignette.
     avoid: photographic look, neon colors, harsh contrast

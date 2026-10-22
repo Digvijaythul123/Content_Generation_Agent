@@ -1133,3 +1133,22 @@ def test_other_modes_may_only_quote_verified_lines():
     assert "We suffer more often in imagination than in reality." in prompt
     assert "inspired by Seneca" in prompt
     assert "Selected Story mode: Mirror" in prompt
+
+
+def test_modern_figures_default_to_painted_tributes():
+    auto = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel",
+        platform_id="instagram", qa_subtype="thoughtful", thinker_id="osho",
+    )
+    assert auto.visual_style == "painterly"
+    chosen = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel",
+        platform_id="instagram", qa_subtype="thoughtful", thinker_id="osho",
+        visual_style="living_thinker",
+    )
+    assert chosen.visual_style == "living_thinker"  # an explicit choice wins
+    ancient = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel",
+        platform_id="instagram", qa_subtype="thoughtful", thinker_id="seneca",
+    )
+    assert ancient.visual_style == "living_thinker"

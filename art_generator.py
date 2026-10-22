@@ -240,7 +240,7 @@ def visual_style_for(record):
 
 
 # Styles that depict the thinker themself need their real likeness.
-_LIKENESS_STYLES = ("living_thinker", "thinker_statue")
+_LIKENESS_STYLES = ("living_thinker", "thinker_statue", "painterly")
 
 
 def _thinker_likeness(record, style):
@@ -269,7 +269,13 @@ def _thinker_likeness(record, style):
         )
     if not thinker.get("appearance"):
         return None
-    return f"{thinker['name']}: {' '.join(thinker['appearance'].split())}"
+    likeness = f"{thinker['name']}: {' '.join(thinker['appearance'].split())}"
+    if thinker.get("portrait_style"):
+        likeness += (
+            " Paint a respectful tribute that captures these signature "
+            "features; do not copy any specific photograph."
+        )
+    return likeness
 
 
 def build_art_prompt(record, art_style=None):

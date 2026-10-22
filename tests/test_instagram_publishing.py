@@ -917,3 +917,11 @@ def test_tidy_caption_splits_one_paragraph_into_parts():
     )
     already = "Hook.\n\nTeaching: X (Y 1)\n\nWhy?\n\n#a #b"
     assert tidy_caption(already) == already
+
+
+def test_painted_tribute_prompt_has_signature_features_and_no_photo_copy():
+    record = {**IMAGE_REEL, "profile_id": "rational_thoughts", "thinker_id": "osho",
+              "visual_style": "painterly"}
+    prompt = art_generator.build_art_prompt(record)
+    assert "very long, wispy white beard" in prompt
+    assert "do not copy any specific photograph" in prompt
