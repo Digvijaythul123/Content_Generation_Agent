@@ -127,8 +127,9 @@ def install():
     }))
     subprocess.run(["launchctl", "unload", str(PLIST_PATH)], capture_output=True)
     subprocess.run(["launchctl", "load", str(PLIST_PATH)], check=True)
-    print(f"Installed. Scheduled Reels are checked every {INTERVAL_SECONDS // 60} "
-          f"minutes; log: {LOG_PATH}")
+    minutes = INTERVAL_SECONDS // 60
+    every = "minute" if minutes == 1 else f"{minutes} minutes"
+    print(f"Installed. Scheduled Reels are checked every {every}; log: {LOG_PATH}")
     return 0
 
 
