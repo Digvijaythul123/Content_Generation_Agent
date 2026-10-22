@@ -138,7 +138,7 @@ def test_explicit_comedy_category_is_supported_for_linkedin_without_liag_brand()
     )
 
     assert request.profile.id == "qa_engineering_ai"
-    assert request.brand.display_name == "d_agnostic_being"
+    assert request.brand.display_name == "buddha.realteachings"
     assert request.content_format.content_fields == (
         "title",
         "post_text",
@@ -391,7 +391,7 @@ def test_personal_brand_name_and_explicit_no_brand_request():
         platform_id="linkedin",
     )
 
-    assert load_brand("default").display_name == "d_agnostic_being"
+    assert load_brand("default").display_name == "buddha.realteachings"
     assert no_brand_request.brand is None
     assert no_brand_request.profile.id == "qa_engineering_ai"
     assert no_brand_request.content_format.id == "linkedin_text_post"
@@ -423,7 +423,7 @@ def test_no_brand_request_does_not_add_brand_identity_to_prompt():
 
     prompt = service.generate_reel.call_args.args[0]
     assert "Publishing brand:" not in prompt
-    assert "d_agnostic_being" not in prompt
+    assert "buddha.realteachings" not in prompt
 
 
 def test_linkedin_single_page_prompt_uses_linkedin_and_exact_copy():

@@ -60,7 +60,7 @@ one-image Reel (image_reel format):
 - Root Python modules provide configuration models/loading, generation,
   prompt composition, JSON file operations, and model communication.
 - YAML configures Critical Thinking / Rational Thoughts, Comedy, and QA Engineering & AI profiles;
-  an optional Comedy category with ten subtypes; the d_agnostic_being and Life Is
+  an optional Comedy category with ten subtypes; the buddha.realteachings and Life Is
   a Glitch brands with optional no-brand generation; Reel, single-page, and
   LinkedIn text-post formats; and
   Instagram and LinkedIn platform compatibility.
@@ -107,7 +107,7 @@ Source / Brief
   Comedy is currently the only category and can specify one of ten subtypes.
   It does not replace the content profile or format.
 - **Brand** owns optional publisher identity, reusable branding, voice
-  overlays, and defaults. Example: d_agnostic_being.
+  overlays, and defaults. Example: buddha.realteachings.
 - **Format** owns output fields and production constraints. Examples:
   Instagram Reel, YouTube Short, single-page graphic, LinkedIn text post,
   Thread, Blog Article.

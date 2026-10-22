@@ -20,7 +20,7 @@ work:
 | Capability | Status | What that means today |
 |---|---|---|
 | Profile-based content generation | [CURRENT] | YAML profiles include Critical Thinking / Rational Thoughts, Comedy, and QA Engineering & AI. |
-| Optional publisher brand | [CURRENT] | d_agnostic_being and Life Is a Glitch are configured; generation can also explicitly omit a brand. |
+| Optional publisher brand | [CURRENT] | buddha.realteachings and Life Is a Glitch are configured; generation can also explicitly omit a brand. |
 | Brief input and JSON content records | [CURRENT] | The CLI accepts a brief and saves a local JSON draft. |
 | Draft review and approval | [CURRENT] | The local workspace reviews posts and Reels; CLI commands also remain available. |
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |

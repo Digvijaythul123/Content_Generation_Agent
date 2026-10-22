@@ -613,7 +613,7 @@ def test_review_ui_generation_options_expose_type_platform_and_profiles():
         for item in options["profiles"]
     )
     assert any(
-        item["id"] == "default" and item["name"] == "d_agnostic_being"
+        item["id"] == "default" and item["name"] == "buddha.realteachings"
         for item in options["brands"]
     )
     assert any(

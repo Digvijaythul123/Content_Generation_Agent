@@ -43,7 +43,7 @@ are configured; broader catalog breadth and evaluation remain incomplete.
 
 ## Phase 2 — Multi-brand support
 
-**Status: [CURRENT/NEXT]** The d_agnostic_being personal brand is configured;
+**Status: [CURRENT/NEXT]** The buddha.realteachings personal brand is configured;
 brand catalog breadth and evaluation remain incomplete.
 
 - **Objectives:** separate publisher identity from editorial profile.

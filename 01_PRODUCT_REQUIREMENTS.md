@@ -37,7 +37,7 @@ future scope explicitly; they do not imply unbuilt features exist.
   containing exact copy and explicit optional visual labels.
 - CLI brief input and JSON draft storage.
 - Brand, profile, format, and platform configuration loading; the personal
-  brands are d_agnostic_being and Life Is a Glitch, and generation supports no
+  brands are buddha.realteachings and Life Is a Glitch, and generation supports no
   brand.
 - Human review commands for listing, approving, rejecting, and bulk reviewing
   saved content.
@@ -86,7 +86,7 @@ implemented.
 - **Source / idea / brief:** input to a generation run. Initially a text brief;
   later it may include a transcript or referenced source with provenance.
 - **Brand:** optional publishing identity: name, brand voice, reusable
-  branding, defaults, and (later) account references. Example: d_agnostic_being.
+  branding, defaults, and (later) account references. Example: buddha.realteachings.
 - **Content profile:** editorial mode, such as Critical Thinking / Rational Thoughts, Comedy,
   Storytelling, Motivation, Finance, Career, Fitness, Education, Relationships,
   or a future profile. It defines audience, objectives, voice, constraints,
