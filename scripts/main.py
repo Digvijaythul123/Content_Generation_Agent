@@ -129,7 +129,7 @@ def main(argv=None):
         default=None,
         help=(
             "Optional art style for post formats, such as cinematic_photo, "
-            "living_buddha, buddha_statue, 3d_render, conceptual_metaphor, "
+            "living_thinker, thinker_statue, 3d_render, conceptual_metaphor, "
             "storybook_monk, ink_wash, or painterly (default: the story "
             "mode's style)."
         ),

@@ -7,7 +7,9 @@ from content_models import (
     trim_hashtags,
     validate_instagram_caption,
 )
-from config_loader import resolve_generation_request
+import random
+
+from config_loader import load_profile_thinkers, resolve_generation_request
 from content_agent import ContentAgent
 
 
@@ -43,6 +45,22 @@ def generate_content(
         thinker_id=thinker_id,
         visual_style=visual_style,
     )
+    if request.thinker_id is None and not brief and request.category_id != "comedy":
+        thinker_id = _pick_thinker(request.profile.id, request.qa_subtype)
+    if thinker_id is not None and thinker_id != request.thinker_id:
+        # Resolve again so the rotated thinker is validated and saved.
+        request = resolve_generation_request(
+            brand_id=brand_id,
+            profile_id=profile_id,
+            format_id=format_id,
+            platform_id=platform_id,
+            brief=brief,
+            category_id=category_id,
+            comedy_subtype=comedy_subtype,
+            qa_subtype=qa_subtype,
+            thinker_id=thinker_id,
+            visual_style=visual_style,
+        )
     agent = ContentAgent(
         profile_id=request.profile.id,
         profile=request.profile.to_mapping(),
@@ -79,3 +97,14 @@ def generate_content(
             )
         validate_instagram_caption(content.fields["caption"])
     return GenerationResult(request=request, content=content)
+
+
+def _pick_thinker(profile_id, story_mode):
+    """Rotate thinkers so drafts do not collapse onto one favourite voice.
+
+    Verified-quote drafts only pick thinkers with quotes on file.
+    """
+    thinkers = load_profile_thinkers(profile_id)
+    if story_mode == "verified_quote":
+        thinkers = [thinker for thinker in thinkers if thinker.get("quotes")]
+    return random.choice(thinkers)["id"] if thinkers else None

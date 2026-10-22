@@ -21,6 +21,7 @@ from project_paths import (
 
 PROMPT_TEMPLATE_PATH = PROMPT_DIRECTORY / "content_generation.md"
 CAPTION_LANGUAGES = ("english", "hinglish")
+VERIFIED_QUOTE_MODE = "verified_quote"
 
 
 class ContentAgent:
@@ -197,6 +198,12 @@ class ContentAgent:
                     f"Unknown thinker {self.thinker_id!r} for "
                     f"profile {profile['id']!r}."
                 )
+            quote_mode = self.qa_subtype == VERIFIED_QUOTE_MODE
+            quote = (
+                random.choice(thinker["quotes"])
+                if quote_mode and thinker.get("quotes")
+                else None
+            )
             # A random pick keeps drafts from collapsing onto the first idea.
             focus_idea = random.choice(thinker["core_ideas"])
             thinker_lines = [
@@ -233,6 +240,22 @@ class ContentAgent:
                 "(SN 36.6)'. Label later-tradition ideas by their tradition "
                 "(for example 'Zen story'), never as the Buddha's own words.\n\n"
             )
+            if quote:
+                thinker_lines.insert(
+                    0,
+                    "Verified quote to use (copy the wording exactly, in "
+                    f"quotation marks, as Main_point): \"{quote['text']}\"\n"
+                    f"Supporting_copy must be: — {thinker['name']}, "
+                    f"{quote['source']}\n"
+                    f"In the caption, write 'Source: {quote['source']}'.",
+                )
+            elif quote_mode:
+                thinker_lines.insert(
+                    0,
+                    "No verified quote is on file for this thinker. Do not "
+                    "quote them: paraphrase one core idea in your own words "
+                    f"and set Supporting_copy to '— inspired by {thinker['name']}'.",
+                )
             prompt = "\n".join(thinker_lines) + prompt
         elif self.category_id != "comedy":
             thinkers = load_profile_thinkers(profile["id"])
@@ -246,6 +269,15 @@ class ContentAgent:
                     "and name the teaching and its reference in the "
                     "caption.\n\n" + prompt
                 )
+
+        lens = story_settings.get("critical_lens") or []
+        if lens and self.category_id != "comedy":
+            prompt = (
+                "Critical-thinking lens (apply it to every concept):\n"
+                + _as_bullets(lens)
+                + "\n\n"
+                + prompt
+            )
 
         if self.visual_style:
             style = next(
@@ -262,9 +294,10 @@ class ContentAgent:
                 f"Visual style for the Design_prompt: {style['name']}. "
                 f"{style['recipe'].strip()}\n"
                 "Write the scene so it suits this style, but do not repeat the "
-                "style keywords; they are added automatically. Show the Buddha "
-                "with dignity: in comedy or scenes with modern objects, use an "
-                "anonymous monk instead of the Buddha.\n\n" + prompt
+                "style keywords; they are added automatically. Show revered "
+                "religious and spiritual figures (for example the Buddha, "
+                "Kabir, or Vivekananda) with dignity: in comedy or scenes with "
+                "modern gadgets, use an anonymous stand-in instead.\n\n" + prompt
             )
 
         if self.qa_subtype:

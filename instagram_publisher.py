@@ -112,6 +112,7 @@ class InstagramPublisher:
             f"{self._base_url}/{self._account_id}/media",
             image_url=image_url,
             caption=caption,
+            is_ai_generated="true",
         )
         container_id = payload.get("id")
         if not container_id:
@@ -126,6 +127,8 @@ class InstagramPublisher:
             "video_url": video_url,
             "caption": caption,
             "share_to_feed": "true",
+            # Every post here uses AI-generated art: apply Instagram's AI label.
+            "is_ai_generated": "true",
         }
         if cover_url:
             # A custom cover image wins over a frame picked from the video.
@@ -190,10 +193,18 @@ class InstagramPublisher:
         self.wait_until_ready(container_id, timeout_seconds)
         media_id = self.publish_container(container_id)
         try:
-            link = self.permalink(media_id)
+            details = self._request(
+                "GET",
+                f"{self._base_url}/{media_id}",
+                fields="permalink,is_ai_generated",
+            )
         except InstagramPublishError:
-            link = None  # The post is live; a missing permalink is not fatal.
-        return {"media_id": media_id, "permalink": link}
+            details = {}  # The post is live; missing details are not fatal.
+        return {
+            "media_id": media_id,
+            "permalink": details.get("permalink"),
+            "ai_label": details.get("is_ai_generated"),
+        }
 
     def publish_reel(self, video_url, caption, thumb_offset_ms=None, cover_url=None):
         """Publish one Reel (shared to the feed) and return its ID and link."""
@@ -205,16 +216,10 @@ class InstagramPublisher:
         return self._finish(container_id, timeout_seconds=600)
 
     def publish_image(self, image_url, caption):
-        """Publish one image post and return {'media_id', 'permalink'}."""
+        """Publish one image post and return its ID, link, and AI label."""
         self._check_quota()
         container_id = self.create_image_container(image_url, caption)
-        self.wait_until_ready(container_id)
-        media_id = self.publish_container(container_id)
-        try:
-            link = self.permalink(media_id)
-        except InstagramPublishError:
-            link = None  # The post is live; a missing permalink is not fatal.
-        return {"media_id": media_id, "permalink": link}
+        return self._finish(container_id)
 
     def refresh_access_token(self):
         """Extend a long-lived token; returns (token, expires_in_seconds)."""

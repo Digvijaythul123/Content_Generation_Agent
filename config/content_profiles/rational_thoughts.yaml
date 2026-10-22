@@ -58,6 +58,14 @@ visual:
     - High-contrast, readable typography
     - Match voiceover timing
 
+# Applied to every post: thinkers are voices to examine, not authorities.
+critical_lens:
+  - Treat every idea, including the featured thinker's, as a claim to examine, not a commandment.
+  - Give the viewer one concrete way to test, check, or apply the idea in their own life.
+  - Name a limit, counterpoint, or context where it matters (where the thinker was wrong, contested, or a product of their time).
+  - Separate evidence from belief and opinion; never present a paraphrase as a quotation.
+  - Celebrate questioning rather than obedience; no guru worship, including of the featured thinker.
+
 # Story Reels: one real idea from one thinker, told in a selected story mode.
 subtype_label: Story mode
 reel_duration_seconds:
@@ -80,7 +88,7 @@ subtypes:
     background: Bright, slightly exaggerated colors and clean framing; playful pizzicato or light percussion with a comic pause before the punchline.
     example: Diogenes reviewing a self-help influencer's morning routine.
   - id: thoughtful
-    default_visual_style: living_buddha
+    default_visual_style: living_thinker
     name: Thoughtful Reflection
     definition: A calm, reflective story that leaves one line the viewer will remember.
     structure: Gentle hook image; a small human moment; the idea reframes it; end on a still, memorable line.
@@ -101,12 +109,19 @@ subtypes:
     background: Era-accurate figure contrasted against vivid modern settings such as phones, malls, or city streets; music blends an ancient instrument with a modern beat.
     example: The Buddha applies the Kalama Sutta to a viral WhatsApp forward.
   - id: myth_buster
-    default_visual_style: buddha_statue
+    default_visual_style: thinker_statue
     name: Myth Buster
     definition: A popular quote or claim attributed to the thinker is checked against what the source actually says.
     structure: Show the viral quote; ask where it comes from; reveal the source or its absence; present the real idea; invite viewers to check sources.
     background: Clean documentary look with paper, manuscript, and archive textures and stamp or highlight effects; steady investigative beat.
     example: "Did the Buddha really say 'Holding on to anger is like drinking poison'?"
+  - id: verified_quote
+    default_visual_style: thinker_statue
+    name: Verified Quote
+    definition: One exact, sourced quote from the thinker, followed by a critical-thinking test of it.
+    structure: Title is a short hook such as "Test this"; Main_point is the exact quote in quotation marks; Supporting_copy is the attribution and source; the caption explains the idea, gives one way to test or apply it, and names a limit or counterpoint.
+    background: A dignified portrait or symbolic scene matching the thinker's era; calm, high-contrast light; a slow, thoughtful music bed.
+    example: Epictetus on how our judgments, not events, disturb us, followed by a ten-second test the viewer can try today.
 
 thinkers:
   - id: buddha
@@ -174,6 +189,13 @@ thinkers:
       - '"Peace comes from within. Do not seek it without." (modern)'
       - '"What you think, you become" / "The mind is everything" (loose modern compression of Dhammapada 1)'
       - '"Do not dwell in the past, do not dream of the future..." (modern)'
+    quotes:
+      - text: 'Hatred is never appeased by hatred in this world. By non-hatred alone is hatred appeased. This is a law eternal.'
+        source: 'Dhammapada 5 (tr. Buddharakkhita)'
+      - text: 'Though one may conquer a thousand times a thousand men in battle, yet he indeed is the noblest victor who conquers himself.'
+        source: 'Dhammapada 103 (tr. Buddharakkhita)'
+      - text: 'Health is the most precious gain and contentment the greatest wealth.'
+        source: 'Dhammapada 204 (tr. Buddharakkhita)'
     portrayal: A human teacher and reasoner, not a deity or miracle worker; calm, wry, and respectful; no caricature.
     appearance: >-
       A man of about 35 from 5th-century-BCE northern India with warm brown skin;
@@ -198,6 +220,9 @@ thinkers:
     misattributions:
       - '"I know that I know nothing" (a later compression of Apology 21d)'
       - '"Strong minds discuss ideas, average minds discuss events..." (modern, not Socrates)'
+    quotes:
+      - text: 'The unexamined life is not worth living for a human being.'
+        source: 'Plato, Apology 38a (tr. Grube)'
     portrayal: Barefoot, playful, persistent questioner; never smug.
     appearance: An older Athenian man with a broad snub nose, bulging eyes, bald crown, and a full grey beard, barefoot in a plain worn himation.
     setting: Athenian agora, stone colonnades, olive trees, marketplaces, dusty sandals.
@@ -215,6 +240,11 @@ thinkers:
       - Vatican Sayings
     misattributions:
       - The "Epicurean paradox" of evil is attributed to him by Lactantius; there is no surviving text by Epicurus
+    quotes:
+      - text: 'Death is nothing to us.'
+        source: 'Principal Doctrines 2'
+      - text: 'Of all the means which wisdom acquires to ensure happiness throughout the whole of life, by far the most important is friendship.'
+        source: 'Principal Doctrines 27'
     portrayal: A warm host in a garden, not a glutton.
     setting: A simple walled garden near Athens, shared meals of bread and olives, friends talking under trees.
   - id: diogenes
@@ -228,6 +258,9 @@ thinkers:
       - Diogenes Laertius, Lives of Eminent Philosophers, Book VI
     misattributions:
       - Many anecdotes are later legends; present them as stories told about him
+    quotes:
+      - text: 'I am a citizen of the world.'
+        source: 'Diogenes Laertius, Lives of Eminent Philosophers VI.63'
     portrayal: A cheeky provocateur with a lamp and a barrel; witty, not cruel.
     appearance: A lean, sun-darkened Greek man with a wild grey beard and tangled hair in a coarse ragged cloak, carrying an oil lamp, often near a large clay jar.
     setting: A large clay jar on a busy Greek street, a lamp in daylight, marble statues, crowded markets.
@@ -244,6 +277,9 @@ thinkers:
     misattributions:
       - '"A journey of a thousand miles begins with a single step" is a loose translation of chapter 64'
       - Many modern "Lao Tzu" quotes on social media are not in the text
+    quotes:
+      - text: 'Knowing others is intelligence; knowing yourself is true wisdom.'
+        source: 'Tao Te Ching, chapter 33'
     portrayal: A quiet, gently humorous old sage; note that his historicity is uncertain.
     appearance: An elderly Chinese sage with a long white beard and topknot in simple layered robes, often riding a water buffalo through a mountain pass.
     setting: Misty mountains, flowing rivers, bamboo, a mountain pass, an ox, ink-wash landscapes.
@@ -259,6 +295,9 @@ thinkers:
       - References in Buddhist, Jain, and Hindu texts that critiqued the school
     misattributions:
       - Their own texts are lost; most surviving lines come from opponents, so present them as reported views
+    quotes:
+      - text: 'While life is yours, live joyously; none can escape Death''s searching eye.'
+        source: 'Reported in Sarva-darshana-sangraha (tr. Cowell and Gough)'
     portrayal: Sharp, earthy, materialist debaters; do not reduce them to hedonism.
     setting: Ancient Indian debate courts, village fire-ritual grounds, dusty marketplaces, palm-leaf manuscripts.
   - id: hume
@@ -274,6 +313,9 @@ thinkers:
       - A Treatise of Human Nature (Book III)
     misattributions:
       - '"Extraordinary claims require extraordinary evidence" is Sagan''s phrasing, though inspired by Hume'
+    quotes:
+      - text: 'A wise man, therefore, proportions his belief to the evidence.'
+        source: 'An Enquiry Concerning Human Understanding, Section X'
     portrayal: Genial, good-humored, and modest.
     setting: 18th-century Edinburgh, candlelit study, cobbled streets, coffee houses, quill and paper.
   - id: russell
@@ -289,6 +331,9 @@ thinkers:
       - '"A Liberal Decalogue" (1951)'
     misattributions:
       - The doubt line is a paraphrase; the original says "the stupid are cocksure while the intelligent are full of doubt"
+    quotes:
+      - text: 'The fundamental cause of the trouble is that in the modern world the stupid are cocksure while the intelligent are full of doubt.'
+        source: '"The Triumph of Stupidity" (1933)'
     portrayal: Dry, witty, precise; a pipe and a raised eyebrow.
     setting: Mid-century English study, books, a lecture hall, a teapot orbiting among planets.
   - id: ambedkar
@@ -305,6 +350,9 @@ thinkers:
       - Speech to the Constituent Assembly, 25 November 1949
     misattributions:
       - Verify any short motivational quote against his speeches and writings before use
+    quotes:
+      - text: 'Educate, agitate, organize.'
+        source: 'Closing message, All-India Depressed Classes Conference, Nagpur (1942)'
     portrayal: A scholar and reformer of quiet resolve; treat caste themes with care and accuracy.
     setting: Libraries, the Constituent Assembly hall, Indian towns and villages, a blue-and-white palette.
   - id: sagan
@@ -321,8 +369,171 @@ thinkers:
       - Cosmos (1980)
     misattributions:
       - '"Somewhere, something incredible is waiting to be known" is often misattributed; avoid it'
+    quotes:
+      - text: 'Extraordinary claims require extraordinary evidence.'
+        source: 'Cosmos (1980)'
     portrayal: Gentle wonder plus rigorous skepticism.
     setting: Observatories, starfields, the Voyager probe, Earth as a pale blue dot, a 1980s TV studio.
+  - id: marcus_aurelius
+    name: Marcus Aurelius
+    era: 121-180 CE, Roman Empire
+    core_ideas:
+      - You control your judgments and actions, not outside events
+      - Act rightly now instead of debating what a good person is
+      - Everything changes; hold possessions and status lightly
+      - Obstacles can become the material for action
+      - Remember mortality to live with focus and humility
+    sources:
+      - Meditations (private notebooks, written c. 170-180 CE)
+    quotes:
+      - text: 'Waste no more time arguing about what a good man should be. Be one.'
+        source: 'Meditations 10.16'
+      - text: 'If it is not right, do not do it; if it is not true, do not say it.'
+        source: 'Meditations 12.17'
+    misattributions:
+      - '"Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth." (not in the Meditations)'
+    portrayal: A tired, self-critical emperor writing notes to himself, not a motivational guru; note that he also ruled an empire at war.
+    appearance: A bearded Roman man in his fifties with curly greying hair, wearing a plain military cloak, writing by oil lamp in a campaign tent.
+    setting: Roman army camps on the Danube frontier, lamplit tents, marble Rome.
+  - id: seneca
+    name: Seneca
+    era: c. 4 BCE-65 CE, Rome
+    core_ideas:
+      - Most suffering comes from imagined fears rather than events
+      - Life is long enough if we stop wasting it
+      - Practice hardship briefly so it loses its power over you
+      - Anger is a temporary madness worth delaying
+    sources:
+      - Letters to Lucilius (Epistulae Morales)
+      - On the Shortness of Life
+      - On Anger
+    quotes:
+      - text: 'We suffer more often in imagination than in reality.'
+        source: 'Letters to Lucilius 13.4'
+      - text: 'It is not that we have a short time to live, but that we waste a lot of it.'
+        source: 'On the Shortness of Life 1'
+    misattributions:
+      - '"Luck is what happens when preparation meets opportunity" (not Seneca)'
+    portrayal: A sharp writer who preached simplicity while being one of Rome's richest men; acknowledge the tension honestly.
+    appearance: An older balding Roman man with a short grey beard in a toga, writing letters at a wooden desk.
+    setting: A Roman villa study with scrolls and wax tablets, Mediterranean light.
+  - id: epictetus
+    name: Epictetus
+    era: c. 50-135 CE, Greece and Rome
+    core_ideas:
+      - We are disturbed not by events but by our judgments about them
+      - Separate what is in your control from what is not
+      - You cannot learn what you think you already know
+      - Freedom is an inner discipline, not a social status
+    sources:
+      - Enchiridion (Handbook, recorded by Arrian)
+      - Discourses (recorded by Arrian)
+    quotes:
+      - text: 'Men are disturbed not by things, but by the views which they take of things.'
+        source: 'Enchiridion 5'
+      - text: 'It is impossible for a man to learn what he thinks he already knows.'
+        source: 'Discourses 2.17'
+    misattributions:
+      - Many "Epictetus" lines online are modern paraphrases; check the Enchiridion or Discourses before quoting.
+    portrayal: A former slave with a lame leg who became a teacher; plain-spoken and demanding.
+    appearance: A bearded Greek man in a simple worn tunic, walking with a slight limp and a stick, teaching students in a bare classroom.
+    setting: The school at Nicopolis, stone benches, simple oil lamps.
+  - id: kabir
+    name: Kabir
+    era: 15th century, Varanasi, India
+    core_ideas:
+      - Rituals, scriptures, and caste do not make anyone holy; sincerity and love do
+      - Look for faults in yourself before judging others
+      - Book learning without understanding is empty
+      - The divine, if anywhere, is within, not in temples or mosques
+    sources:
+      - Kabir's dohas (couplets) as collected in the Bijak and the Guru Granth Sahib
+    quotes:
+      - text: 'Bura jo dekhan main chala, bura na milya koi; jo dil khoja aapna, mujhsa bura na koi. (I set out to find the wicked and found none; when I searched my own heart, I found no one worse than me.)'
+        source: 'Kabir, doha'
+      - text: 'Pothi padhi padhi jag mua, pandit bhaya na koi; dhai aakhar prem ka, padhe so pandit hoi. (The world died reading books and no one became wise; whoever learns the two and a half letters of love becomes wise.)'
+        source: 'Kabir, doha'
+    misattributions:
+      - Many couplets shared as Kabir online are modern; check standard collections before quoting.
+    portrayal: A weaver-poet who mocked hypocrisy in every religion; witty, blunt, never preachy.
+    appearance: A lean 15th-century Indian weaver in a simple white dhoti and shawl, sitting at a wooden handloom.
+    setting: Varanasi lanes, river ghats, handlooms and spun cotton.
+  - id: vivekananda
+    name: Swami Vivekananda
+    era: 1863-1902, India
+    core_ideas:
+      - Strength, self-reliance, and education over fear and fatalism
+      - Test ideas through experience instead of blind belief
+      - Serve people as the highest form of worship
+      - Focus the mind on one idea and pursue it fully
+    sources:
+      - The Complete Works of Swami Vivekananda (including Raja Yoga, 1896)
+    quotes:
+      - text: 'Arise, awake, and stop not till the goal is reached.'
+        source: 'Complete Works (adapted from Katha Upanishad 1.3.14)'
+      - text: 'Take up one idea. Make that one idea your life; think of it, dream of it, live on that idea.'
+        source: 'Raja Yoga (1896)'
+    misattributions:
+      - '"Talk to yourself once in a day, otherwise you may miss meeting an excellent person in this world." (unverified)'
+    portrayal: Emphasize his rational, reformist, education-first side; he was also a religious monk, so do not present him as a secular thinker.
+    appearance: A young Indian monk in a saffron turban and long saffron robe, arms folded, confident gaze.
+    setting: Late 19th-century Kolkata, the Chicago Parliament of Religions hall (1893).
+  - id: bhagat_singh
+    name: Bhagat Singh
+    era: 1907-1931, India
+    core_ideas:
+      - Progress requires criticizing and challenging inherited beliefs
+      - Reason and independent thinking over blind faith
+      - Courage to examine your own convictions, even near death
+      - Ideas outlive individuals
+    sources:
+      - '"Why I Am an Atheist" (written in Lahore jail, 1930)'
+      - Jail notebook and letters
+    quotes:
+      - text: 'Any man who stands for progress has to criticize, disbelieve and challenge every item of the old faith.'
+        source: '"Why I Am an Atheist" (1930)'
+      - text: 'Criticism and independent thinking are the two indispensable qualities of a revolutionary.'
+        source: '"Why I Am an Atheist" (1930)'
+    misattributions:
+      - Many slogans attributed to him online are unsourced; quote "Why I Am an Atheist" or his letters directly.
+    portrayal: A young, widely read revolutionary thinker; focus on his reasoning, not on glorifying violence.
+    appearance: A young Indian man in his early twenties with a thin moustache and a felt hat, reading in a jail cell.
+    setting: 1920s Lahore, prison cells with books, typewritten pamphlets.
+  - id: phule
+    name: Mahatma Jyotirao Phule
+    era: 1827-1890, Pune, India
+    core_ideas:
+      - Education is the root of freedom; ignorance breeds every other injustice
+      - Caste hierarchy and priestly authority must be questioned with reason
+      - Education for women and the oppressed is a moral duty
+      - Truth is found by inquiry, not inherited authority
+    sources:
+      - Gulamgiri (Slavery, 1873)
+      - Shetkaryacha Asud (The Cultivator's Whipcord, 1883)
+      - Sarvajanik Satya Dharma
+    quotes:
+      - text: 'Vidyevina mati geli, mativina niti geli, nitivina gati geli, gativina vitta gele, vittavina shudra khachale, itke anarth eka avidyene kele. (Without education, wisdom was lost; without wisdom, morals; without morals, progress; without progress, wealth; without wealth, the Shudras were ruined. All this from the lack of education alone.)'
+        source: 'Shetkaryacha Asud (1883)'
+    misattributions:
+      - Check English quotes against Gulamgiri or Shetkaryacha Asud before using them.
+    portrayal: A reformer who, with Savitribai Phule, opened schools for girls and the oppressed; practical and fearless.
+    appearance: A 19th-century Maharashtrian man in a white pagadi turban and white clothes, standing at a modest schoolroom.
+    setting: 1850s Pune, the first girls' school at Bhide Wada, slates and chalk.
+  - id: osho
+    name: Osho (Rajneesh)
+    era: 1931-1990, India
+    core_ideas:
+      - Question conditioning and inherited religious dogma
+      - Meditation as watchful awareness rather than belief
+      - Celebrate life instead of renouncing it
+      - The individual matters more than the crowd or the institution
+    sources:
+      - Talks published as books (for example The Book of Secrets; Courage)
+    misattributions:
+      - A huge number of "Osho quotes" online are paraphrases or invented; only quote wording checked against a specific book.
+    portrayal: Engage his ideas critically; he is controversial (including the Rajneeshpuram events of the 1980s), so never present him as an unquestionable guru.
+    appearance: An older Indian man with a long white beard in a simple robe and knitted cap, speaking calmly.
+    setting: A quiet ashram garden in Pune, simple meditation hall.
 
 # Art direction for posts. A story mode picks a default; the user can override.
 visual_styles:
@@ -336,26 +547,28 @@ visual_styles:
       haze. Teal-and-amber film color grade, fine film grain, natural skin
       texture with visible pores, realistic fabric weave.
     avoid: plastic or airbrushed skin, extra or fused fingers, oversaturation, cartoon or illustration look, HDR halos
-  - id: living_buddha
-    name: Living Buddha (photoreal)
+  - id: living_thinker
+    name: Living thinker (photoreal)
     palette: night
     recipe: >-
-      Photorealistic historical recreation set in 5th-century-BCE northern
-      India, like a still from a prestige historical film. Accurate Buddhist
-      iconography, era-correct plain cotton robes, natural materials, no
-      modern objects. Soft natural key light (dawn, dusk, or oil lamp), gentle
-      rim light, atmospheric depth, 85mm lens, shallow depth of field, warm
-      earthy film grade.
-    avoid: glowing halo or aura, deity or superhero styling, jewelry or crowns, fair-skinned European features, plastic skin, extra fingers, modern objects
-  - id: buddha_statue
-    name: Buddha statue (museum photo)
+      Photorealistic historical recreation of the featured thinker in their
+      own era and place, like a still from a prestige historical film.
+      Era-accurate clothing, architecture, and materials matching the
+      thinker's appearance; no modern objects unless the scene is set today.
+      Soft natural key light (dawn, dusk, or lamp light), gentle rim light,
+      atmospheric depth, 85mm lens, shallow depth of field, warm film grade.
+    avoid: glowing halo or aura, deity or superhero styling, anachronisms, wrong ethnicity for the thinker, plastic skin, extra fingers
+  - id: thinker_statue
+    name: Thinker statue (museum photo)
     palette: night
     recipe: >-
-      Museum-grade macro photograph of an ancient Buddha statue in weathered
-      bronze or carved stone: patina, fine cracks, moss or small flowers.
-      Hard directional side light carving the face out of darkness, faint
-      incense smoke in the beam, 100mm macro lens at f/2.8 with razor-thin
-      focus, dark moody background.
+      Museum-grade photograph of a classical statue or bust of the featured
+      thinker in a material true to their tradition (a marble or bronze bust
+      for Greek and Roman thinkers, weathered bronze or stone for the Buddha,
+      a bronze memorial statue for modern figures): patina, fine cracks,
+      moss or small flowers. Hard directional side light carving the face
+      out of darkness, faint haze in the beam, 100mm lens at f/2.8 with
+      razor-thin focus, dark moody background.
     avoid: shiny new plastic statue, souvenir-shop look, cartoon features, cluttered background, decorative misuse of the statue
   - id: 3d_render
     name: 3D render

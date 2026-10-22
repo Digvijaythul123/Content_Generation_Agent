@@ -100,7 +100,18 @@ def load_profile_story_settings(profile_id):
             f"Content profile {profile_id!r} 'reel_duration_seconds' requires "
             "positive integer 'minimum' and 'maximum' values."
         )
-    return {"subtype_label": label.strip(), "reel_duration_seconds": duration}
+    lens = data.get("critical_lens", [])
+    if not isinstance(lens, list) or not all(
+        isinstance(item, str) and item.strip() for item in lens
+    ):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'critical_lens' must be a list of text."
+        )
+    return {
+        "subtype_label": label.strip(),
+        "reel_duration_seconds": duration,
+        "critical_lens": lens,
+    }
 
 
 def load_profile_thinkers(profile_id):
@@ -145,6 +156,18 @@ def load_profile_thinkers(profile_id):
                 raise ConfigurationError(
                     f"Thinker {identifier!r} requires a non-empty {key!r} list."
                 )
+        quotes = thinker.get("quotes", [])
+        if not isinstance(quotes, list) or not all(
+            isinstance(quote, dict)
+            and isinstance(quote.get("text"), str)
+            and quote["text"].strip()
+            and isinstance(quote.get("source"), str)
+            and quote["source"].strip()
+            for quote in quotes
+        ):
+            raise ConfigurationError(
+                f"Thinker {identifier!r} quotes need non-empty 'text' and 'source'."
+            )
         misattributions = thinker.get("misattributions", [])
         if not isinstance(misattributions, list) or not all(
             isinstance(value, str) for value in misattributions

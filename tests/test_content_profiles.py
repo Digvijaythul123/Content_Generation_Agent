@@ -875,10 +875,10 @@ def test_rational_thoughts_defines_story_modes_and_thinkers():
     assert {"comedy", "thoughtful", "thought_provoking"} <= modes
     assert "buddha" in {item["id"] for item in thinkers}
     assert all(item["sources"] for item in thinkers)
-    assert load_profile_story_settings("rational_thoughts") == {
-        "subtype_label": "Story mode",
-        "reel_duration_seconds": {"minimum": 30, "maximum": 60},
-    }
+    settings = load_profile_story_settings("rational_thoughts")
+    assert settings["subtype_label"] == "Story mode"
+    assert settings["reel_duration_seconds"] == {"minimum": 30, "maximum": 60}
+    assert any("claim to examine" in line for line in settings["critical_lens"])
 
 
 def test_thinker_and_story_mode_are_validated_for_rational_thoughts():
@@ -974,7 +974,7 @@ def test_story_mode_picks_default_visual_style_for_posts_only():
         platform_id="instagram",
         qa_subtype="myth_buster",
     )
-    assert post.visual_style == "buddha_statue"
+    assert post.visual_style == "thinker_statue"
     reel = resolve_generation_request(
         profile_id="rational_thoughts", qa_subtype="myth_buster"
     )
@@ -999,7 +999,7 @@ def test_visual_style_and_appearance_reach_generation_prompt():
         format_id="image_reel",
         platform_id="instagram",
         thinker_id="buddha",
-        visual_style="living_buddha",
+        visual_style="living_thinker",
     )
     service = Mock()
     service.generate_reel.return_value = "generated"
@@ -1015,9 +1015,9 @@ def test_visual_style_and_appearance_reach_generation_prompt():
         ).generate_content()
 
     prompt = service.generate_reel.call_args.args[0]
-    assert "Visual style for the Design_prompt: Living Buddha" in prompt
+    assert "Visual style for the Design_prompt: Living thinker" in prompt
     assert "ushnisha" in prompt
-    assert "anonymous monk" in prompt
+    assert "anonymous stand-in" in prompt
     assert "Subject:" in prompt and "Lighting:" in prompt
 
 
@@ -1040,3 +1040,70 @@ def test_hinglish_caption_option_reaches_prompt_and_rejects_unknown():
                 profile=request.profile.to_mapping(), caption_language="klingon"
             )
     assert "Hinglish line" in service.generate_reel.call_args.args[0]
+
+
+def _prompt_for(**kwargs):
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
+        **kwargs,
+    )
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id,
+            profile=request.profile.to_mapping(),
+            content_format=request.content_format,
+            platform=request.platform,
+            qa_subtype=request.qa_subtype,
+            thinker_id=request.thinker_id,
+        ).generate_content()
+    return service.generate_reel.call_args.args[0]
+
+
+def test_verified_quote_mode_uses_exact_quote_or_paraphrases_honestly():
+    from config_loader import load_profile_thinkers
+
+    epictetus = next(
+        t for t in load_profile_thinkers("rational_thoughts") if t["id"] == "epictetus"
+    )
+    prompt = _prompt_for(qa_subtype="verified_quote", thinker_id="epictetus")
+    assert any(quote["text"] in prompt for quote in epictetus["quotes"])
+    assert "Supporting_copy must be: — Epictetus" in prompt
+
+    osho = _prompt_for(qa_subtype="verified_quote", thinker_id="osho")
+    assert "No verified quote is on file" in osho
+    assert "inspired by Osho (Rajneesh)" in osho
+
+
+def test_critical_lens_is_applied_to_every_concept():
+    prompt = _prompt_for(thinker_id="marcus_aurelius")
+    assert "Critical-thinking lens" in prompt
+    assert "no guru worship" in prompt
+    assert "Marcus Aurelius" in prompt
+
+
+def test_pipeline_rotates_thinkers_when_none_chosen(monkeypatch):
+    import content_pipeline
+
+    seen = []
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            seen.append(kwargs["thinker_id"])
+
+        def generate_content(self):
+            return "Title: T\nMain_point: M\nSupporting_copy: S\nVisual_labels: None\nDesign_prompt: D\nMusic_cue: C\nCaption: Hook #a"
+
+    monkeypatch.setattr(content_pipeline, "ContentAgent", FakeAgent)
+    result = content_pipeline.generate_content(
+        profile_id="rational_thoughts", format_id="image_reel",
+        platform_id="instagram", qa_subtype="verified_quote",
+    )
+    assert seen[0] and seen[0] != "osho"  # quote mode only picks quoted thinkers
+    assert result.request.thinker_id == seen[0]
+    content_pipeline.generate_content(
+        profile_id="rational_thoughts", format_id="image_reel",
+        platform_id="instagram", brief="Write about the news",
+    )
+    assert seen[1] is None  # a brief lets the model choose freely

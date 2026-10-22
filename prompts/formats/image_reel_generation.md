@@ -56,8 +56,8 @@ Color: the color grade, with the lower 40% falling into deep natural shadow
 for text.
 Prefer compositions that age well: a back view or silhouette rim-lit against
 the light, a hand or object in macro, or a statue in profile often looks more
-real than a front-facing face. Showing only part of the Buddha (a hand,
-a robe sleeve) is a respectful, striking option.
+real than a front-facing face. Showing only part of a revered figure (a
+hand, a robe sleeve) is a respectful, striking option.
 Be concrete and visual. Never ask for text, letters, or signs in the image.
 
 Music_cue: one line describing the background-music mood and tempo to pick in

@@ -131,16 +131,19 @@ def test_publisher_creates_waits_and_publishes():
         _response({"data": [{"quota_usage": 2, "config": {"quota_total": 100}}]}),
         _response({"status_code": "IN_PROGRESS"}),
         _response({"status_code": "FINISHED"}),
-        _response({"permalink": "https://instagram.com/p/abc"}),
+        _response({"permalink": "https://instagram.com/p/abc", "is_ai_generated": True}),
     ]
     session.post.side_effect = [_response({"id": "c1"}), _response({"id": "m1"})]
 
     result = _publisher(session).publish_image("https://cdn/x.jpg", "Caption")
 
-    assert result == {"media_id": "m1", "permalink": "https://instagram.com/p/abc"}
+    assert result == {
+        "media_id": "m1", "permalink": "https://instagram.com/p/abc", "ai_label": True
+    }
     create, publish = session.post.call_args_list
     assert create.args[0] == "https://graph.example/v1/123/media"
     assert create.kwargs["data"]["image_url"] == "https://cdn/x.jpg"
+    assert create.kwargs["data"]["is_ai_generated"] == "true"
     assert publish.kwargs["data"]["creation_id"] == "c1"
 
 
@@ -680,7 +683,7 @@ def test_publisher_creates_reel_container_and_waits_longer():
         _response({"data": [{"quota_usage": 0, "config": {"quota_total": 100}}]}),
         _response({"status_code": "IN_PROGRESS"}),
         _response({"status_code": "FINISHED"}),
-        _response({"permalink": "https://www.instagram.com/reel/x/"}),
+        _response({"permalink": "https://www.instagram.com/reel/x/", "is_ai_generated": True}),
     ]
     session.post.side_effect = [_response({"id": "c1"}), _response({"id": "m1"})]
     publisher = InstagramPublisher("token", "123", session=session, sleep=lambda s: None)
@@ -690,7 +693,10 @@ def test_publisher_creates_reel_container_and_waits_longer():
     data = session.post.call_args_list[0].kwargs["data"]
     assert data["media_type"] == "REELS" and data["video_url"].endswith("r.mp4")
     assert data["thumb_offset"] == "5000" and data["share_to_feed"] == "true"
-    assert result == {"media_id": "m1", "permalink": "https://www.instagram.com/reel/x/"}
+    assert data["is_ai_generated"] == "true"
+    assert result == {
+        "media_id": "m1", "permalink": "https://www.instagram.com/reel/x/", "ai_label": True
+    }
 
 
 def test_review_settings_save_caption_music_and_schedule(workspace, monkeypatch):

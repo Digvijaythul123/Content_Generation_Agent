@@ -1187,6 +1187,8 @@ def publish_content(
             instagram_permalink=result["permalink"],
             published_at=datetime.now(timezone.utc).isoformat(),
         )
+        if result.get("ai_label") is not None:
+            record["instagram_ai_label"] = bool(result["ai_label"])
         record.pop("scheduled_at", None)
         save_post(content_id, record)
         _append_history(
