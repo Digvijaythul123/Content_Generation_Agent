@@ -1381,7 +1381,9 @@ def publish_content(
         )
         if result.get("ai_label") is not None:
             record["instagram_ai_label"] = bool(result["ai_label"])
-        record.pop("scheduled_at", None)
+        for key in ("scheduled_at", "schedule_failed", "schedule_attempts",
+                    "schedule_retry_at", "schedule_last_error"):
+            record.pop(key, None)
         save_post(content_id, record)
         _append_history(
             content_type, content_id, "stage_ready",

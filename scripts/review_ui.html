@@ -1654,11 +1654,21 @@
           + `Trying again at ${new Date(publishing.schedule_retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`;
         panel.append(retry);
       }
-      if (publishing.schedule_failed) {
-        const failed = document.createElement("p");
-        failed.className = "message error";
-        failed.textContent = `The scheduled post failed: ${publishing.schedule_failed} Fix it, then schedule again.`;
-        panel.append(failed);
+      if (publishing.schedule_failed || publishing.schedule_retry_at) {
+        const failedBox = document.createElement("div");
+        failedBox.className = "inline-actions";
+        if (publishing.schedule_failed) {
+          const failed = document.createElement("p");
+          failed.className = "message error";
+          failed.textContent = `The scheduled post failed: ${publishing.schedule_failed} `
+            + "Post it now, or pick a new time above and press Schedule.";
+          failedBox.append(failed);
+        }
+        // Same as "Publish Reel now", placed where the failure is shown.
+        const retryNow = makeAction("Try again now", () => publishNow.click());
+        retryNow.disabled = !publishing.can_run;
+        failedBox.append(retryNow);
+        panel.insertBefore(failedBox, actions);
       }
       const manual = document.createElement("p");
       manual.className = "hint";
