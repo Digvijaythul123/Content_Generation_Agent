@@ -885,7 +885,8 @@ def _artwork_record(content_type, content_id):
 
 
 def get_art_prompt(content_type, content_id):
-    """Return the text-free art prompt to paste into an image tool by hand."""
+    """Return the full art prompt to paste into an image tool by hand
+    (built fresh, so it includes the latest text, scenery, and weather)."""
     record = _artwork_record(content_type, content_id)
     brand = _post_brand(record)
     return build_art_prompt(record, brand.template.art_style if brand else None)

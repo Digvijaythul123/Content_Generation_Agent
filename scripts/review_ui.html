@@ -663,12 +663,42 @@
       });
     }
 
+    function artPromptCopier() {
+      // The full art prompt: rules, style, setting, and (for illustrated
+      // posts) the exact words. Built fresh, so it has the latest choices.
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const message = document.createElement("span");
+      message.className = "message";
+      const copy = makeAction("Copy art prompt (for the image tool)", async () => {
+        try {
+          const result = await requestJson(contentUrl(state.selected, "art_prompt"));
+          await navigator.clipboard.writeText(result.prompt);
+          message.textContent = "Copied the full art prompt. Paste it into ChatGPT, Gemini, or Copilot.";
+        } catch (error) {
+          message.textContent = `Copy failed: ${error.message}. Use the Instagram tab's art prompt box.`;
+        }
+      });
+      box.append(copy, message);
+      return box;
+    }
+
     function createField(key, value) {
       const field = document.createElement("section");
       field.className = "field";
       const name = document.createElement("div");
       name.className = "field-name";
-      name.textContent = labelize(key);
+      name.textContent = key === "design_prompt"
+        ? "Scene notes (not for the image tool; copy the art prompt instead)"
+        : labelize(key);
+      if (key === "design_prompt" && state.selected?.type === "post") {
+        field.append(name, artPromptCopier());
+        const content = document.createElement("div");
+        content.className = "field-value";
+        content.textContent = asText(value);
+        field.append(content);
+        return field;
+      }
       const content = document.createElement("div");
       content.className = "field-value";
       content.textContent = asText(value);
@@ -981,6 +1011,14 @@
         const stageId = state.activeTab === "image_prompts" && state.selected.type === "post"
           ? "design_prompt"
           : state.activeTab;
+        if (stageId === "design_prompt") {
+          const note = document.createElement("p");
+          note.className = "hint";
+          note.textContent = "For the image tool, always use the art prompt: it adds the no-lettering rules, "
+            + "the style, the scenery and weather, and the exact words for illustrated posts. "
+            + "The saved file below can be older than your latest changes.";
+          tab.append(note, artPromptCopier());
+        }
         if (state.selected.type === "reel" || stageId === "design_prompt") {
           stageButton(stageId, labelize(stageId), tab);
         }
@@ -1108,8 +1146,8 @@
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.textContent = isImageReel()
-        ? "Make the artwork from the text-free art prompt below (never a prompt that includes the copy), "
-          + "attach it, render the cover image, then render the Reel video. "
+        ? "Make the artwork with Copy art prompt below (not the scene notes on the Content tab): it carries the style, "
+          + "scenery, weather, and no-lettering rules. Attach the image, render the cover image, then render the Reel video. "
           + "Download the MP4 and upload it in the Instagram app, picking music there and switching on \"Add AI label\"."
         : "Generate the artwork (if your brand uses one), render the image, check it and the caption below, then publish. "
           + "Nothing leaves this computer until you confirm Publish.";
