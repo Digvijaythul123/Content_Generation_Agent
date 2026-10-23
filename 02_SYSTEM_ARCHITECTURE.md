@@ -55,6 +55,7 @@ flowchart LR
     subgraph pub["Publishing and insights"]
         host["media_host.py"]
         insta["instagram_publisher.py"]
+        fbpub["facebook_publisher.py"]
         stats["analytics.py"]
         backup["backup_content.py"]
     end
@@ -63,6 +64,7 @@ flowchart LR
     imgtool[["Image tools<br/>ChatGPT, Gemini, Copilot<br/>(manual) or Gemini/Cloudflare API"]]
     r2[["Cloudflare R2"]]
     ig[["Instagram Graph API"]]
+    fb[["Facebook Page<br/>(Graph API)"]]
     icloud[["iCloud Drive"]]
 
     user --> ui & cli
@@ -80,11 +82,14 @@ flowchart LR
     video --> assets
     ui --> host --> r2
     ui --> insta --> ig
+    ui --> fbpub --> fb
+    sched --> fbpub
     sched --> host
     sched --> insta
     sched --> backup --> icloud
     ig -.->|fetches media| r2
     stats --> ig
+    stats --> fb
     ui --> stats
 ```
 
@@ -104,6 +109,7 @@ flowchart TD
     S -- "now" --> PUB["Upload to R2<br/>Instagram Reel with AI label<br/>and text cover"]
     S -- "schedule" --> Q["Scheduled queue"] --> PUB
     PUB --> D["Published<br/>permalink saved, R2 copy deleted"]
+    D --> FBP["Facebook Page<br/>Reel / photo / multi-photo post<br/>(retries network and rate limits)"]
     D --> I["Insights<br/>Performance section"]
 ```
 
@@ -120,8 +126,9 @@ flowchart TD
     reel -- "no (feed)" --> flay{"Layout"}
     flay -- "poster" --> fpos["feed_poster.html"]
     flay -- "standard" --> brand["brand layout<br/>quote_painting.html"]
+    reel -- "no (carousel)" --> car["carousel_slide.html<br/>cover, one slide per line, closing;<br/>inner slides reuse the art blurred"]
 
-    pos & pan --> layers["Video layers, bottom to top:<br/>1. background (push-in, film finish)<br/>2. effect (sparks, meteors, rain, sunlight)<br/>3. text lines fading in<br/>4. music"]
+    pos & pan --> layers["Video layers, bottom to top:<br/>1. background (push-in, film finish, weather look)<br/>2. effect (sparks, meteors, rain, snow, sunlight)<br/>3. text lines fading in, closing line at the end<br/>4. music"]
     des --> whole["Video: whole picture, gentle push-in,<br/>effect and music, no text layers"]
 ```
 
@@ -184,7 +191,11 @@ one-image Reel (image_reel format) and Instagram feed post:
   video_renderer.py (ffmpeg): push-in + film finish + effect layer
       (sparks, meteors, rain, sunlight) + text fades + music_library.py
                    -> generated_assets/*_reel.mp4
+  carousel format: media_renderer.render_carousel + templates/carousel_slide.html
+                   -> one 1080x1350 JPEG per slide -> Instagram carousel
   review UI publish/schedule -> media_host.py (R2) -> instagram_publisher.py
+                             -> facebook_publisher.py (Page: Reel, photo,
+                                or multi-photo post; uploaded from this Mac)
   scripts/publish_scheduled.py (LaunchAgent, every minute): due posts,
       weekly token refresh, weekly iCloud backup (backup_content.py)
   analytics.py -> generated_assets/performance.json -> UI Performance section

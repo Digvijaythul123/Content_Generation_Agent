@@ -26,8 +26,8 @@ work:
 | Scene and visual preparation | [CURRENT] | Commands produce scene text, image prompts, and a master video prompt. |
 | Single-page social posts | [CURRENT] | The pipeline generates 4:5 Instagram Feed or LinkedIn post copy and a ready-to-use design prompt with exact copy and optional diagram labels. |
 | LinkedIn text posts | [CURRENT] | QA Engineering & AI generates ready-to-publish post copy and a topic-specific image-generation prompt to copy into an image tool; it does not generate the image file. |
-| Buddha's teachings content | [CURRENT] | The `rational_thoughts` profile is now **Buddha's Teachings**: a worldwide Buddhist audience, all traditions labelled, verified quotes only, and a lens in the Buddha's own "test it in your life" spirit. The thinker library holds the Buddha (default for new drafts), Ambedkar, Phule, and Osho. 8 story modes (including Mirror and Verified Quote), 30–60s pacing for script Reels, and background/music cues. |
-| One-image Reels | [CURRENT] | `--format image_reel --platform instagram` writes short on-screen copy, a 9:16 art prompt, and a music cue. After approval and artwork, rendering produces a 1080×1920 cover and a silent 10s MP4 with a slow push-in and lines that fade in one by one. Upload it in the Instagram app and add music there. |
+| Buddha's teachings content | [CURRENT] | The `rational_thoughts` profile is now **Buddha's Teachings**: a worldwide Buddhist audience, all traditions labelled, verified quotes only, and a lens in the Buddha's own "test it in your life" spirit. The thinker library holds the Buddha (default for new drafts), Ambedkar, Phule, and Osho. 14 story modes (including Mirror, One-Liner, Dialogue with a young monk, Real or Fake? quote quiz, and four illustrated modes: Mind States, Numbered List, Illustrated Metaphor, Parable Card), plain-English rules for all copy, and rotating world sceneries and weather for the art. |
+| One-image Reels | [CURRENT] | `--format image_reel --platform instagram` writes short on-screen copy, a 9:16 art prompt, and a music cue. After approval and artwork, rendering produces a 1080×1920 cover and an 8s MP4 with a slow push-in, lines that fade in one by one, an optional effect (sparks, meteors, rain, snow, sunlight), music from `music/`, and an optional closing line in the last 2 seconds. |
 | QA topic pillars | [CURRENT] | Optionally focus QA Engineering & AI drafts on one of eight pillars; multi-draft batches rotate through them when none is selected. |
 | Optional Comedy category | [CURRENT] | Select Comedy independently of format, optionally choose one of ten subtypes, and generate Reel, single-page, or explicitly requested LinkedIn drafts without changing their output fields. Comedy batches can create up to ten drafts and rotate across subtypes. |
 | Additional profiles, brands, and formats | [NEXT] | The data-driven direction exists, but broader profile and platform coverage remains incomplete. |
@@ -35,9 +35,12 @@ work:
 | Character, environment, camera, and music plans | [NEXT] | Reusable, independently reviewable plans are not yet modeled. |
 | AI video rendering | [FUTURE] | No video provider integration or rendered video output exists. |
 | Recurring 3D characters and reusable asset library | [FUTURE] | Not implemented. |
-| Instagram Feed publishing | [CURRENT] | Approved Instagram Feed posts render to a 1080×1350 JPEG for review, then publish through the Instagram API after explicit confirmation. |
+| Instagram Feed publishing | [CURRENT] | Approved single-image posts render to a 1080×1350 JPEG and carousels to one JPEG per slide, then publish (or schedule) through the Instagram API after explicit confirmation. |
+| Carousels (swipe posts) | [CURRENT] | `--format carousel --platform instagram_feed`: a cover hook, 3-7 one-line slides, and a closing slide; one cover artwork, reused blurred behind the inner slides. |
+| Facebook Page | [CURRENT] | After Instagram, Reels go to the Page as Reels, images as photo posts, and carousels as one multi-photo post. Facebook failures never undo the Instagram post; network and "posting too often" errors retry automatically. |
+| Engagement tools | [CURRENT] | Closing call-to-action line on Reels, a numbered series ("Day 4 of 30"), a first comment to copy and pin, and Simplify / New wording rewrites of a post's text. |
 | One-image Reel publishing and scheduling | [CURRENT] | After review on a Reel's Instagram tab (caption editor, 5-hashtag check, music choice), **Publish Reel now** uploads the MP4 to R2 and posts it through the Instagram API; **Schedule** queues it for `scripts.publish_scheduled`. Royalty-free tracks in `music/` are mixed in, because the API cannot add Instagram's music library. |
-| Analytics | [FUTURE] | No analytics integration exists. |
+| Analytics | [CURRENT] | The review UI's Performance section lists each published post's hashtags, reach, Instagram views, Facebook views, and total views (what the Instagram app shows), sorted by reach, plus averages per story mode, visual style, and thinker. |
 
 ## Current workflow
 
@@ -177,6 +180,19 @@ In the review UI's Instagram tab, unpublished posts also have:
   under the text; change it and render the video again.
 - **Convert to Reel**: feed posts are still images, so this turns one into a
   one-image Reel for video and music; add new 9:16 art afterwards.
+- **Scenery and Weather**: where the art is set (22 places, from desert dunes
+  to cave temples) and its light (overcast, monsoon rain, mist, snow, night,
+  and more). New drafts rotate them; changing them rewrites the art prompt.
+  **Make the current image look like this weather** tints existing art
+  instead (rain and snow add their effect).
+- **Closing line** (Reels) and **Part of the series**: a call to action in
+  the last 2 seconds of the video, and a "Day N of 30" label and caption line.
+- **First comment**: suggested text (source and question) to post and pin.
+- **Schedule** for Reels, single-image posts, and carousels, and **Also post
+  to my Facebook Page** (on by default when the Page is connected).
+
+Always make art from **Copy art prompt**, not the Content tab's scene notes:
+the art prompt adds the style, scenery, weather, and no-lettering rules.
 
 **Illustrated story modes** (Mind states, Numbered list, Illustrated
 metaphor, Parable card) work the other way round: the image tool draws the
@@ -284,6 +300,15 @@ Kubernetes, event buses, or distributed systems for this project.
    scheduled Reels every minute while the Mac is on; `--uninstall` stops it.
    Long-lived tokens expire after about 60 days; extend them with
    `python3 -m scripts.publish_post --refresh-token`.
+7. Optional, Facebook Page: in the same Meta app add the use case **Manage
+   everything on your Page**; in Graph API Explorer generate a user token
+   with `pages_show_list`, `pages_read_engagement`, and `pages_manage_posts`
+   (tick the Page), extend it in the Access Token Debugger, then use it to
+   fetch the Page's own token (`{page-id}?fields=access_token`; new-style
+   Pages may not appear in `me/accounts`). Put `FACEBOOK_PAGE_ID` and
+   `FACEBOOK_PAGE_TOKEN` in `.env`; `--check` confirms the Page. A Page token
+   made from a long-lived user token does not expire. New Pages are rate
+   limited by Facebook at first; the app retries such posts hours later.
 
 
 ## Backups
