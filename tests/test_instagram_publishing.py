@@ -1292,3 +1292,25 @@ def test_performance_report_lists_hashtags_and_sorts_by_reach(tmp_path, monkeypa
     report = analytics.cached_report(cache)
     assert [row["id"] for row in report["posts"]] == ["post_002", "post_001"]
     assert report["posts"][0]["hashtags"] == ["#Buddhism", "#Zen"]
+
+
+def test_performance_adds_facebook_views_to_match_the_app():
+    import analytics
+    publisher = Mock()
+    publisher._base_url = "https://graph.example"
+    publisher._request.side_effect = lambda method, url, **params: (
+        {"data": [{"id": "m1", "permalink": "p1"}, {"id": "m2", "permalink": "p2"}]}
+        if url.endswith("/me/media")
+        else {"data": [{"name": "views", "values": [{"value": 192}]},
+                       {"name": "reach", "values": [{"value": 146}]}]}
+    )
+    facebook = Mock()
+    facebook._graph.return_value = {"views": 133}
+    records = [
+        {"id": "post_006", "instagram_media_id": "m1", "facebook_video_id": "fb1", "caption": "#Buddhism"},
+        {"id": "post_007", "instagram_media_id": "m2"},
+    ]
+    rows = {row["id"]: row for row in analytics.fetch_performance(publisher, records, facebook=facebook)}
+    assert rows["post_006"]["facebook_views"] == 133 and rows["post_006"]["total_views"] == 325
+    assert rows["post_007"]["facebook_views"] is None and rows["post_007"]["total_views"] == 192
+    assert facebook._graph.call_args.args[1] == "fb1"

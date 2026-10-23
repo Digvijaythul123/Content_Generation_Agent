@@ -2047,17 +2047,19 @@
         return;
       }
       $("performance-updated").textContent =
-        `Updated ${new Date(report.fetched_at).toLocaleString()}. Numbers can lag a few hours.`;
+        `Updated ${new Date(report.fetched_at).toLocaleString()}. Total views = Instagram + Facebook, `
+        + "which is what the Instagram app shows. Numbers can lag a few hours.";
       body.className = "";
       body.append(performanceTable(
-        ["Post", "Hashtags", "Reach", "Views", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
+        ["Post", "Hashtags", "Reach", "IG views", "FB views", "Total views", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
         report.posts.map((post) => {
           const link = document.createElement("a");
           link.href = post.permalink;
           link.target = "_blank";
           link.rel = "noopener noreferrer";
           link.textContent = `${post.id} · ${post.title.replaceAll("**", "")}`;
-          return [link, (post.hashtags || []).join(" ") || "–", post.reach, post.views, post.saved,
+          return [link, (post.hashtags || []).join(" ") || "–", post.reach, post.views,
+            post.facebook_views ?? "–", post.total_views ?? post.views, post.saved,
             post.shares, post.avg_watch_seconds, post.story_mode, post.visual_style];
         })
       ));
@@ -2065,7 +2067,7 @@
         const heading = document.createElement("h3");
         heading.textContent = `By ${label.toLowerCase()}`;
         body.append(heading, performanceTable(
-          [label, "Posts", "Avg views", "Avg reach", "Saves", "Shares", "Avg watch (s)"],
+          [label, "Posts", "Avg total views", "Avg reach", "Saves", "Shares", "Avg watch (s)"],
           items.map((item) => [item.value, item.posts, item.avg_views, item.avg_reach,
             item.saves, item.shares, item.avg_watch_seconds])
         ));

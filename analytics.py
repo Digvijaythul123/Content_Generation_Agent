@@ -9,6 +9,7 @@ import json
 import re
 from datetime import datetime, timezone
 
+from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
 from instagram_publisher import InstagramPublisher, InstagramPublishError
 from post_storage import load_post
 from project_paths import GENERATED_ASSETS_DIRECTORY, GENERATED_POSTS_DIRECTORY
@@ -41,9 +42,29 @@ def _published_records(posts_directory=GENERATED_POSTS_DIRECTORY):
     return records
 
 
-def fetch_performance(publisher=None, records=None):
-    """Return one row of metrics per published post the account still has."""
+def _facebook_views(record, facebook):
+    """Plays of the Reel's Facebook copy, or None when it has none."""
+    video_id = record.get("facebook_video_id")
+    if not facebook or not video_id:
+        return None
+    try:
+        return int(facebook._graph("GET", video_id, fields="views").get("views", 0))
+    except (FacebookPublishError, ValueError, TypeError):
+        return None
+
+
+def fetch_performance(publisher=None, records=None, facebook=None):
+    """Return one row of metrics per published post the account still has.
+
+    The Instagram app's view count adds the Facebook copy's views, so those
+    are fetched too and summed into ``total_views``.
+    """
     publisher = publisher or InstagramPublisher()
+    if facebook is None and facebook_configured():
+        try:
+            facebook = FacebookPublisher()
+        except FacebookPublishError:
+            facebook = None
     base = publisher._base_url
     records = records if records is not None else _published_records()
     media = publisher._request(
@@ -93,6 +114,8 @@ def fetch_performance(publisher=None, records=None):
                 "avg_watch_seconds": round(watch_ms / 1000, 1) if watch_ms else None,
             }
         )
+        rows[-1]["facebook_views"] = _facebook_views(record, facebook)
+        rows[-1]["total_views"] = rows[-1]["views"] + (rows[-1]["facebook_views"] or 0)
     return rows
 
 
@@ -110,7 +133,9 @@ def summarize(rows):
                 {
                     "value": value,
                     "posts": len(items),
-                    "avg_views": round(sum(r["views"] for r in items) / len(items)),
+                    "avg_views": round(
+                        sum(r.get("total_views", r["views"]) for r in items) / len(items)
+                    ),
                     "avg_reach": round(sum(r["reach"] for r in items) / len(items)),
                     "saves": sum(r["saved"] for r in items),
                     "shares": sum(r["shares"] for r in items),
