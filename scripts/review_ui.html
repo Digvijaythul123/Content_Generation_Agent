@@ -104,6 +104,9 @@
     .badge.rejected { background: #512e2b; color: #ffc0b7; }
     .badge.reel { background: #293c4b; color: #b6d9f1; }
     .badge.published { background: #3b2d55; color: #d9c6ff; }
+    .badge.scheduled { background: #1f474d; color: #a9e4ea; }
+    .badge.schedule-retrying { background: #5a472c; color: #ffd796; }
+    .badge.schedule-failed { background: #512e2b; color: #ffc0b7; }
     .manual-art { margin: 6px 0 14px; }
     .manual-art details { margin: 8px 0; }
     .manual-art summary { cursor: pointer; color: var(--muted); font-size: 13px; }
@@ -327,6 +330,9 @@
             <option>Approved</option>
             <option>Rejected</option>
             <option>Published</option>
+            <option value="@scheduled">Scheduled</option>
+            <option value="@ready">Approved, not scheduled yet</option>
+            <option value="@todo">Still to do (hide scheduled and published)</option>
             <option>UNKNOWN</option>
           </select>
           <select id="brand-filter" aria-label="Filter by brand"><option value="">All brands</option></select>
@@ -486,6 +492,40 @@
       return known.includes(String(value).toLowerCase()) ? String(value).toLowerCase() : "";
     }
 
+    function scheduleState(item) {
+      // Only Approved posts waiting to go out count as scheduled.
+      if (!item.scheduled_at || item.status !== "Approved") return null;
+      if (item.schedule_failed) return "failed";
+      return item.schedule_retrying ? "retrying" : "scheduled";
+    }
+
+    function matchesStatus(item, status) {
+      if (!status) return true;
+      if (status === "@scheduled") return scheduleState(item) !== null;
+      if (status === "@ready") return item.status === "Approved" && scheduleState(item) === null;
+      if (status === "@todo") return item.status !== "Published" && scheduleState(item) !== "scheduled"
+        && scheduleState(item) !== "retrying";
+      return item.status === status;
+    }
+
+    function scheduleBadge(item) {
+      const stateName = scheduleState(item);
+      if (!stateName) return null;
+      const badge = document.createElement("span");
+      if (stateName === "failed") {
+        badge.className = "badge schedule-failed";
+        badge.textContent = "Schedule failed";
+        return badge;
+      }
+      const when = new Date(item.scheduled_at).toLocaleString([], {
+        weekday: "short", hour: "numeric", minute: "2-digit"
+      });
+      badge.className = `badge ${stateName === "retrying" ? "schedule-retrying" : "scheduled"}`;
+      badge.textContent = stateName === "retrying" ? `Retrying · ${when}` : `Scheduled · ${when}`;
+      badge.title = new Date(item.scheduled_at).toLocaleString();
+      return badge;
+    }
+
     function renderCounts(items) {
       const statuses = new Map();
       items.forEach((item) => statuses.set(item.status, (statuses.get(item.status) || 0) + 1));
@@ -501,6 +541,13 @@
         chip.textContent = `${status}: ${count}`;
         counts.append(chip);
       });
+      const scheduled = items.filter((item) => scheduleState(item) !== null).length;
+      if (scheduled) {
+        const chip = document.createElement("span");
+        chip.className = "badge scheduled";
+        chip.textContent = `Scheduled: ${scheduled}`;
+        counts.append(chip);
+      }
     }
 
     function populateFilter(id, label, values, key) {
@@ -615,7 +662,7 @@
       const platform = $("platform-filter").value;
       const filtered = state.items.filter((item) =>
         (!type || item.type === type) &&
-        (!status || item.status === status) &&
+        matchesStatus(item, status) &&
         (!brand || item.brand_id === brand) &&
         (!profile || item.profile_id === profile) &&
         (!format || item.format_id === format) &&
@@ -646,9 +693,11 @@
         currentStatus.className = `badge ${badgeClass(item.status)}`;
         currentStatus.textContent = item.status;
         top.append(kind, currentStatus);
+        const scheduled = scheduleBadge(item);
+        if (scheduled) top.append(scheduled);
         const title = document.createElement("span");
         title.className = "item-title";
-        title.textContent = item.title;
+        title.textContent = String(item.title || "").replaceAll("**", "");
         const meta = document.createElement("span");
         meta.className = "item-meta";
         const category = item.category_id
@@ -1426,7 +1475,7 @@
       heading.className = "detail-heading";
       const title = document.createElement("h2");
       title.className = "detail-title";
-      title.textContent = state.record.title || "Untitled";
+      title.textContent = String(state.record.title || "Untitled").replaceAll("**", "");
       const meta = document.createElement("div");
       meta.className = "detail-meta";
       [state.selected.type, state.selected.id, state.record.status || "UNKNOWN", state.record.profile_id, state.record.category_id, state.record.comedy_subtype, (state.record.subtype || state.record.qa_subtype), state.record.format_id, state.record.platform_id]
