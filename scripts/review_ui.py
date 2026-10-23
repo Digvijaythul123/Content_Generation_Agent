@@ -46,7 +46,10 @@ from art_generator import (
 )
 from content_text import strip_highlights
 from media_renderer import (
+    MAX_CAROUSEL_SLIDES,
     MediaRenderError,
+    carousel_slide_path,
+    is_carousel,
     layout_for,
     post_image_path,
     render_post_image,
@@ -285,8 +288,9 @@ def get_recent_activity(limit=12):
 
 
 def _is_instagram_post(record):
+    """Instagram feed posts: a single image or a carousel (not Reels)."""
     return str(record.get("platform_id") or "").startswith("instagram") and (
-        record.get("format_id", "single_page") == "single_page"
+        record.get("format_id", "single_page") in ("single_page", "carousel")
     )
 
 
@@ -305,7 +309,7 @@ def _post_brand(record):
 
 
 def _needs_artwork(record):
-    return _is_image_reel(record) or (
+    return _is_image_reel(record) or is_carousel(record) or (
         _is_instagram_post(record)
         and (
             record.get("layout") == "poster"
@@ -348,6 +352,10 @@ def _asset_paths(content_type, content_id):
                 "Generated video",
                 reel_video_path(content_id),
             ),
+        ] + [
+            (f"slide_{number}", f"Slide {number}", "Generated image",
+             carousel_slide_path(content_id, number))
+            for number in range(2, MAX_CAROUSEL_SLIDES + 1)
         ]
     if content_type != "reel":
         raise KeyError(f"Unknown content type: {content_type}")
@@ -1482,6 +1490,16 @@ def publish_content(
         host = host or R2MediaHost()
         key, media_url = host.upload(image_path, content_id)
         uploaded_keys.append(key)
+        slide_urls = [media_url]
+        if is_carousel(record):
+            # Slide 1 is uploaded above; add the rest in order.
+            for number in range(2, int(record.get("slide_count") or 0) + 1):
+                slide = carousel_slide_path(content_id, number)
+                if not slide.is_file():
+                    raise ValueError("Render the carousel again; a slide is missing.")
+                slide_key, slide_url = host.upload(slide, content_id)
+                uploaded_keys.append(slide_key)
+                slide_urls.append(slide_url)
         cover_url = None
         cover_path = post_image_path(content_id)
         if is_reel and cover_path.is_file():
@@ -1502,6 +1520,8 @@ def publish_content(
                 thumb_offset_ms=REEL_COVER_OFFSET_MS,
                 cover_url=cover_url,
             )
+        elif is_carousel(record):
+            result = publisher.publish_carousel(slide_urls, caption)
         else:
             result = publisher.publish_image(media_url, caption)
         record = load_post(content_id)
@@ -1882,6 +1902,9 @@ def generate_and_save(payload):
             data["first_comment"] = first_comment
     if payload.get("caption_language") == "hinglish":
         data["caption_language"] = "hinglish"
+    if result.request.content_format.id == "carousel":
+        # The cover art keeps its upper part open, like a poster.
+        data["layout"] = "poster"
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
         try:

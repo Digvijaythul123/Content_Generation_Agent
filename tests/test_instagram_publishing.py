@@ -1361,3 +1361,50 @@ def test_quiz_posts_hide_their_source_until_the_first_comment(tmp_path):
     art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
     quiz = {**IMAGE_REEL, "subtype": "real_or_fake", "caption": "x\n\nTeaching: Gratitude (AN 2.31-32)"}
     assert "AN 2.31" not in build_post_html(quiz, artwork=art)
+
+
+def test_carousel_slides_render_and_publish_as_one_post(tmp_path, workspace, monkeypatch):
+    import media_renderer
+    from instagram_publisher import InstagramPublisher
+    record = {
+        **POST, "format_id": "carousel", "platform_id": "instagram_feed",
+        "title": "5 signs your **mind** needs rest", "main_point": "Notice them early.",
+        "slides": "1. You reread the same line\n2. Small noises feel **loud**\nPlain line",
+        "supporting_copy": "Rest is part of the **path**.",
+    }
+    slides = media_renderer.carousel_slides(record)
+    assert [slide["kind"] for slide in slides] == ["cover", "inner", "inner", "inner", "closing"]
+    assert slides[1]["number"] == "01" and slides[1]["big"] == "You reread the same line"
+    assert slides[3]["number"] == "" and slides[1]["counter"] == "2/5" and slides[-1]["counter"] == "5/5"
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    html = media_renderer.build_carousel_html(record, None, art, slides[1])
+    assert 'class="inner tone-dark"' in html and "You reread the same line" in html
+
+    # Publishing uploads every slide and posts one carousel.
+    workspace.write({**record, "status": "Approved", "slide_count": 3, "caption": "Hook\n\n#Buddhism"})
+    for number in (1, 2, 3):
+        path = media_renderer.carousel_slide_path("post_001", number)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"jpg")
+    monkeypatch.setattr(review_ui, "carousel_slide_path", media_renderer.carousel_slide_path)
+    monkeypatch.setattr(review_ui, "post_image_path", media_renderer.post_image_path)
+    host = Mock()
+    host.upload.side_effect = [("k1", "u1"), ("k2", "u2"), ("k3", "u3")]
+    publisher = Mock()
+    publisher.publish_carousel.return_value = {"media_id": "c1", "permalink": "https://instagram.com/p/c1/"}
+    review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+    assert publisher.publish_carousel.call_args.args[0] == ["u1", "u2", "u3"]
+    assert workspace.read()["status"] == "Published"
+    assert [call.args[0] for call in host.delete.call_args_list] == ["k1", "k2", "k3"]
+
+    # The API client makes one item per slide, then the carousel parent.
+    client = InstagramPublisher(access_token="t", account_id="a", session=Mock())
+    calls = []
+    client._request = lambda method, url, **params: calls.append(params) or {"id": f"id{len(calls)}", "status_code": "FINISHED"}
+    client._check_quota = lambda: None
+    client.wait_until_ready = lambda *a, **k: None
+    client._finish = lambda container_id, timeout_seconds=None: {"media_id": container_id}
+    assert client.publish_carousel(["u1", "u2"], "cap") == {"media_id": "id3"}
+    assert calls[0]["is_carousel_item"] == "true" and calls[2]["media_type"] == "CAROUSEL"
+    assert calls[2]["children"] == "id1,id2" and calls[2]["caption"] == "cap"

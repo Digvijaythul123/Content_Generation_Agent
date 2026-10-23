@@ -39,7 +39,10 @@ DESIGNED_TEMPLATE = TEMPLATE_DIRECTORY / "designed.html"
 # dark band at the bottom. Records without a layout keep the panel look.
 IMAGE_REEL_LAYOUTS = ("poster", "panel")
 IMAGE_REEL_SIZE = (1080, 1920)
-_RENDERABLE_FORMATS = ("single_page", "image_reel")
+_RENDERABLE_FORMATS = ("single_page", "image_reel", "carousel")
+CAROUSEL_TEMPLATE = TEMPLATE_DIRECTORY / "carousel_slide.html"
+# Instagram's API takes up to 10 items in one carousel (cover + 8 + closing).
+MAX_CAROUSEL_SLIDES = 10
 # Dark cinematic art needs light text on a deep shadow wash.
 _NIGHT_COLORS = {"background": "#0E0C0B", "text": "#F5F1E8", "accent": "#F5C542"}
 _HIGHLIGHT_PATTERN = re.compile(r"\*\*(.+?)\*\*")
@@ -198,6 +201,91 @@ def series_label(record):
         return ""
     length = record.get("series_length")
     return f"Day {number} of {length}" if length else f"Day {number}"
+
+
+def is_carousel(record):
+    return record.get("format_id") == "carousel"
+
+
+def carousel_slide_path(post_id, number):
+    """Slide 1 is the usual post image; later slides sit beside it."""
+    if number == 1:
+        return post_image_path(post_id)
+    return GENERATED_ASSETS_DIRECTORY / f"{post_id}_slide_{number:02}.jpg"
+
+
+_NUMBERED_LINE = re.compile(r"^\s*(\d{1,2})[.)]\s+(.+)$")
+
+
+def carousel_slides(record):
+    """The slides in order: cover, one per line of ``slides``, closing."""
+    lines = [line.strip() for line in str(record.get("slides") or "").splitlines() if line.strip()]
+    lines = lines[: MAX_CAROUSEL_SLIDES - 2]
+    total = len(lines) + 2
+    slides = [{
+        "kind": "cover", "big": record.get("title") or "", "small": record.get("main_point") or "",
+        "number": "", "counter": "", "hint": "Swipe \u2192",
+    }]
+    for index, line in enumerate(lines, start=2):
+        numbered = _NUMBERED_LINE.match(line)
+        slides.append({
+            "kind": "inner",
+            "big": numbered.group(2) if numbered else line,
+            "small": "",
+            "number": numbered.group(1).zfill(2) if numbered else "",
+            "counter": f"{index}/{total}",
+            "hint": "",
+        })
+    slides.append({
+        "kind": "closing", "big": record.get("supporting_copy") or "", "small": "",
+        "number": "", "counter": f"{total}/{total}",
+        "hint": "Save this \u00b7 Send it to someone who needs it",
+    })
+    return slides
+
+
+def build_carousel_html(record, brand, artwork, slide):
+    template = brand.template if brand is not None else BrandTemplate()
+    try:
+        source = CAROUSEL_TEMPLATE.read_text(encoding="utf-8")
+    except OSError as error:
+        raise MediaRenderError(f"Could not read {CAROUSEL_TEMPLATE}: {error}") from error
+    return Template(source).substitute(
+        background=template.background,
+        background_rgba_strong=_rgba(template.background, 0.7),
+        background_rgba_soft=_rgba(template.background, 0.4),
+        text=_NIGHT_COLORS["text"],
+        accent=_NIGHT_COLORS["accent"],
+        art=_art_html(artwork),
+        kind=slide["kind"],
+        tone=text_tone(artwork, record) if slide["kind"] == "cover" else "dark",
+        big=_copy_html(slide["big"]),
+        small=_copy_html(slide["small"]),
+        number=escape(slide["number"]),
+        counter=escape(slide["counter"]),
+        hint=escape(slide["hint"]),
+        handle=escape(template.handle or ""),
+    )
+
+
+def render_carousel(post_id, record, brand, artwork):
+    """Render every slide to a 1080x1350 JPEG; return their paths in order."""
+    for field in ("title", "main_point", "slides", "supporting_copy"):
+        if not str(record.get(field) or "").strip():
+            raise MediaRenderError(f"Cannot render the carousel; missing {field}.")
+    slides = carousel_slides(record)
+    paths = [
+        render_html_to_jpeg(
+            build_carousel_html(record, brand, artwork, slide),
+            carousel_slide_path(post_id, number),
+            INSTAGRAM_FEED_SIZE,
+        )
+        for number, slide in enumerate(slides, start=1)
+    ]
+    # Remove slides left over from a longer earlier version.
+    for number in range(len(slides) + 1, MAX_CAROUSEL_SLIDES + 1):
+        carousel_slide_path(post_id, number).unlink(missing_ok=True)
+    return paths
 
 
 def is_image_reel(record):
@@ -395,11 +483,26 @@ def render_post_image(post_id):
     artwork = (
         artwork_path(post_id)
         if is_image_reel(record)
+        or is_carousel(record)
         or is_designed(record)
         or record.get("layout") == "poster"
         or layout_for(brand) == "quote_painting"
         else None
     )
+    if is_carousel(record):
+        if artwork is None:
+            raise MediaRenderError("Add the cover artwork first; the slides reuse it.")
+        with tempfile.TemporaryDirectory() as folder:
+            if is_video_artwork(artwork):
+                artwork = extract_video_frame(artwork, Path(folder) / "frame.png")
+            paths = render_carousel(post_id, record, brand, artwork)
+        record["slide_count"] = len(paths)
+        try:
+            record["image_path"] = str(paths[0].relative_to(PROJECT_ROOT))
+        except ValueError:
+            record["image_path"] = str(paths[0])
+        save_post(post_id, record)
+        return paths[0]
     with tempfile.TemporaryDirectory() as folder:
         if is_video_artwork(artwork):
             artwork = extract_video_frame(artwork, Path(folder) / "frame.png")

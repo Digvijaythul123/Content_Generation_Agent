@@ -250,7 +250,7 @@ def test_single_page_format_and_instagram_feed_platform_are_configured():
     )
     assert content_format.prompt_template == "single_page_generation.md"
     assert content_format.aspect_ratio == "4:5"
-    assert platform.supported_format_ids == ("single_page",)
+    assert platform.supported_format_ids == ("single_page", "carousel")
     assert platform.aspect_ratio == "4:5"
 
 

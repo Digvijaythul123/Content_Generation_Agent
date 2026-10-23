@@ -240,6 +240,42 @@ class InstagramPublisher:
         container_id = self.create_image_container(image_url, caption)
         return self._finish(container_id)
 
+    def publish_carousel(self, image_urls, caption):
+        """Publish a carousel (2-10 images) and return its ID, link, and AI label.
+
+        Each image becomes a carousel item container; the parent container
+        carries the caption, and publishing it posts the whole set.
+        """
+        if not 2 <= len(image_urls) <= 10:
+            raise InstagramPublishError("A carousel needs 2 to 10 images.")
+        self._check_quota()
+        children = []
+        for image_url in image_urls:
+            payload = self._request(
+                "POST",
+                f"{self._base_url}/{self._account_id}/media",
+                image_url=image_url,
+                is_carousel_item="true",
+                is_ai_generated="true",
+            )
+            child_id = payload.get("id")
+            if not child_id:
+                raise InstagramPublishError("Instagram did not return a slide container ID.")
+            children.append(child_id)
+        for child_id in children:
+            self.wait_until_ready(child_id)
+        payload = self._request(
+            "POST",
+            f"{self._base_url}/{self._account_id}/media",
+            media_type="CAROUSEL",
+            children=",".join(children),
+            caption=caption,
+        )
+        container_id = payload.get("id")
+        if not container_id:
+            raise InstagramPublishError("Instagram did not return a carousel container ID.")
+        return self._finish(container_id)
+
     def refresh_access_token(self):
         """Extend a long-lived token; returns (token, expires_in_seconds)."""
         payload = self._request(

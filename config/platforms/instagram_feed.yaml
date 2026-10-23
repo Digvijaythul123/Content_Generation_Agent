@@ -2,5 +2,6 @@ id: instagram_feed
 display_name: Instagram Feed
 supported_format_ids:
   - single_page
+  - carousel
 constraints:
   aspect_ratio: "4:5"

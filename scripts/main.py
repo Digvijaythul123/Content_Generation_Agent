@@ -57,6 +57,9 @@ def _save_result(result, caption_language="english"):
             data["first_comment"] = first_comment
     if caption_language != "english":
         data["caption_language"] = caption_language
+    if result.request.content_format.id == "carousel":
+        # The cover art keeps its upper part open, like a poster.
+        data["layout"] = "poster"
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
         try:
