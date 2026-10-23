@@ -24,9 +24,15 @@ class FacebookPublishError(RuntimeError):
     ``transient`` marks network problems that are worth retrying.
     """
 
-    def __init__(self, message, transient=False):
+    def __init__(self, message, transient=False, rate_limited=False):
         super().__init__(message)
-        self.transient = transient
+        self.transient = transient or rate_limited
+        self.rate_limited = rate_limited
+
+
+# Facebook's "posting too often" and API-limit error codes. New Pages and
+# apps hit these after a few posts in a day; they clear after a while.
+_RATE_LIMIT_CODES = {4, 17, 32, 368, 613}
 
 
 def facebook_configured():
@@ -83,9 +89,13 @@ class FacebookPublisher:
         if response.status_code >= 400 or (isinstance(payload, dict) and "error" in payload):
             details = payload.get("error", {}) if isinstance(payload, dict) else {}
             message = details.get("error_user_msg") or details.get("message")
+            rate_limited = details.get("code") in _RATE_LIMIT_CODES or "limit how often" in (
+                message or ""
+            ).lower()
             raise FacebookPublishError(
                 f"Facebook returned HTTP {response.status_code}: "
-                f"{message or 'no error details'}"
+                f"{message or 'no error details'}",
+                rate_limited=rate_limited,
             )
         if not isinstance(payload, dict):
             raise FacebookPublishError("Facebook returned an unexpected response.")

@@ -138,3 +138,18 @@ def test_feed_posts_go_to_facebook_and_can_be_scheduled(reel, tmp_path, monkeypa
     assert reel["post_001"]["facebook_post_id"] == "PP"
     with pytest.raises(ValueError, match="already on Facebook"):
         review_ui.post_to_facebook("post_001", publisher=publisher)
+
+
+def test_posting_too_often_is_retried_hours_later(reel):
+    publisher, _ = _publisher([_response({"error": {
+        "code": 368, "message": "We limit how often you can post, comment or do other things"}}, 400)])
+    with pytest.raises(FacebookPublishError) as error:
+        publisher.page_info()
+    assert error.value.rate_limited and error.value.transient
+
+    failing = Mock()
+    failing.publish_reel.side_effect = FacebookPublishError("We limit how often you can post", rate_limited=True)
+    now = datetime(2026, 10, 23, 12, 0, tzinfo=timezone.utc)
+    with pytest.raises(FacebookPublishError):
+        review_ui.post_to_facebook("post_001", publisher=failing, now=now)
+    assert reel["post_001"]["facebook_retry_at"] == (now + timedelta(minutes=60)).isoformat()

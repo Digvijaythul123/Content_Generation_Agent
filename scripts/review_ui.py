@@ -1584,8 +1584,10 @@ def publish_content(
             _ACTIVE_STAGES.discard(stage_key)
 
 
-# Waits (minutes) before retrying a Facebook network failure.
+# Waits (minutes) before retrying a Facebook network failure, and longer
+# waits when Facebook says the Page is posting too often.
 FACEBOOK_RETRY_MINUTES = (5, 15, 30, 60)
+FACEBOOK_RATE_LIMIT_MINUTES = (60, 120, 240, 480)
 
 
 def _rendered_media(content_id, record):
@@ -1628,8 +1630,13 @@ def post_to_facebook(content_id, publisher=None, now=None):
         record = load_post(content_id)
         attempts = int(record.get("facebook_attempts") or 0)
         record["facebook_error"] = str(error)
-        if error.transient and attempts < len(FACEBOOK_RETRY_MINUTES):
-            wait = FACEBOOK_RETRY_MINUTES[attempts]
+        waits = (
+            FACEBOOK_RATE_LIMIT_MINUTES
+            if getattr(error, "rate_limited", False)
+            else FACEBOOK_RETRY_MINUTES
+        )
+        if error.transient and attempts < len(waits):
+            wait = waits[attempts]
             record["facebook_attempts"] = attempts + 1
             record["facebook_retry_at"] = (
                 (now or datetime.now(timezone.utc)) + timedelta(minutes=wait)
