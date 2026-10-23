@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -158,6 +158,7 @@ def list_content_items():
                     "visual_style": record.get("visual_style", ""),
                     "scheduled_at": record.get("scheduled_at") or "",
                     "schedule_failed": bool(record.get("schedule_failed")),
+                    "schedule_retrying": bool(record.get("schedule_retry_at")),
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
                     ),
@@ -676,6 +677,8 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
             "permalink": record.get("instagram_permalink"),
             "scheduled_at": record.get("scheduled_at"),
             "schedule_failed": record.get("schedule_failed"),
+            "schedule_retry_at": record.get("schedule_retry_at"),
+            "schedule_last_error": record.get("schedule_last_error"),
             "connection": publishing_connection(),
         }
     if content_type != "post" or not _is_instagram_post(record):
@@ -1102,7 +1105,9 @@ def update_post_settings(content_id, payload):
             record["scheduled_at"] = moment.isoformat()
         else:
             record.pop("scheduled_at", None)
-        record.pop("schedule_failed", None)
+        for key in ("schedule_failed", "schedule_attempts",
+                    "schedule_retry_at", "schedule_last_error"):
+            record.pop(key, None)
         changed.append("scheduled_at")
     save_post(content_id, record)
     if is_designed(record) and set(changed) & set(ON_IMAGE_TEXT_FIELDS):
@@ -1163,10 +1168,44 @@ def convert_to_reel(content_id):
     return record
 
 
+# Network failures (a Mac waking from sleep, a slow connection) are retried
+# after these waits, in minutes; other failures stop at once.
+SCHEDULE_RETRY_MINUTES = (5, 10, 15, 20, 25)
+
+
+def _is_transient(error):
+    if isinstance(error, InstagramPublishError):
+        return error.transient
+    if isinstance(error, MediaHostError):
+        try:
+            from botocore.exceptions import BotoCoreError
+        except ImportError:
+            return False
+        return isinstance(error.__cause__, BotoCoreError)
+    return False
+
+
+def _published_copy(record, publisher, since):
+    """Find this post on Instagram if an earlier attempt timed out after
+    Instagram had already published it, so a retry never posts twice."""
+    caption = strip_highlights(record.get("caption") or "").strip()[:80]
+    if not caption:
+        return None
+    for media in publisher.recent_media():
+        try:
+            posted = datetime.strptime(media["timestamp"], "%Y-%m-%dT%H:%M:%S%z")
+        except (KeyError, ValueError):
+            continue
+        if posted >= since and (media.get("caption") or "").strip().startswith(caption):
+            return media
+    return None
+
+
 def publish_due_posts(now=None, host=None, publisher=None):
     """Publish every scheduled one-image Reel whose time has come.
 
-    A failed attempt is recorded and not retried until the Reel is
+    Network failures are retried a few times (see SCHEDULE_RETRY_MINUTES);
+    any other failure is recorded and not retried until the Reel is
     rescheduled, so a broken token cannot cause repeated attempts.
     """
     now = now or datetime.now(timezone.utc)
@@ -1184,16 +1223,56 @@ def publish_due_posts(now=None, host=None, publisher=None):
             or record.get("status") != "Approved"
             or record.get("schedule_failed")
             or _parse_schedule(scheduled) > now
+            or (
+                record.get("schedule_retry_at")
+                and _parse_schedule(record["schedule_retry_at"]) > now
+            )
         ):
             continue
+        attempts = int(record.get("schedule_attempts") or 0)
         try:
+            if attempts:
+                publisher = publisher or InstagramPublisher()
+                copy = _published_copy(
+                    record, publisher, _parse_schedule(scheduled) - timedelta(minutes=5)
+                )
+                if copy:
+                    record = load_post(content_id)
+                    record.update(
+                        status="Published",
+                        instagram_media_id=copy["id"],
+                        instagram_permalink=copy.get("permalink"),
+                        published_at=copy["timestamp"],
+                    )
+                    for key in ("scheduled_at", "schedule_attempts",
+                                "schedule_retry_at", "schedule_last_error"):
+                        record.pop(key, None)
+                    save_post(content_id, record)
+                    _append_history("post", content_id, "found_already_published",
+                                    permalink=copy.get("permalink"))
+                    results.append((content_id, "published", copy.get("permalink")))
+                    continue
             result = publish_content(
                 "post", content_id, host=host, publisher=publisher
             )
             results.append((content_id, "published", result.get("permalink")))
         except (*_STAGE_ACTION_ERRORS, ValueError) as error:
             record = load_post(content_id)
+            if _is_transient(error) and attempts < len(SCHEDULE_RETRY_MINUTES):
+                wait = SCHEDULE_RETRY_MINUTES[attempts]
+                record.update(
+                    schedule_attempts=attempts + 1,
+                    schedule_retry_at=(now + timedelta(minutes=wait)).isoformat(),
+                    schedule_last_error=str(error),
+                )
+                save_post(content_id, record)
+                results.append(
+                    (content_id, "retrying", f"{error} Trying again in {wait} minutes.")
+                )
+                continue
             record["schedule_failed"] = str(error)
+            for key in ("schedule_attempts", "schedule_retry_at"):
+                record.pop(key, None)
             save_post(content_id, record)
             results.append((content_id, "failed", str(error)))
     return results
@@ -1262,6 +1341,7 @@ def publish_content(
         if stage_key in _ACTIVE_STAGES:
             raise ValueError("This post is already being published.")
         _ACTIVE_STAGES.add(stage_key)
+    uploaded_keys = []
     try:
         _append_history(
             content_type, content_id, "stage_started",
@@ -1269,7 +1349,7 @@ def publish_content(
         )
         host = host or R2MediaHost()
         key, media_url = host.upload(image_path, content_id)
-        uploaded_keys = [key]
+        uploaded_keys.append(key)
         cover_url = None
         cover_path = post_image_path(content_id)
         if is_reel and cover_path.is_file():
@@ -1318,6 +1398,12 @@ def publish_content(
             content_type, content_id, "stage_failed",
             stage="publishing", error=str(error),
         )
+        # Do not leave public copies behind when the publish did not finish.
+        for uploaded_key in uploaded_keys:
+            try:
+                host.delete(uploaded_key)
+            except MediaHostError:
+                pass
         raise
     finally:
         with _STAGE_LOCK:

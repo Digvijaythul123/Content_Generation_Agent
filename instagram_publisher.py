@@ -15,7 +15,15 @@ _REFRESH_URL = "https://graph.instagram.com/refresh_access_token"
 
 
 class InstagramPublishError(RuntimeError):
-    """Raised when Instagram rejects or cannot complete a publish request."""
+    """Raised when Instagram rejects or cannot complete a publish request.
+
+    ``transient`` marks network problems (no connection, no reply in time)
+    that are worth retrying, unlike a rejected token or media.
+    """
+
+    def __init__(self, message, transient=False):
+        super().__init__(message)
+        self.transient = transient
 
 
 class InstagramPublisher:
@@ -57,6 +65,16 @@ class InstagramPublisher:
         self._poll_interval_seconds = poll_interval_seconds
         self._poll_timeout_seconds = poll_timeout_seconds
 
+    def recent_media(self, limit=10):
+        """The account's latest posts, newest first (caption and timestamp)."""
+        data = self._request(
+            "GET",
+            f"{self._base_url}/{self._account_id}/media",
+            fields="id,caption,timestamp,permalink",
+            limit=limit,
+        )
+        return data.get("data", [])
+
     def _request(self, method, url, **params):
         params["access_token"] = self._access_token
         try:
@@ -66,12 +84,13 @@ class InstagramPublisher:
                 response = self._session.post(url, data=params, timeout=60)
         except requests.Timeout as error:
             raise InstagramPublishError(
-                "Instagram did not respond within 60 seconds."
+                "Instagram did not respond within 60 seconds.", transient=True
             ) from error
         except requests.RequestException as error:
             # The URL may contain the access token, so do not echo the error.
             raise InstagramPublishError(
-                f"Could not reach Instagram ({type(error).__name__})."
+                f"Could not reach Instagram ({type(error).__name__}).",
+                transient=True,
             ) from error
         try:
             payload = response.json()

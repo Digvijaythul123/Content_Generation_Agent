@@ -1128,3 +1128,62 @@ def test_designed_reel_video_moves_the_whole_picture_gently(tmp_path):
         "ffmpeg", tmp_path / "bg.jpg", [], tmp_path / "o.mp4", 8,
         zoom=video_renderer.DESIGNED_ZOOM_AMOUNT)
     assert "zoompan=z='1+0.025*on/240'" in command[command.index("-filter_complex") + 1]
+
+
+def test_scheduled_post_retries_network_errors_then_gives_up(workspace, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from instagram_publisher import InstagramPublishError
+    now = datetime(2026, 10, 23, 3, 0, tzinfo=timezone.utc)
+    workspace.write({**IMAGE_REEL, "status": "Approved", "caption": "Hook line\n\n#Buddhism",
+                     "scheduled_at": (now - timedelta(minutes=30)).isoformat()})
+    calls = []
+
+    def flaky(*args, **kwargs):
+        calls.append(1)
+        raise InstagramPublishError("Could not reach Instagram (ConnectionError).", transient=True)
+
+    monkeypatch.setattr(review_ui, "publish_content", flaky)
+    publisher = Mock()
+    publisher.recent_media.return_value = []
+    outcome = review_ui.publish_due_posts(now=now, publisher=publisher)
+    assert outcome[0][1] == "retrying"
+    record = workspace.read()
+    assert record["schedule_attempts"] == 1 and "schedule_failed" not in record
+    # Not retried before the wait is over.
+    assert review_ui.publish_due_posts(now=now + timedelta(minutes=2), publisher=publisher) == []
+    later = now
+    for wait in review_ui.SCHEDULE_RETRY_MINUTES:
+        later += timedelta(minutes=wait)
+        review_ui.publish_due_posts(now=later, publisher=publisher)
+    record = workspace.read()
+    assert record["schedule_failed"].startswith("Could not reach")
+    assert len(calls) == len(review_ui.SCHEDULE_RETRY_MINUTES) + 1
+
+
+def test_retry_after_timeout_finds_the_post_instead_of_posting_twice(workspace, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 10, 23, 3, 30, tzinfo=timezone.utc)
+    workspace.write({**IMAGE_REEL, "status": "Approved", "caption": "Hook line\n\n#Buddhism",
+                     "scheduled_at": "2026-10-23T03:00:00+00:00", "schedule_attempts": 1,
+                     "schedule_retry_at": (now - timedelta(minutes=1)).isoformat()})
+    monkeypatch.setattr(review_ui, "publish_content", Mock(side_effect=AssertionError("posted twice")))
+    publisher = Mock()
+    publisher.recent_media.return_value = [
+        {"id": "9", "caption": "Hook line\n\n#Buddhism", "timestamp": "2026-10-23T03:01:10+0000",
+         "permalink": "https://instagram.com/reel/x"}]
+    assert review_ui.publish_due_posts(now=now, publisher=publisher)[0][1] == "published"
+    record = workspace.read()
+    assert record["status"] == "Published" and record["instagram_media_id"] == "9"
+    assert "schedule_attempts" not in record
+
+
+def test_non_network_errors_fail_at_once(workspace, monkeypatch):
+    from datetime import datetime, timezone
+    from instagram_publisher import InstagramPublishError
+    now = datetime(2026, 10, 23, 3, 0, tzinfo=timezone.utc)
+    workspace.write({**IMAGE_REEL, "status": "Approved", "caption": "c #Buddhism",
+                     "scheduled_at": "2026-10-23T02:00:00+00:00"})
+    monkeypatch.setattr(review_ui, "publish_content",
+                        Mock(side_effect=InstagramPublishError("Invalid OAuth access token.")))
+    assert review_ui.publish_due_posts(now=now)[0][1] == "failed"
+    assert workspace.read()["schedule_failed"] == "Invalid OAuth access token."

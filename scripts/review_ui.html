@@ -574,7 +574,9 @@
           const when = new Date(item.scheduled_at);
           const status = item.schedule_failed
             ? "Failed: reschedule it"
-            : (when < new Date() ? "Due: posting within a minute" : "Queued");
+            : item.schedule_retrying
+              ? "Network problem: retrying"
+              : (when < new Date() ? "Due: posting within a minute" : "Queued");
           return [when.toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), open, status];
         })
       ));
@@ -1644,6 +1646,13 @@
         }, "secondary");
         scheduled.append(text, cancel);
         panel.append(scheduled);
+      }
+      if (publishing.schedule_retry_at && !publishing.schedule_failed) {
+        const retry = document.createElement("p");
+        retry.className = "message";
+        retry.textContent = `The last attempt hit a network problem (${publishing.schedule_last_error}). `
+          + `Trying again at ${new Date(publishing.schedule_retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`;
+        panel.append(retry);
       }
       if (publishing.schedule_failed) {
         const failed = document.createElement("p");
