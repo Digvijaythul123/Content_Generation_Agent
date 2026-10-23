@@ -383,6 +383,7 @@ def test_gemini_client_reports_blocked_and_failed_requests():
 
 def test_artwork_stage_gates_render_and_clears_stale_image(workspace, monkeypatch):
     monkeypatch.setattr(art_generator, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    monkeypatch.setattr(review_ui, "art_service_problem", lambda: None)
     monkeypatch.setattr(
         review_ui, "load_brand", lambda brand_id: Brand.from_mapping(PAINTING_BRAND)
     )
@@ -1239,3 +1240,15 @@ def test_weather_look_tints_existing_art_and_brings_its_effect(tmp_path, workspa
     assert not video_renderer.reel_video_path("post_001").exists()
     with pytest.raises(ValueError, match="on or off"):
         review_ui.update_post_settings("post_001", {"weather_look": "yes"})
+
+
+def test_generate_artwork_is_off_with_a_reason_when_no_image_service(workspace, monkeypatch):
+    monkeypatch.setattr(review_ui, "art_service_problem",
+                        lambda: "No image service is connected (CLOUDFLARE_AI_TOKEN is empty in .env).")
+    workspace.write({**IMAGE_REEL, "status": "Approved", "design_prompt": "A monk."})
+    stages = {stage["id"]: stage for stage in review_ui.get_pipeline("post", "post_001")["stages"]}
+    artwork = stages["artwork"]
+    assert artwork["can_run"] is False and "Copy art prompt" in artwork["reason"]
+    monkeypatch.setattr(review_ui, "art_service_problem", lambda: None)
+    stages = {stage["id"]: stage for stage in review_ui.get_pipeline("post", "post_001")["stages"]}
+    assert stages["artwork"]["can_run"] is True

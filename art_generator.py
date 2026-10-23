@@ -236,6 +236,20 @@ class CloudflareImageClient:
         return data, detect_image_type(data) or "image/jpeg"
 
 
+_PROVIDER_KEYS = {"cloudflare": "CLOUDFLARE_AI_TOKEN", "gemini": "GEMINI_API_KEY"}
+
+
+def art_service_problem():
+    """Why automatic artwork can't run, or None when an image service is set up."""
+    provider = get_setting("ART_PROVIDER", DEFAULT_ART_PROVIDER).lower()
+    key = _PROVIDER_KEYS.get(provider)
+    if key is None:
+        return f"ART_PROVIDER {provider!r} is not 'cloudflare' or 'gemini'."
+    if not (get_setting(key) or "").strip():
+        return f"No image service is connected ({key} is empty in .env)."
+    return None
+
+
 def get_image_client():
     provider = get_setting("ART_PROVIDER", DEFAULT_ART_PROVIDER).lower()
     if provider == "cloudflare":

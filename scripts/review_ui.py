@@ -31,6 +31,7 @@ from art_generator import (
     VIDEO_ARTWORK_SUFFIXES,
     ArtGenerationError,
     artwork_path,
+    art_service_problem,
     build_art_prompt,
     generate_post_artwork,
     is_designed,
@@ -648,6 +649,18 @@ def get_pipeline(content_type, content_id):
         ])
         + [_publishing_stage(content_type, content_id, record, files, last_stage_events)]
     )
+    problem = art_service_problem()
+    for stage in common:
+        if stage["id"] == "artwork" and problem and stage.get("can_run"):
+            # Art is made by hand: copy the art prompt and upload the image.
+            stage["can_run"] = False
+            stage["manual"] = True
+            stage["reason"] = (
+                f"{problem} Make the art yourself: Copy art prompt, create the "
+                "image in ChatGPT, Gemini, or Copilot, then upload it below."
+            )
+            if stage["status"] == "failed":
+                stage["status"] = "not_started"
     return {"stages": common}
 
 
