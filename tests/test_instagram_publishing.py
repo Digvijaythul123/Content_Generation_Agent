@@ -1408,3 +1408,19 @@ def test_carousel_slides_render_and_publish_as_one_post(tmp_path, workspace, mon
     assert client.publish_carousel(["u1", "u2"], "cap") == {"media_id": "id3"}
     assert calls[0]["is_carousel_item"] == "true" and calls[2]["media_type"] == "CAROUSEL"
     assert calls[2]["children"] == "id1,id2" and calls[2]["caption"] == "cap"
+
+
+def test_scheduler_publishes_due_feed_posts_and_carousels(workspace, monkeypatch):
+    from datetime import datetime, timezone
+    now = datetime(2026, 10, 24, 3, 0, tzinfo=timezone.utc)
+    published = []
+    monkeypatch.setattr(review_ui, "publish_content",
+                        lambda kind, cid, **kw: published.append(cid) or {"permalink": "https://ig/p"})
+    for format_id in ("carousel", "single_page"):
+        published.clear()
+        workspace.write({**POST, "format_id": format_id, "platform_id": "instagram_feed",
+                         "status": "Approved", "scheduled_at": "2026-10-24T02:00:00+00:00"})
+        assert review_ui.publish_due_posts(now=now)[0][1] == "published"
+        assert published == ["post_001"]
+    review_ui.update_post_settings("post_001", {"scheduled_at": "2030-01-01T01:00:00+00:00"})
+    assert workspace.read()["scheduled_at"].startswith("2030-01-01")

@@ -262,7 +262,7 @@
       <div class="panel-heading">
         <div>
           <h2 id="scheduled-heading">Scheduled</h2>
-          <p class="hint">Reels queued to post automatically (your Mac must be on at the time).</p>
+          <p class="hint">Reels and posts queued to post automatically (your Mac must be on at the time).</p>
         </div>
       </div>
       <div id="scheduled-body" class="hint">Nothing scheduled.</div>
@@ -616,7 +616,7 @@
         .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
       if (!queued.length) {
         body.className = "hint";
-        body.textContent = "Nothing scheduled. Open a Reel's Instagram tab to schedule it.";
+        body.textContent = "Nothing scheduled. Open a Reel's or post's Instagram tab to schedule it.";
         return;
       }
       body.className = "";
@@ -1307,6 +1307,45 @@
         }
       }
       container.append(actions);
+      if (publishing && state.record.status !== "Published") container.append(feedScheduleControls(publishing));
+      if (publishing) container.append(firstCommentBox(), facebookControls(publishing));
+    }
+
+    function feedScheduleControls(publishing) {
+      // Same queue as Reels: the scheduler posts it at the chosen time.
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const when = document.createElement("input");
+      when.type = "datetime-local";
+      when.setAttribute("aria-label", "Schedule date and time");
+      when.value = nextPostingSlot();
+      const schedule = makeAction("Schedule", async () => {
+        if (!when.value) {
+          window.alert("Pick a date and time first.");
+          return;
+        }
+        try {
+          await saveReelSettings({ scheduled_at: new Date(when.value).toISOString() });
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary");
+      schedule.disabled = !publishing.can_run;
+      box.append(when, schedule);
+      if (publishing.scheduled_at) {
+        const text = document.createElement("span");
+        text.className = "message";
+        text.textContent = `Scheduled for ${new Date(publishing.scheduled_at).toLocaleString()}.`;
+        const cancel = makeAction("Cancel schedule", async () => {
+          try {
+            await saveReelSettings({ scheduled_at: null });
+          } catch (error) {
+            window.alert(error.message);
+          }
+        }, "secondary");
+        box.append(text, cancel);
+      }
+      return box;
     }
 
     function manualArtworkControls() {

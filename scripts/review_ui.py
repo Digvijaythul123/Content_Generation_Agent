@@ -756,6 +756,17 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
         "can_run": not reason and not running,
         "reason": reason,
         "permalink": record.get("instagram_permalink"),
+        "scheduled_at": record.get("scheduled_at"),
+        "schedule_failed": record.get("schedule_failed"),
+        "schedule_retry_at": record.get("schedule_retry_at"),
+        "schedule_last_error": record.get("schedule_last_error"),
+        "connection": publishing_connection(),
+        "facebook": {
+            "share": record.get("share_to_facebook", True),
+            "permalink": record.get("facebook_permalink"),
+            "error": record.get("facebook_error"),
+            "retry_at": record.get("facebook_retry_at"),
+        },
     }
 
 
@@ -1070,7 +1081,7 @@ def update_post_settings(content_id, payload):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
             {"layout", "caption", "scenery", "weather", "weather_look", "share_to_facebook",
-             "first_comment"}
+             "first_comment", "scheduled_at"}
             | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
@@ -1078,7 +1089,7 @@ def update_post_settings(content_id, payload):
             )
     if record.get("status") == "Published" and set(payload) - {"first_comment"}:
         # Only the first comment (posted by hand) can change after publishing.
-        raise ValueError("This Reel is already published.")
+        raise ValueError("This post is already published.")
     changed = []
     if "caption" in payload:
         caption = payload["caption"]
@@ -1199,7 +1210,7 @@ def update_post_settings(content_id, payload):
         value = payload["scheduled_at"]
         if value:
             if record.get("status") != "Approved":
-                raise ValueError("Approve this Reel before scheduling it.")
+                raise ValueError("Approve this post before scheduling it.")
             moment = _parse_schedule(value)
             if moment <= datetime.now(timezone.utc):
                 raise ValueError("Choose a time in the future.")
@@ -1359,7 +1370,7 @@ def publish_due_posts(now=None, host=None, publisher=None):
         scheduled = record.get("scheduled_at")
         if (
             not scheduled
-            or not _is_image_reel(record)
+            or not (_is_image_reel(record) or _is_instagram_post(record))
             or record.get("status") != "Approved"
             or record.get("schedule_failed")
             or _parse_schedule(scheduled) > now
@@ -1548,7 +1559,7 @@ def publish_content(
                 pass
         uploaded_keys = []
         facebook = None
-        if is_reel and facebook_configured() and record.get("share_to_facebook", True):
+        if facebook_configured() and record.get("share_to_facebook", True):
             # Instagram is done; a Facebook problem is recorded and retried
             # on its own, never undoing or repeating the Instagram post.
             try:
@@ -1577,19 +1588,42 @@ def publish_content(
 FACEBOOK_RETRY_MINUTES = (5, 15, 30, 60)
 
 
+def _rendered_media(content_id, record):
+    """The files to post: the Reel video, the carousel slides, or the image."""
+    if _is_image_reel(record):
+        video = reel_video_path(content_id)
+        if not video.is_file():
+            raise ValueError("Render the Reel video first.")
+        return [video]
+    if is_carousel(record):
+        slides = [
+            carousel_slide_path(content_id, number)
+            for number in range(1, int(record.get("slide_count") or 0) + 1)
+        ]
+        if not slides or not all(path.is_file() for path in slides):
+            raise ValueError("Render the carousel slides first.")
+        return slides
+    image = post_image_path(content_id)
+    if not image.is_file():
+        raise ValueError("Render the Instagram image first.")
+    return [image]
+
+
 def post_to_facebook(content_id, publisher=None, now=None):
-    """Post a Reel (already on Instagram) to the Facebook Page."""
+    """Post a Reel, image, or carousel (already on Instagram) to the Page."""
     record = load_post(content_id)
-    if not _is_image_reel(record):
-        raise ValueError("Only Reels can be posted to Facebook.")
-    if record.get("facebook_video_id"):
-        raise ValueError("This Reel is already on Facebook.")
-    video = reel_video_path(content_id)
-    if not video.is_file():
-        raise ValueError("Render the Reel video first.")
+    if not (_is_image_reel(record) or _is_instagram_post(record)):
+        raise ValueError("Only Instagram Reels and feed posts can go to Facebook.")
+    if record.get("facebook_video_id") or record.get("facebook_post_id"):
+        raise ValueError("This post is already on Facebook.")
+    media = _rendered_media(content_id, record)
     caption = strip_highlights(record.get("caption") or "").strip()
+    publisher = publisher or FacebookPublisher()
     try:
-        result = (publisher or FacebookPublisher()).publish_reel(video, caption)
+        if _is_image_reel(record):
+            result = publisher.publish_reel(media[0], caption)
+        else:
+            result = publisher.publish_photos(media, caption)
     except FacebookPublishError as error:
         record = load_post(content_id)
         attempts = int(record.get("facebook_attempts") or 0)
@@ -1606,8 +1640,11 @@ def post_to_facebook(content_id, publisher=None, now=None):
         _append_history("post", content_id, "facebook_failed", error=str(error))
         raise
     record = load_post(content_id)
+    if result.get("video_id"):
+        record["facebook_video_id"] = result["video_id"]
+    else:
+        record["facebook_post_id"] = result["post_id"]
     record.update(
-        facebook_video_id=result["video_id"],
         facebook_permalink=result.get("permalink"),
         facebook_published_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -1632,6 +1669,7 @@ def retry_facebook_posts(now=None, publisher=None):
         if (
             not retry_at
             or record.get("facebook_video_id")
+            or record.get("facebook_post_id")
             or _parse_schedule(retry_at) > now
             or not facebook_configured()
         ):

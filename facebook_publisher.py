@@ -1,10 +1,12 @@
-"""Publish one-image Reels to a Facebook Page with the Reels Publishing API.
+"""Publish to a Facebook Page: Reels, single photos, and multi-photo posts.
 
-The video is uploaded straight from this computer (no public hosting):
-start an upload session, send the MP4 bytes, then finish and publish.
+Media is uploaded straight from this computer (no public hosting). Reels
+use the Reels Publishing API (start, upload, finish); photos use the Page's
+/photos edge, and a carousel becomes one post with several attached photos.
 See https://developers.facebook.com/docs/video-api/guides/reels-publishing
 """
 
+import json
 import time
 
 import requests
@@ -95,6 +97,51 @@ class FacebookPublisher:
         if method == "GET":
             return self._call("GET", url, params=params)
         return self._call("POST", url, data=params)
+
+    def _upload_photo(self, path, **params):
+        params["access_token"] = self._token
+        return self._call(
+            "POST",
+            f"{self._base_url}/{self._page_id}/photos",
+            timeout=120,
+            data=params,
+            files={"source": (path.name, path.read_bytes(), "image/jpeg")},
+        )
+
+    def _post_link(self, post_id):
+        try:
+            link = self._graph("GET", post_id, fields="permalink_url").get("permalink_url")
+        except FacebookPublishError:
+            link = None
+        return link
+
+    def publish_photo(self, image_path, caption):
+        """Post one image with its caption; return the post's ID and link."""
+        result = self._upload_photo(image_path, message=caption, published="true")
+        post_id = result.get("post_id") or result.get("id")
+        if not post_id:
+            raise FacebookPublishError("Facebook did not return a post ID.")
+        return {"post_id": post_id, "permalink": self._post_link(post_id)}
+
+    def publish_photos(self, image_paths, caption):
+        """Post several images as one post (a carousel); return its ID and link."""
+        if len(image_paths) < 2:
+            return self.publish_photo(image_paths[0], caption)
+        media = []
+        for path in image_paths:
+            # Uploaded hidden, then attached to a single post below.
+            photo = self._upload_photo(path, published="false")
+            if not photo.get("id"):
+                raise FacebookPublishError("Facebook did not return a photo ID.")
+            media.append(photo["id"])
+        params = {"message": caption}
+        for index, media_id in enumerate(media):
+            params[f"attached_media[{index}]"] = json.dumps({"media_fbid": media_id})
+        post = self._graph("POST", f"{self._page_id}/feed", **params)
+        post_id = post.get("id")
+        if not post_id:
+            raise FacebookPublishError("Facebook did not return a post ID.")
+        return {"post_id": post_id, "permalink": self._post_link(post_id)}
 
     def page_info(self):
         """The connected Page's ID, name, and link (no side effects)."""

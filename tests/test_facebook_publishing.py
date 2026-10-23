@@ -96,3 +96,45 @@ def test_post_to_facebook_saves_link_and_retries_network_failures(reel):
     assert publisher.publish_reel.call_args.args[1] == "Hook line\n\n#Buddhism"  # no ** marks
     with pytest.raises(ValueError, match="already on Facebook"):
         review_ui.post_to_facebook("post_001", publisher=publisher)
+
+
+def test_photo_and_multi_photo_posts(tmp_path):
+    one, two = tmp_path / "s1.jpg", tmp_path / "s2.jpg"
+    one.write_bytes(b"a")
+    two.write_bytes(b"b")
+    publisher, session = _publisher([
+        _response({"id": "P1", "post_id": "PAGE_P1"}),
+        _response({"permalink_url": "https://fb/p/1"}),
+    ])
+    assert publisher.publish_photo(one, "cap") == {"post_id": "PAGE_P1", "permalink": "https://fb/p/1"}
+    upload = session.request.call_args_list[0]
+    assert upload.kwargs["files"]["source"][1] == b"a" and upload.kwargs["data"]["message"] == "cap"
+
+    publisher, session = _publisher([
+        _response({"id": "M1"}), _response({"id": "M2"}),
+        _response({"id": "PAGE_POST"}), _response({"permalink_url": "https://fb/p/2"}),
+    ])
+    result = publisher.publish_photos([one, two], "carousel caption")
+    assert result == {"post_id": "PAGE_POST", "permalink": "https://fb/p/2"}
+    calls = session.request.call_args_list
+    assert calls[0].kwargs["data"]["published"] == "false"
+    feed = calls[2].kwargs["data"]
+    assert feed["message"] == "carousel caption"
+    assert feed["attached_media[0]"] == '{"media_fbid": "M1"}' and feed["attached_media[1]"] == '{"media_fbid": "M2"}'
+
+
+def test_feed_posts_go_to_facebook_and_can_be_scheduled(reel, tmp_path, monkeypatch):
+    import media_renderer
+    reel["post_001"] = {"format_id": "carousel", "platform_id": "instagram_feed", "status": "Published",
+                        "caption": "Hook\n\n#Buddhism", "slide_count": 2}
+    for number in (1, 2):
+        path = tmp_path / f"slide{number}.jpg"
+        path.write_bytes(b"x")
+    monkeypatch.setattr(review_ui, "carousel_slide_path", lambda cid, n: tmp_path / f"slide{n}.jpg")
+    publisher = Mock()
+    publisher.publish_photos.return_value = {"post_id": "PP", "permalink": "https://fb/pp"}
+    review_ui.post_to_facebook("post_001", publisher=publisher)
+    assert [p.name for p in publisher.publish_photos.call_args.args[0]] == ["slide1.jpg", "slide2.jpg"]
+    assert reel["post_001"]["facebook_post_id"] == "PP"
+    with pytest.raises(ValueError, match="already on Facebook"):
+        review_ui.post_to_facebook("post_001", publisher=publisher)
