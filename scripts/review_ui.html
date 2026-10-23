@@ -2074,17 +2074,33 @@
 
     async function loadPerformance(refresh = false) {
       const button = $("performance-refresh");
+      const label = button.textContent;
+      const before = new Map((state.performance?.posts || []).map((post) => [post.id, post]));
       button.disabled = true;
+      if (refresh) button.textContent = "Refreshing…";
       try {
         const payload = await requestJson(
           refresh ? "/api/performance/refresh" : "/api/performance",
           refresh ? { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" } : undefined
         );
+        state.performance = payload.report;
         renderPerformance(payload.report);
+        if (refresh && payload.report) {
+          // Say what changed, so a refresh with no new numbers is still visible.
+          const changed = payload.report.posts.filter((post) => {
+            const old = before.get(post.id);
+            return old && (old.views !== post.views || old.reach !== post.reach);
+          }).length;
+          $("performance-updated").textContent =
+            `Fetched from Instagram just now (${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}). `
+            + (changed ? `${changed} post(s) changed.` : "No change since the last fetch.")
+            + " Instagram's numbers can lag the app by a few hours.";
+        }
       } catch (error) {
         $("performance-body").textContent = error.message;
       } finally {
         button.disabled = false;
+        button.textContent = label;
       }
     }
 
