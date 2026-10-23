@@ -288,6 +288,8 @@
           <label id="content-subtype-field" hidden>Content subtype<select id="content-subtype" name="content_subtype"></select></label>
           <label id="thinker-field" hidden>Thinker<select id="thinker" name="thinker_id"></select></label>
           <label id="visual-style-field" hidden>Visual style<select id="visual-style" name="visual_style"></select></label>
+          <label id="scenery-field" hidden>Scenery<select id="scenery" name="scenery"></select></label>
+          <label id="weather-field" hidden>Weather and light<select id="weather" name="weather"></select></label>
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
@@ -429,6 +431,16 @@
         ? previousStyle
         : "";
       $("visual-style-field").hidden = styles.length === 0;
+      for (const [kind, field, autoLabel] of [["sceneries", "scenery", "Auto (rotate places)"],
+                                              ["weathers", "weather", "Auto (rotate weather)"]]) {
+        const items = state.options[`profile_${kind}`]?.[profileId] || [];
+        const select = $(field);
+        const previous = select.value;
+        select.replaceChildren(new Option(autoLabel, "auto"), new Option("Story's own setting", "none"));
+        items.forEach((option) => addOption(select, option, ""));
+        select.value = [...select.options].some((option) => option.value === previous) ? previous : "auto";
+        $(`${field}-field`).hidden = items.length === 0;
+      }
       const brandSelect = $("brand");
       if (profileId === "comedy" && !brandSelect.value) {
         const comedyBrand = state.options.brands.find(
@@ -998,6 +1010,37 @@
       return state.selected?.type === "post" && state.record?.format_id === "image_reel";
     }
 
+    function settingControls() {
+      // Change where the art is set and its weather; the art prompt updates.
+      const profileId = state.record.profile_id;
+      const sceneries = state.options.profile_sceneries?.[profileId] || [];
+      const weathers = state.options.profile_weathers?.[profileId] || [];
+      if (state.record.status === "Published" || !state.record.design_prompt
+          || (!sceneries.length && !weathers.length)) return null;
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      for (const [items, field, label] of [[sceneries, "scenery", "Scenery "], [weathers, "weather", "Weather "]]) {
+        if (!items.length) continue;
+        const wrap = document.createElement("label");
+        wrap.textContent = label;
+        const select = document.createElement("select");
+        select.append(new Option("Story's own setting", ""));
+        items.forEach((option) => select.append(new Option(option.name, option.id)));
+        select.value = state.record[field] || "";
+        select.addEventListener("change", async () => {
+          try {
+            await saveReelSettings({ [field]: select.value || null },
+              "Saved. Copy the updated art prompt and make the art again.");
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+        wrap.append(select);
+        box.append(wrap);
+      }
+      return box;
+    }
+
     function scheduleAlert() {
       // A failed or retrying scheduled post gets its fixes at the top of the tab.
       const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
@@ -1040,6 +1083,8 @@
     function renderInstagram(container) {
       const alert = scheduleAlert();
       if (alert) container.append(alert);
+      const setting = settingControls();
+      if (setting) container.append(setting);
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.textContent = isImageReel()
@@ -1961,6 +2006,8 @@
         content_subtype: $("content-subtype").value || null,
         thinker_id: $("thinker").value || null,
         visual_style: $("visual-style").value || null,
+        scenery: $("scenery").value || "auto",
+        weather: $("weather").value || "auto",
         caption_language: $("caption-language").value,
         format_id: $("format").value,
         platform_id: $("platform").value,

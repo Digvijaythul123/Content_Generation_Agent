@@ -178,6 +178,37 @@ def load_profile_thinkers(profile_id):
     return thinkers
 
 
+def _load_named_options(profile_id, key):
+    """A profile's list of {id, name, description} options (may be empty)."""
+    items = _load_profile_data(profile_id).get(key, [])
+    if not isinstance(items, list):
+        raise ConfigurationError(f"Content profile {profile_id!r} {key!r} must be a list.")
+    seen = set()
+    for item in items:
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(field), str) and item[field].strip()
+            for field in ("id", "name", "description")
+        ):
+            raise ConfigurationError(
+                f"Content profile {profile_id!r} {key!r} entries need an id, "
+                "a name, and a description."
+            )
+        if item["id"] in seen:
+            raise ConfigurationError(f"Duplicate {key} id {item['id']!r}.")
+        seen.add(item["id"])
+    return items
+
+
+def load_profile_sceneries(profile_id):
+    """Places around the world that the art can be set in."""
+    return _load_named_options(profile_id, "sceneries")
+
+
+def load_profile_weathers(profile_id):
+    """Weather and light options for the art."""
+    return _load_named_options(profile_id, "weathers")
+
+
 def load_profile_visual_styles(profile_id):
     data = _load_profile_data(profile_id)
     styles = data.get("visual_styles", [])

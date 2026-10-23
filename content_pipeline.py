@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
+import json
 
 from content_models import (
     ContentValidationError,
@@ -12,7 +14,14 @@ from content_models import (
 import random
 import re
 
-from config_loader import load_focus_thinkers, resolve_generation_request
+from config_loader import (
+    ConfigurationError,
+    load_focus_thinkers,
+    load_profile_sceneries,
+    load_profile_subtypes,
+    load_profile_weathers,
+    resolve_generation_request,
+)
 from content_agent import ContentAgent
 
 
@@ -35,8 +44,14 @@ def generate_content(
     thinker_id=None,
     visual_style=None,
     caption_language="english",
+    scenery=None,
+    weather=None,
 ):
-    """Resolve configuration, generate a draft, and validate its content."""
+    """Resolve configuration, generate a draft, and validate its content.
+
+    ``scenery`` and ``weather`` take an id, "auto" or None to rotate, or
+    "none" to leave the place or light to the story.
+    """
     subtype = subtype or qa_subtype  # legacy keyword
     request = resolve_generation_request(
         brand_id=brand_id,
@@ -66,6 +81,11 @@ def generate_content(
             thinker_id=thinker_id,
             visual_style=visual_style,
         )
+    request = replace(
+        request,
+        scenery=_pick_setting(request, "sceneries", scenery),
+        weather=_pick_setting(request, "weathers", weather),
+    )
     agent = ContentAgent(
         profile_id=request.profile.id,
         profile=request.profile.to_mapping(),
@@ -81,6 +101,8 @@ def generate_content(
         thinker_id=request.thinker_id,
         visual_style=request.visual_style,
         caption_language=caption_language,
+        scenery=request.scenery,
+        weather=request.weather,
     )
     raw_content = agent.generate_content()
     try:
@@ -117,6 +139,48 @@ def generate_content(
             )
         validate_instagram_caption(content.fields["caption"])
     return GenerationResult(request=request, content=content)
+
+
+# How many recent posts to look back on so a place or weather is not repeated.
+_SETTING_MEMORY = 8
+_POSTS_DIRECTORY = Path(__file__).resolve().parent / "generated_posts"
+
+
+def _uses_setting(request):
+    """Art-based posts get a place; illustrated list pages do not."""
+    if "design_prompt" not in request.content_format.content_fields:
+        return False
+    if not request.subtype:
+        return True
+    for item in load_profile_subtypes(request.profile.id):
+        if item["id"] == request.subtype:
+            return not item.get("designed_image") or item["id"] == "parable_card"
+    return True
+
+
+def _pick_setting(request, kind, choice):
+    loader = load_profile_sceneries if kind == "sceneries" else load_profile_weathers
+    field = "scenery" if kind == "sceneries" else "weather"
+    options = [item["id"] for item in loader(request.profile.id)]
+    if choice == "none" or not options or not _uses_setting(request):
+        return None
+    if choice and choice != "auto":
+        if choice not in options:
+            raise ConfigurationError(f"Unknown {field} {choice!r}.")
+        return choice
+    recent = []
+    paths = sorted(_POSTS_DIRECTORY.glob("post_*.json"), key=lambda path: path.stat().st_mtime)
+    for path in reversed(paths):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8")).get(field)
+        except (OSError, ValueError):
+            continue
+        if value:
+            recent.append(value)
+        if len(recent) >= _SETTING_MEMORY:
+            break
+    fresh = [option for option in options if option not in recent]
+    return random.choice(fresh or options)
 
 
 def _pick_thinker(profile_id, story_mode):

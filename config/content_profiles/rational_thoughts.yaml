@@ -500,3 +500,106 @@ visual_styles:
       bold deep-red headings and dark brown serif lettering that are crisp
       and easy to read.
     avoid: photorealism, 3D render look, clutter, cramped lettering, misspellings
+
+# Places around the world for the art. "Auto" rotates through them so the
+# feed does not repeat a place; a post can also pick one in the review UI.
+sceneries:
+  - id: desert_dunes
+    name: Desert dunes
+    description: Wind-rippled sand dunes stretching to the horizon, a single line of footprints, wide empty sky (like the Sahara or the Thar desert)
+  - id: tropical_beach
+    name: Tropical beach
+    description: A quiet tropical beach with gentle waves, wet sand reflecting the sky, and palm trees at the edge (like the south coast of Sri Lanka)
+  - id: rocky_coast
+    name: Rocky ocean coast
+    description: A dramatic rocky coastline with waves breaking against dark cliffs and sea spray in the air (like Big Sur or the coast of Cornwall)
+  - id: open_ocean
+    name: Open ocean
+    description: The open ocean seen from a small wooden boat, endless water and horizon in every direction
+  - id: zen_garden
+    name: Zen garden
+    description: A Japanese Zen garden with raked gravel, moss-covered stones, and maple trees beside a wooden temple veranda (like Kyoto)
+  - id: lotus_pond
+    name: Lotus pond garden
+    description: A temple garden pond full of lotus flowers and broad leaves, with stone steps leading to the water
+  - id: cherry_blossoms
+    name: Cherry blossom park
+    description: A park path under cherry trees in full bloom with petals drifting through the air
+  - id: himalayan_peaks
+    name: Himalayan peaks
+    description: High snow-capped Himalayan peaks with prayer flags moving in the wind and a small stone stupa (like Ladakh or Nepal)
+  - id: misty_karst
+    name: Misty karst mountains
+    description: Tall limestone karst mountains rising from a winding river, layered into the distance (like Guilin or Ha Long Bay)
+  - id: alpine_lake
+    name: Mountain lake
+    description: A perfectly still mountain lake mirroring the peaks and pine forest around it (like Lake Bled or Lake Louise)
+  - id: forest_waterfall
+    name: Rainforest waterfall
+    description: A lush rainforest with a tall waterfall, ferns, mossy rocks, and drifting spray
+  - id: bamboo_grove
+    name: Bamboo grove
+    description: A tall bamboo grove with a narrow path and stems rising out of sight (like Arashiyama)
+  - id: stupa_plains
+    name: Plains of ancient stupas
+    description: Wide plains dotted with hundreds of ancient brick stupas and temples into the distance (like Bagan in Myanmar)
+  - id: rice_terraces
+    name: Rice terraces
+    description: Green rice terraces stepping down a hillside with a small farmer's hut (like Bali or northern Vietnam)
+  - id: snowy_forest
+    name: Snowy pine forest
+    description: A silent pine forest under deep fresh snow with a narrow trail between the trees
+  - id: autumn_valley
+    name: Autumn valley
+    description: A valley of red, orange, and gold trees with a clear river winding through it
+  - id: savanna
+    name: Savanna
+    description: A wide golden savanna with one lone acacia tree and distant hills
+  - id: frozen_north
+    name: Frozen north
+    description: A frozen lake and snowy mountains in the far north, with ice cracks and wide open sky (like Iceland or Norway)
+  - id: sea_cave
+    name: Sea cave
+    description: A large sea cave opening onto the ocean, light entering through the mouth of the cave and reflecting on wet rock
+  - id: cave_temple
+    name: Cave temple
+    description: An ancient rock-cut cave temple with carved pillars and a large stone Buddha deep inside (like Ajanta, Ellora, or Dambulla)
+  - id: mountain_monastery
+    name: Cliffside monastery
+    description: A small monastery clinging to a cliff above a deep forested valley (like Taktsang in Bhutan)
+  - id: quiet_city
+    name: Quiet city
+    description: A modern city street or rooftop early in the day, almost empty, with buildings fading into the distance
+
+# Weather and light, rotated separately so the feed is not always sunny.
+weathers:
+  - id: golden_hour
+    name: Golden hour
+    description: Low warm sunlight at sunrise or sunset with long soft shadows
+  - id: overcast
+    name: Soft overcast
+    description: A soft grey overcast sky with even, shadowless light and muted colors
+  - id: monsoon_rain
+    name: Monsoon rain
+    description: Heavy monsoon rain, wet glistening surfaces, puddles, and dark rain clouds
+  - id: misty_morning
+    name: Misty morning
+    description: Thick morning mist and fog softening everything into layers of grey and blue
+  - id: snowfall
+    name: Falling snow
+    description: Gently falling snow, cold blue-white light, and quiet stillness
+  - id: blue_hour
+    name: Blue hour
+    description: Deep blue twilight just after sunset with the first lights appearing
+  - id: moonlit_night
+    name: Moonlit night
+    description: A clear night lit by a full moon and stars, silver-blue light and deep shadows
+  - id: storm_clouds
+    name: Storm clouds
+    description: Dark dramatic storm clouds with a single break of light falling through them
+  - id: after_rain
+    name: After the rain
+    description: Just after rain, wet everything, fresh air, drops on leaves, and clearing clouds
+  - id: lamplight
+    name: Lamplight
+    description: Darkness lit only by oil lamps or candles, warm small pools of light in deep shadow

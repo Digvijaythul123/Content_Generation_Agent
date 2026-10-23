@@ -64,7 +64,8 @@ Shot: shot type, camera angle, and lens (for example "medium close-up, eye
 level, 85mm, shallow depth of field").
 Lighting: one key light with its direction and color, plus rim or fill light.
 Setting: place, era, atmosphere (mist, dust, smoke, god-rays), and textures.
-Color: the color grade and mood (warm golden light works well), with the upper
+Color: the color grade and mood (vary the light and weather from post to post:
+overcast, rain, mist, night, and golden light all work), with the upper
 third kept open and luminous (sky, mist, or a soft light beam) for text.
 Prefer compositions that age well: a back view or silhouette rim-lit against
 the light, a hand or object in macro, or a statue in profile often looks more

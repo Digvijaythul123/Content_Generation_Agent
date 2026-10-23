@@ -691,11 +691,15 @@ def test_main_saves_selected_profile_id(
         thinker_id=None,
         visual_style=None,
         caption_language="english",
+        scenery=None,
+        weather=None,
     ):
         del (
             thinker_id,
             visual_style,
             caption_language,
+            scenery,
+            weather,
             brand_id,
             format_id,
             platform_id,
@@ -1267,3 +1271,40 @@ def test_designed_modes_end_with_a_reminder_of_their_structure():
     reminder = prompt[prompt.rindex("IMPORTANT, this overrides"):]
     assert "Numbered List (illustrated)" in reminder and "Design_prompt" in reminder
     assert "IMPORTANT, this overrides" not in _prompt_for(subtype="mirror", thinker_id="buddha")
+
+
+def test_scenery_and_weather_rotate_and_reach_the_prompt(tmp_path, monkeypatch):
+    import content_pipeline
+    from config_loader import load_profile_sceneries, load_profile_weathers
+    places = [item["id"] for item in load_profile_sceneries("rational_thoughts")]
+    weathers = [item["id"] for item in load_profile_weathers("rational_thoughts")]
+    assert {"desert_dunes", "tropical_beach", "cave_temple", "alpine_lake"} <= set(places)
+    assert {"overcast", "monsoon_rain", "misty_morning", "moonlit_night"} <= set(weathers)
+
+    # Recent posts' places are skipped.
+    monkeypatch.setattr(content_pipeline, "_POSTS_DIRECTORY", tmp_path)
+    for index, place in enumerate(places[:-1]):
+        (tmp_path / f"post_{index:03}.json").write_text(json.dumps({"scenery": place}))
+    monkeypatch.setattr(content_pipeline, "_SETTING_MEMORY", len(places))
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram")
+    assert content_pipeline._pick_setting(request, "sceneries", "auto") == places[-1]
+    assert content_pipeline._pick_setting(request, "sceneries", "none") is None
+    assert content_pipeline._pick_setting(request, "weathers", "overcast") == "overcast"
+    with pytest.raises(Exception, match="Unknown scenery"):
+        content_pipeline._pick_setting(request, "sceneries", "moon_base")
+    listing = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
+        subtype="numbered_list")
+    assert content_pipeline._pick_setting(listing, "sceneries", "auto") is None
+
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id, profile=request.profile.to_mapping(),
+            content_format=request.content_format, platform=request.platform,
+            scenery="cave_temple", weather="monsoon_rain",
+        ).generate_content()
+    prompt = service.generate_reel.call_args.args[0]
+    assert "rock-cut cave temple" in prompt and "monsoon rain" in prompt

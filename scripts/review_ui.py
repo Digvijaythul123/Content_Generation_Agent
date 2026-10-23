@@ -17,7 +17,9 @@ from config_loader import (
     load_profile_subtypes,
     load_focus_thinkers,
     load_profile_thinkers,
+    load_profile_sceneries,
     load_profile_visual_styles,
+    load_profile_weathers,
 )
 from content_agent import simplify_copy
 from content_models import ContentValidationError, validate_instagram_caption
@@ -1030,7 +1032,7 @@ def update_post_settings(content_id, payload):
     if not _is_image_reel(record):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
-            {"layout", "caption"} | set(ON_IMAGE_TEXT_FIELDS)
+            {"layout", "caption", "scenery", "weather"} | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
                 "Only the layout, caption, and on-image text can be changed for feed posts."
@@ -1055,6 +1057,19 @@ def update_post_settings(content_id, payload):
         # The renders show the old words, so render them again.
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append(field)
+    for field, loader in (("scenery", load_profile_sceneries), ("weather", load_profile_weathers)):
+        if field not in payload:
+            continue
+        value = payload[field] or None
+        if value is not None and value not in {
+            item["id"] for item in loader(record.get("profile_id") or "")
+        }:
+            raise ValueError(f"Unknown {field} {value!r}.")
+        if value:
+            record[field] = value
+        else:
+            record.pop(field, None)
         changed.append(field)
     if "music_track" in payload:
         track = payload["music_track"] or None
@@ -1110,8 +1125,10 @@ def update_post_settings(content_id, payload):
             record.pop(key, None)
         changed.append("scheduled_at")
     save_post(content_id, record)
-    if is_designed(record) and set(changed) & set(ON_IMAGE_TEXT_FIELDS):
-        # The image tool draws these words, so its prompt must carry the new ones.
+    if (is_designed(record) and set(changed) & set(ON_IMAGE_TEXT_FIELDS)) or (
+        set(changed) & {"scenery", "weather"}
+    ):
+        # The art prompt carries the words (illustrated modes) and the setting.
         _write_art_prompt(content_id, record)
     _append_history(
         "post", content_id, "settings_updated", fields=changed,
@@ -1532,7 +1549,20 @@ def get_generation_options():
     options["music_tracks"] = [path.name for path in list_tracks()]
     options["profile_thinkers"] = {}
     options["profile_visual_styles"] = {}
+    options["profile_sceneries"] = {}
+    options["profile_weathers"] = {}
     profile_errors = []
+    for profile in options.get("profiles", []):
+        try:
+            for key, loader in (("profile_sceneries", load_profile_sceneries),
+                                ("profile_weathers", load_profile_weathers)):
+                items = loader(profile["id"])
+                if items:
+                    options[key][profile["id"]] = [
+                        {"id": item["id"], "name": item["name"]} for item in items
+                    ]
+        except ConfigurationError as error:
+            profile_errors.append(str(error))
     for profile in options.get("profiles", []):
         try:
             styles = load_profile_visual_styles(profile["id"])
@@ -1609,6 +1639,8 @@ def generate_and_save(payload):
         thinker_id=payload.get("thinker_id") or None,
         visual_style=payload.get("visual_style") or None,
         caption_language=payload.get("caption_language") or "english",
+        scenery=payload.get("scenery") or "auto",
+        weather=payload.get("weather") or "auto",
     )
     data = {
         "brand_id": (
@@ -1631,6 +1663,10 @@ def generate_and_save(payload):
         data["thinker_id"] = result.request.thinker_id
     if result.request.visual_style:
         data["visual_style"] = result.request.visual_style
+    if result.request.scenery:
+        data["scenery"] = result.request.scenery
+    if result.request.weather:
+        data["weather"] = result.request.weather
     if payload.get("caption_language") == "hinglish":
         data["caption_language"] = "hinglish"
     if result.request.content_format.id == "image_reel":

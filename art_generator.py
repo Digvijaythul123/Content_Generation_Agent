@@ -331,6 +331,42 @@ def _without_blocked_names(text, record):
     return text
 
 
+_TEXT_SPACE_PATTERN = re.compile(
+    r",?\s*(?:to\s+(?:leave|make|keep)\s+(?:room|space)\s+)?for\s+(?:the\s+)?"
+    r"(?:text|copy|words|title|caption|lettering)(?:\s+(?:overlay|area|later))?\b",
+    re.IGNORECASE,
+)
+
+
+def _setting_lines(record):
+    """Place and weather lines that override the scene's own setting."""
+    from config_loader import (
+        ConfigurationError,
+        load_profile_sceneries,
+        load_profile_weathers,
+    )
+
+    profile_id = record.get("profile_id")
+    lines = []
+    for field, loader, label in (
+        ("scenery", load_profile_sceneries, "Place"),
+        ("weather", load_profile_weathers, "Weather and light"),
+    ):
+        value = record.get(field)
+        if not value or not profile_id:
+            continue
+        try:
+            item = next((entry for entry in loader(profile_id) if entry["id"] == value), None)
+        except ConfigurationError:
+            item = None
+        if item:
+            lines.append(
+                f"{label} (use this even if the scene above says otherwise): "
+                f"{item['description']}."
+            )
+    return lines
+
+
 def is_designed(record):
     """True for illustrated story modes, where the image tool draws the words."""
     subtype = record.get("subtype") or record.get("qa_subtype")
@@ -409,6 +445,7 @@ def _designed_art_prompt(record, scene, style, art_style=None):
         f"part of the design. {safe_area}",
         "\n".join(words),
         f"Layout and illustration: {scene}",
+        *_setting_lines(record),
     ]
     if style:
         parts.append(f"Visual style: {' '.join(style['recipe'].split())}")
@@ -456,6 +493,9 @@ def build_art_prompt(record, art_style=None):
     elif art_style:
         parts.append(f"Visual style: {art_style}")
     scene = _without_blocked_names(description, record)
+    # The text model sometimes adds "space for text"; image tools then paint
+    # lettering, so drop those phrases (the rules above already keep space).
+    scene = _TEXT_SPACE_PATTERN.sub("", scene)
     if record.get("layout") == "poster":
         # Older scenes reserved the bottom for text; posters use the top.
         scene = re.sub(
@@ -465,6 +505,7 @@ def build_art_prompt(record, art_style=None):
             flags=re.IGNORECASE,
         )
     parts.append(f"Scene: {scene}")
+    parts += _setting_lines(record)
     likeness = _thinker_likeness(record, style)
     if likeness:
         parts.append(f"Likeness: {likeness}")

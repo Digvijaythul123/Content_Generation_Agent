@@ -1187,3 +1187,29 @@ def test_non_network_errors_fail_at_once(workspace, monkeypatch):
                         Mock(side_effect=InstagramPublishError("Invalid OAuth access token.")))
     assert review_ui.publish_due_posts(now=now)[0][1] == "failed"
     assert workspace.read()["schedule_failed"] == "Invalid OAuth access token."
+
+
+def test_art_prompt_carries_scenery_and_weather_and_they_can_change(workspace, monkeypatch):
+    record = {**IMAGE_REEL, "profile_id": "rational_thoughts", "design_prompt": "A monk sits.",
+              "scenery": "desert_dunes", "weather": "misty_morning"}
+    prompt = art_generator.build_art_prompt(record)
+    assert "Place (use this even if the scene above says otherwise): Wind-rippled sand dunes" in prompt
+    assert "Thick morning mist" in prompt
+
+    monkeypatch.setattr(art_generator, "GENERATED_ASSETS_DIRECTORY", workspace.assets)
+    workspace.write({**record, "status": "Approved"})
+    review_ui.update_post_settings("post_001", {"scenery": "sea_cave", "weather": None})
+    saved = workspace.read()
+    assert saved["scenery"] == "sea_cave" and "weather" not in saved
+    with pytest.raises(ValueError, match="Unknown scenery"):
+        review_ui.update_post_settings("post_001", {"scenery": "moon_base"})
+
+
+def test_art_prompt_drops_space_for_text_phrases():
+    record = {**IMAGE_REEL, "profile_id": "rational_thoughts", "visual_style": None,
+              "design_prompt": "Color: deep indigo, with a luminous open space in the upper third for text. "
+                               "Quiet sky to leave room for the title overlay."}
+    prompt = art_generator.build_art_prompt(record)
+    scene = prompt[prompt.index("Scene:"):]
+    assert "for text" not in scene and "title" not in scene
+    assert "luminous open space in the upper third." in scene

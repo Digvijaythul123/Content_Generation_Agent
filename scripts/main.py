@@ -41,6 +41,10 @@ def _save_result(result, caption_language="english"):
         data["thinker_id"] = result.request.thinker_id
     if result.request.visual_style:
         data["visual_style"] = result.request.visual_style
+    if result.request.scenery:
+        data["scenery"] = result.request.scenery
+    if result.request.weather:
+        data["weather"] = result.request.weather
     if caption_language != "english":
         data["caption_language"] = caption_language
     if result.request.content_format.id == "image_reel":
@@ -134,6 +138,24 @@ def main(argv=None):
             "living_thinker, thinker_statue, 3d_render, conceptual_metaphor, "
             "storybook_monk, ink_wash, or painterly (default: the story "
             "mode's style)."
+        ),
+    )
+    parser.add_argument(
+        "--scenery",
+        default="auto",
+        help=(
+            "Place for the art, such as desert_dunes, tropical_beach, "
+            "cave_temple, or alpine_lake; 'auto' (default) rotates places, "
+            "'none' keeps the story's own setting."
+        ),
+    )
+    parser.add_argument(
+        "--weather",
+        default="auto",
+        help=(
+            "Weather and light for the art, such as overcast, monsoon_rain, "
+            "misty_morning, or moonlit_night; 'auto' (default) rotates, "
+            "'none' leaves it to the story."
         ),
     )
     parser.add_argument(
@@ -235,6 +257,8 @@ def main(argv=None):
             thinker_id=thinker_id,
             visual_style=args.visual_style,
             caption_language=args.caption_language,
+            scenery=args.scenery,
+            weather=args.weather,
         )
         _save_result(result, args.caption_language)
     return 0

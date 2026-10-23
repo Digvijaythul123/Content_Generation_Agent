@@ -432,6 +432,8 @@ class GenerationRequest:
     subtype: Optional[str] = None
     thinker_id: Optional[str] = None
     visual_style: Optional[str] = None
+    scenery: Optional[str] = None
+    weather: Optional[str] = None
 
 
     @property

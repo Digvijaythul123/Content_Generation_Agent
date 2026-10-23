@@ -79,8 +79,12 @@ class ContentAgent:
         thinker_id=None,
         visual_style=None,
         caption_language="english",
+        scenery=None,
+        weather=None,
     ):
         self.ai_service = AIService()
+        self.scenery = scenery
+        self.weather = weather
         self.profile = profile or load_profile(profile_id)
         self.brand = brand
         self.content_format = content_format
@@ -166,6 +170,7 @@ class ContentAgent:
             self._thinker_section,
             self._lens_section,
             self._visual_style_section,
+            self._setting_section,
             self._subtype_section,
             self._comedy_section,
             self._caption_language_section,
@@ -386,6 +391,33 @@ class ContentAgent:
             "religious and spiritual figures (for example the Buddha, "
             "Kabir, or Vivekananda) with dignity: in comedy or scenes with "
             "modern gadgets, use an anonymous stand-in instead.\n\n"
+        )
+
+    def _setting_section(self):
+        """The place and weather for the art, rotated across posts."""
+        from config_loader import load_profile_sceneries, load_profile_weathers
+
+        lines = []
+        for value, loader, label in (
+            (self.scenery, load_profile_sceneries, "Place"),
+            (self.weather, load_profile_weathers, "Weather and light"),
+        ):
+            if not value:
+                continue
+            item = next(
+                (entry for entry in loader(self.profile["id"]) if entry["id"] == value),
+                None,
+            )
+            if item is None:
+                raise ValueError(f"Unknown {label.lower()} {value!r}.")
+            lines.append(f"- {label}: {item['description']}.")
+        if not lines:
+            return ""
+        return (
+            "Setting for the Design_prompt (use it instead of the thinker's "
+            "usual setting or golden light; keep the story and subject):\n"
+            + "\n".join(lines)
+            + "\n\n"
         )
 
     def _subtype_section(self):
