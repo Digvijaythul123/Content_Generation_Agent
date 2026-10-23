@@ -23,6 +23,7 @@ from config_loader import (
 )
 from content_agent import simplify_copy
 from content_models import ContentValidationError, validate_instagram_caption
+from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError, R2MediaHost
 from art_generator import (
@@ -99,6 +100,7 @@ _STAGE_ACTION_ERRORS = (
     ArtGenerationError,
     MediaHostError,
     InstagramPublishError,
+    FacebookPublishError,
     ContentValidationError,
     OSError,
     ValueError,
@@ -695,6 +697,12 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
             "schedule_retry_at": record.get("schedule_retry_at"),
             "schedule_last_error": record.get("schedule_last_error"),
             "connection": publishing_connection(),
+            "facebook": {
+                "share": record.get("share_to_facebook", True),
+                "permalink": record.get("facebook_permalink"),
+                "error": record.get("facebook_error"),
+                "retry_at": record.get("facebook_retry_at"),
+            },
         }
     if content_type != "post" or not _is_instagram_post(record):
         return {
@@ -1013,6 +1021,7 @@ def publishing_connection():
             get_setting("INSTAGRAM_ACCESS_TOKEN")
             and get_setting("INSTAGRAM_ACCOUNT_ID")
         ),
+        "facebook": facebook_configured(),
         "media_host": all(
             get_setting(name)
             for name in (
@@ -1046,7 +1055,7 @@ def update_post_settings(content_id, payload):
     if not _is_image_reel(record):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
-            {"layout", "caption", "scenery", "weather", "weather_look"}
+            {"layout", "caption", "scenery", "weather", "weather_look", "share_to_facebook"}
             | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
@@ -1086,6 +1095,11 @@ def update_post_settings(content_id, payload):
         else:
             record.pop(field, None)
         changed.append(field)
+    if "share_to_facebook" in payload:
+        if not isinstance(payload["share_to_facebook"], bool):
+            raise ValueError("Posting to Facebook must be on or off.")
+        record["share_to_facebook"] = payload["share_to_facebook"]
+        changed.append("share_to_facebook")
     if "weather_look" in payload:
         if not isinstance(payload["weather_look"], bool):
             raise ValueError("The weather look must be on or off.")
@@ -1438,7 +1452,16 @@ def publish_content(
                 host.delete(uploaded_key)  # Instagram keeps its own copy.
             except MediaHostError:
                 pass
-        return {"dry_run": False, **result}
+        uploaded_keys = []
+        facebook = None
+        if is_reel and facebook_configured() and record.get("share_to_facebook", True):
+            # Instagram is done; a Facebook problem is recorded and retried
+            # on its own, never undoing or repeating the Instagram post.
+            try:
+                facebook = post_to_facebook(content_id)
+            except FacebookPublishError as error:
+                facebook = {"error": str(error)}
+        return {"dry_run": False, **result, "facebook": facebook}
     except _STAGE_ACTION_ERRORS as error:
         _append_history(
             content_type, content_id, "stage_failed",
@@ -1454,6 +1477,77 @@ def publish_content(
     finally:
         with _STAGE_LOCK:
             _ACTIVE_STAGES.discard(stage_key)
+
+
+# Waits (minutes) before retrying a Facebook network failure.
+FACEBOOK_RETRY_MINUTES = (5, 15, 30, 60)
+
+
+def post_to_facebook(content_id, publisher=None, now=None):
+    """Post a Reel (already on Instagram) to the Facebook Page."""
+    record = load_post(content_id)
+    if not _is_image_reel(record):
+        raise ValueError("Only Reels can be posted to Facebook.")
+    if record.get("facebook_video_id"):
+        raise ValueError("This Reel is already on Facebook.")
+    video = reel_video_path(content_id)
+    if not video.is_file():
+        raise ValueError("Render the Reel video first.")
+    caption = strip_highlights(record.get("caption") or "").strip()
+    try:
+        result = (publisher or FacebookPublisher()).publish_reel(video, caption)
+    except FacebookPublishError as error:
+        record = load_post(content_id)
+        attempts = int(record.get("facebook_attempts") or 0)
+        record["facebook_error"] = str(error)
+        if error.transient and attempts < len(FACEBOOK_RETRY_MINUTES):
+            wait = FACEBOOK_RETRY_MINUTES[attempts]
+            record["facebook_attempts"] = attempts + 1
+            record["facebook_retry_at"] = (
+                (now or datetime.now(timezone.utc)) + timedelta(minutes=wait)
+            ).isoformat()
+        else:
+            record.pop("facebook_retry_at", None)
+        save_post(content_id, record)
+        _append_history("post", content_id, "facebook_failed", error=str(error))
+        raise
+    record = load_post(content_id)
+    record.update(
+        facebook_video_id=result["video_id"],
+        facebook_permalink=result.get("permalink"),
+        facebook_published_at=datetime.now(timezone.utc).isoformat(),
+    )
+    for key in ("facebook_error", "facebook_attempts", "facebook_retry_at"):
+        record.pop(key, None)
+    save_post(content_id, record)
+    _append_history("post", content_id, "facebook_published", permalink=result.get("permalink"))
+    return result
+
+
+def retry_facebook_posts(now=None, publisher=None):
+    """Retry Facebook uploads that failed for network reasons."""
+    now = now or datetime.now(timezone.utc)
+    results = []
+    for path in sorted(_CONTENT_DIRECTORIES["post"].glob("post_*.json")):
+        content_id = path.stem
+        try:
+            record = load_post(content_id)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        retry_at = record.get("facebook_retry_at")
+        if (
+            not retry_at
+            or record.get("facebook_video_id")
+            or _parse_schedule(retry_at) > now
+            or not facebook_configured()
+        ):
+            continue
+        try:
+            result = post_to_facebook(content_id, publisher=publisher, now=now)
+            results.append((content_id, "facebook published", result.get("permalink")))
+        except (FacebookPublishError, ValueError, OSError) as error:
+            results.append((content_id, "facebook failed", str(error)))
+    return results
 
 
 def regenerate_content(content_type, content_id):

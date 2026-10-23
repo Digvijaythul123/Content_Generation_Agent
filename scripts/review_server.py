@@ -223,6 +223,22 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "facebook"
+        ):
+            try:
+                self._send_json({"result": ui.post_to_facebook(path_parts[3])})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except ui.FacebookPublishError as error:
+                self._send_json({"error": str(error)}, 502)
+            except (ui.PostStorageError, ui.ReviewUIError, OSError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
             and path_parts[4] == "simplify"
         ):
             try:

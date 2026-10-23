@@ -3,6 +3,7 @@ import sys
 
 from art_generator import ArtGenerationError
 from content_models import ContentValidationError
+from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError
 from media_renderer import MediaRenderError, post_image_path
@@ -22,6 +23,7 @@ _ERRORS = (
     ArtGenerationError,
     ContentValidationError,
     InstagramPublishError,
+    FacebookPublishError,
     MediaHostError,
     MediaRenderError,
     PostStorageError,
@@ -106,6 +108,11 @@ def main(argv=None):
                 f"ID {account.get('user_id') or account.get('id')})."
             )
             print(f"Posts published via API in the last 24h: {used}/{total}.")
+            if facebook_configured():
+                page = FacebookPublisher().page_info()
+                print(f"Facebook Page connected: {page.get('name')} (ID {page.get('id')}).")
+            else:
+                print("Facebook Page: not set up (FACEBOOK_PAGE_ID / FACEBOOK_PAGE_TOKEN in .env).")
             return 0
         if args.refresh_token:
             token, expires_in = InstagramPublisher().refresh_access_token()

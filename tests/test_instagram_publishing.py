@@ -1252,3 +1252,29 @@ def test_generate_artwork_is_off_with_a_reason_when_no_image_service(workspace, 
     monkeypatch.setattr(review_ui, "art_service_problem", lambda: None)
     stages = {stage["id"]: stage for stage in review_ui.get_pipeline("post", "post_001")["stages"]}
     assert stages["artwork"]["can_run"] is True
+
+
+def test_reel_goes_to_facebook_after_instagram_and_facebook_errors_do_not_undo_it(workspace, monkeypatch):
+    from facebook_publisher import FacebookPublishError
+    _reel_workspace(workspace, monkeypatch, status="Approved", caption="Hook\n\n#Buddhism")
+    host = Mock()
+    host.upload.return_value = ("key", "https://cdn.example/reel.mp4")
+    publisher = Mock()
+    publisher.publish_reel.return_value = {"media_id": "m1", "permalink": "https://www.instagram.com/reel/m1/"}
+    monkeypatch.setattr(review_ui, "facebook_configured", lambda: True)
+    calls = []
+
+    def failing_facebook(content_id, **kwargs):
+        calls.append(content_id)
+        raise FacebookPublishError("Facebook returned HTTP 400: Invalid token")
+
+    monkeypatch.setattr(review_ui, "post_to_facebook", failing_facebook)
+    result = review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+    assert calls == ["post_001"] and result["facebook"]["error"].endswith("Invalid token")
+    assert workspace.read()["status"] == "Published"  # Instagram post stands
+
+    _reel_workspace(workspace, monkeypatch, status="Approved", caption="Hook\n\n#Buddhism",
+                    share_to_facebook=False)
+    calls.clear()
+    review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+    assert calls == []  # this Reel opted out

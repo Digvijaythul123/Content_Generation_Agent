@@ -1239,6 +1239,8 @@
         if (state.record.status === "Published") {
           if (state.record.caption) container.append(createField("caption", state.record.caption));
           container.append(manualPostControls());
+          const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
+          container.append(facebookControls(publishing));
         } else {
           container.append(reelReviewPanel());
         }
@@ -1865,11 +1867,71 @@
           + "Use Publish Reel now, or pick a new time and press Schedule.";
         panel.insertBefore(failed, actions);
       }
+      panel.append(facebookControls(publishing));
       const manual = document.createElement("p");
       manual.className = "hint";
       manual.textContent = "Posted it yourself in the Instagram app instead? Mark it below.";
       panel.append(manual, manualPostControls());
       return panel;
+    }
+
+    function facebookControls(publishing) {
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const facebook = publishing.facebook || {};
+      if (!(publishing.connection || {}).facebook) {
+        const hint = document.createElement("span");
+        hint.className = "hint";
+        hint.textContent = "Facebook Page not connected (FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN in .env).";
+        box.append(hint);
+        return box;
+      }
+      if (state.record.status !== "Published") {
+        const label = document.createElement("label");
+        const share = document.createElement("input");
+        share.type = "checkbox";
+        share.checked = facebook.share !== false;
+        share.addEventListener("change", async () => {
+          try {
+            await saveReelSettings({ share_to_facebook: share.checked });
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+        label.append(share, " Also post to my Facebook Page");
+        box.append(label);
+        return box;
+      }
+      if (facebook.permalink || state.record.facebook_video_id) {
+        const link = document.createElement("a");
+        link.href = facebook.permalink || "https://www.facebook.com/";
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "View on Facebook";
+        box.append(link);
+        return box;
+      }
+      if (facebook.error) {
+        const error = document.createElement("span");
+        error.className = "message error";
+        error.textContent = `Facebook: ${facebook.error}`
+          + (facebook.retry_at ? ` Trying again at ${new Date(facebook.retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "");
+        box.append(error);
+      }
+      const post = makeAction("Post to Facebook now", async () => {
+        post.disabled = true;
+        post.textContent = "Posting to Facebook… (a minute or two)";
+        try {
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/facebook`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+          });
+        } catch (error) {
+          window.alert(error.message);
+        }
+        await refreshItems(state.selected);
+      }, "secondary");
+      box.append(post);
+      return box;
     }
 
     function manualPostControls() {

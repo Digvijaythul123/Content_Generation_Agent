@@ -22,7 +22,7 @@ from app_settings import get_setting
 from instagram_publisher import InstagramPublisher, InstagramPublishError
 from project_paths import GENERATED_ASSETS_DIRECTORY, PROJECT_ROOT
 from scripts.backup_content import backup_if_due
-from scripts.review_ui import publish_due_posts
+from scripts.review_ui import publish_due_posts, retry_facebook_posts
 
 
 LABEL = "com.dagnosticbeing.publish-scheduled"
@@ -110,6 +110,8 @@ def run_once():
         if refreshed:
             print(f"{stamp} {refreshed}", flush=True)
         for content_id, outcome, detail in publish_due_posts():
+            print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
+        for content_id, outcome, detail in retry_facebook_posts():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
         backed_up = backup_if_due()
         if backed_up:
