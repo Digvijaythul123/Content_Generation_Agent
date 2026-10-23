@@ -59,6 +59,10 @@ VIDEO_EFFECTS = {
         ("rain", 11, 160, (60, 120), (0.32, 0.55), ("scroll", 0, 1750)),
         ("raindrop", 17, 20, (180, 320), (0.14, 0.26), ("scroll", 0, 2600)),
     ),
+    "snow": (
+        ("snowflake", 37, 160, (1.2, 3.2), (0.35, 0.8), ("scroll", 10, 70)),
+        ("snowflake", 41, 50, (3.0, 6.5), (0.25, 0.6), ("scroll", -14, 120)),
+    ),
     "sunlight": (
         ("rays", 13, 16, (0.8, 3.0), (0.07, 0.19), ("sway", 34, 9, 0)),
         ("rays", 29, 10, (0.6, 2.0), (0.05, 0.13), ("sway", 26, 6.5, 2)),
@@ -69,6 +73,7 @@ EFFECT_NAMES = {
     "sparks": "Drifting sparks",
     "meteors": "Meteor shower",
     "rain": "Rain",
+    "snow": "Falling snow",
     "sunlight": "Sunlight rays",
 }
 # Rays fan out from a sun just above the top-right corner of the frame.
@@ -165,6 +170,13 @@ const draw = {{
     ctx.closePath(); ctx.fill();
     ctx.restore();
   }},
+  snowflake(x, y, r, a) {{
+    // Soft, slightly blurred flakes; bigger ones fall faster (nearer).
+    ctx.filter = r > 3 ? "blur(1.6px)" : "blur(.6px)";
+    ctx.fillStyle = `rgba(250, 252, 255, ${{a}})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.filter = "none";
+  }},
   mote(x, y, r, a) {{
     // Dust floating in the light, brighter nearer the sun.
     const near = Math.max(0.25, 1 - Math.hypot(x - {sun_x}, y - {sun_y}) / 2000);
@@ -201,11 +213,17 @@ def _scroll(speed, period):
     return "0"
 
 
+# A weather look brings its own effect unless the post chose one.
+_LOOK_EFFECTS = {"monsoon_rain": "rain", "storm_clouds": "rain", "snowfall": "snow"}
+
+
 def effect_for(record):
     """The record's overlay effect name, or None (legacy ``sparks: true``)."""
     effect = record.get("effect")
     if effect in VIDEO_EFFECTS:
         return effect
+    if "effect" not in record and not record.get("sparks") and record.get("weather_look"):
+        return _LOOK_EFFECTS.get(record.get("weather"))
     return "sparks" if record.get("sparks") and effect is None else None
 
 

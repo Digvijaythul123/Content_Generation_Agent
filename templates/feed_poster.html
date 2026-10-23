@@ -81,6 +81,32 @@
   /* The handle sits lower, over the art, so it keeps its own shadow. */
   body.tone-light .handle { color: #FFF8EC; }
 
+  /* Weather look: repaints art made in other light (for example a sunny
+     image for a rainy-day post). Filters tint the art; the overlay adds
+     the weather's color, and also covers motion clips. */
+  .look { position: absolute; inset: 0; pointer-events: none; }
+  body.look-golden_hour .art { filter: sepia(.18) saturate(1.15); }
+  body.look-golden_hour .look { background: rgba(255, 168, 80, .12); }
+  body.look-overcast .art { filter: saturate(.55) brightness(.9) contrast(.9); }
+  body.look-overcast .look { background: rgba(150, 160, 176, .2); }
+  body.look-monsoon_rain .art { filter: saturate(.5) brightness(.7) contrast(1.05); }
+  body.look-monsoon_rain .look { background: linear-gradient(180deg, rgba(28, 40, 58, .5), rgba(28, 40, 58, .3)); }
+  body.look-after_rain .art { filter: saturate(.85) brightness(.92); }
+  body.look-after_rain .look { background: rgba(70, 95, 120, .16); }
+  body.look-misty_morning .art { filter: saturate(.6) contrast(.78) brightness(1.04); }
+  body.look-misty_morning .look { background: linear-gradient(180deg, rgba(222, 228, 236, .32), rgba(222, 228, 236, .5)); }
+  body.look-snowfall .art { filter: saturate(.45) brightness(1.02) contrast(.92); }
+  body.look-snowfall .look { background: rgba(205, 220, 240, .26); }
+  body.look-blue_hour .art { filter: saturate(.7) brightness(.62); }
+  body.look-blue_hour .look { background: rgba(24, 40, 96, .42); }
+  body.look-moonlit_night .art { filter: saturate(.4) brightness(.45) contrast(1.1); }
+  body.look-moonlit_night .look { background: rgba(18, 28, 70, .5); }
+  body.look-storm_clouds .art { filter: saturate(.55) brightness(.6) contrast(1.2); }
+  body.look-storm_clouds .look { background: rgba(32, 38, 48, .35); }
+  body.look-lamplight .art { filter: brightness(.55) sepia(.25); }
+  body.look-lamplight .look { background: radial-gradient(ellipse 70% 60% at 50% 70%, rgba(255, 170, 70, .18), rgba(10, 6, 2, .45)); }
+  body.layer-text .look { display: none; }
+
   /* Layers used for the video: the background moves, the text stays crisp. */
   body.layer-background .column, body.layer-background .handle { visibility: hidden; }
   /* "chrome": the glow and fades alone, laid over a motion clip. */
@@ -94,8 +120,9 @@
   body.only-title .column, body.only-title .handle { visibility: hidden; }
 </style>
 </head>
-<body class="layer-$layer tone-$tone">
+<body class="layer-$layer tone-$tone look-$look">
 $art
+<div class="look"></div>
 <div class="glow"></div>
 <div class="foot"></div>
 <main class="column">

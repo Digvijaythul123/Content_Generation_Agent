@@ -130,6 +130,20 @@ def _brand_for(record):
 # text turns dark; between MID and LIGHT the shade behind it gets stronger.
 TONE_LIGHT = 150
 TONE_MID = 105
+# How much a weather look brightens or darkens the art (see the templates),
+# so the text tone follows the repainted image, not the original.
+LOOK_BRIGHTNESS = {
+    "golden_hour": 1.0, "overcast": 0.85, "monsoon_rain": 0.45,
+    "after_rain": 0.85, "misty_morning": 1.15, "snowfall": 1.0,
+    "blue_hour": 0.5, "moonlit_night": 0.35, "storm_clouds": 0.45,
+    "lamplight": 0.5,
+}
+
+
+def weather_look(record):
+    """The weather to repaint existing art with, or None."""
+    weather = record.get("weather")
+    return weather if record.get("weather_look") and weather in LOOK_BRIGHTNESS else None
 
 
 @lru_cache(maxsize=32)
@@ -170,6 +184,7 @@ def text_tone(artwork, record):
         return "dark"
     if brightness is None:
         return "dark"
+    brightness *= LOOK_BRIGHTNESS.get(weather_look(record), 1.0)
     if brightness > TONE_LIGHT:
         return "light"
     return "mid" if brightness > TONE_MID else "dark"
@@ -264,6 +279,7 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             else ""
         ),
         layer=layer,
+        look=weather_look(record) or "none",
         tone=(
             text_tone(artwork, record)
             if template_path in (IMAGE_REEL_POSTER_TEMPLATE, FEED_POSTER_TEMPLATE)

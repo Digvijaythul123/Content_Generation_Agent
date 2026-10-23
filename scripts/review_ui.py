@@ -1032,7 +1032,8 @@ def update_post_settings(content_id, payload):
     if not _is_image_reel(record):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
-            {"layout", "caption", "scenery", "weather"} | set(ON_IMAGE_TEXT_FIELDS)
+            {"layout", "caption", "scenery", "weather", "weather_look"}
+            | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
                 "Only the layout, caption, and on-image text can be changed for feed posts."
@@ -1071,6 +1072,18 @@ def update_post_settings(content_id, payload):
         else:
             record.pop(field, None)
         changed.append(field)
+    if "weather_look" in payload:
+        if not isinstance(payload["weather_look"], bool):
+            raise ValueError("The weather look must be on or off.")
+        if payload["weather_look"]:
+            record["weather_look"] = True
+        else:
+            record.pop("weather_look", None)
+        changed.append("weather_look")
+    if set(changed) & {"weather", "weather_look"} and record.get("weather_look"):
+        # The renders show the old light, so render them again.
+        post_image_path(content_id).unlink(missing_ok=True)
+        reel_video_path(content_id).unlink(missing_ok=True)
     if "music_track" in payload:
         track = payload["music_track"] or None
         names = {path.name for path in list_tracks()}

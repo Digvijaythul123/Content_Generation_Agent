@@ -1038,6 +1038,26 @@
         wrap.append(select);
         box.append(wrap);
       }
+      if (weathers.length && state.record.weather) {
+        const lookLabel = document.createElement("label");
+        const look = document.createElement("input");
+        look.type = "checkbox";
+        look.checked = Boolean(state.record.weather_look);
+        look.addEventListener("change", async () => {
+          try {
+            await saveReelSettings({ weather_look: look.checked },
+              look.checked
+                ? "The current image will be tinted to this weather (rain and snow add their effect). Render the image and video again."
+                : "Tint removed. Render the image and video again.");
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+        lookLabel.append(look, " Make the current image look like this weather (no new art needed)");
+        lookLabel.title = "For art made in other light, for example a sunny image for a rainy-day post. "
+          + "New art made from the updated prompt looks more natural.";
+        box.append(lookLabel);
+      }
       return box;
     }
 
@@ -1595,7 +1615,7 @@
       effectLabel.textContent = "Effect ";
       const effect = document.createElement("select");
       for (const [value, name] of [["", "None"], ["sparks", "Drifting sparks"],
-        ["meteors", "Meteor shower"], ["rain", "Rain"], ["sunlight", "Sunlight rays"]]) {
+        ["meteors", "Meteor shower"], ["rain", "Rain"], ["snow", "Falling snow"], ["sunlight", "Sunlight rays"]]) {
         effect.append(new Option(name, value));
       }
       // Older Reels saved the sparks effect as "sparks: true".

@@ -529,8 +529,8 @@ def test_image_reel_layers_split_art_and_text(tmp_path):
     background = build_post_html(IMAGE_REEL, artwork=art, layer="background")
 
     assert "height: 1920px" in full and "<img" in full
-    assert "<img" not in text and 'class="layer-text"' in text
-    assert 'class="layer-background"' in background
+    assert "<img" not in text and 'class="layer-text look-none"' in text
+    assert 'class="layer-background look-none"' in background
     with pytest.raises(MediaRenderError, match="artwork"):
         build_post_html(IMAGE_REEL)
 
@@ -1020,7 +1020,7 @@ def test_effect_overlays_move_under_the_text_and_can_be_chosen(tmp_path, workspa
     assert video_renderer.effect_for({"sparks": True}) == "sparks"  # legacy records
     assert video_renderer.effect_for({"sparks": True, "effect": "rain"}) == "rain"
     assert video_renderer.effect_for({}) is None
-    assert set(video_renderer.VIDEO_EFFECTS) == {"sparks", "meteors", "rain", "sunlight"}
+    assert set(video_renderer.VIDEO_EFFECTS) == {"sparks", "meteors", "rain", "snow", "sunlight"}
 
     _reel_workspace(workspace, monkeypatch)
     review_ui.update_post_settings("post_001", {"sparks": True})
@@ -1029,7 +1029,7 @@ def test_effect_overlays_move_under_the_text_and_can_be_chosen(tmp_path, workspa
     record = workspace.read()
     assert record["effect"] == "meteors" and "sparks" not in record
     with pytest.raises(ValueError, match="Effect must be"):
-        review_ui.update_post_settings("post_001", {"effect": "snow"})
+        review_ui.update_post_settings("post_001", {"effect": "hail"})
     review_ui.update_post_settings("post_001", {"effect": None})
     assert video_renderer.effect_for(workspace.read()) is None
     assert not video_renderer.reel_video_path("post_001").exists()
@@ -1213,3 +1213,29 @@ def test_art_prompt_drops_space_for_text_phrases():
     scene = prompt[prompt.index("Scene:"):]
     assert "for text" not in scene and "title" not in scene
     assert "luminous open space in the upper third." in scene
+
+
+def test_weather_look_tints_existing_art_and_brings_its_effect(tmp_path, workspace, monkeypatch):
+    import media_renderer
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    record = {**IMAGE_REEL, "layout": "poster", "weather": "monsoon_rain", "weather_look": True}
+    html = build_post_html(record, artwork=art)
+    assert "look-monsoon_rain" in html and '<div class="look"></div>' in html
+    assert "look-none" in build_post_html({**record, "weather_look": False}, artwork=art)
+    # Bright sunny art turns dark under a rain look, so the text stays light.
+    monkeypatch.setattr(media_renderer, "_region_brightness", lambda *a: 200)
+    assert media_renderer.text_tone(art, record) == "dark"
+    assert media_renderer.text_tone(art, {**record, "weather_look": False}) == "light"
+
+    assert video_renderer.effect_for(record) == "rain"
+    assert video_renderer.effect_for({**record, "weather": "snowfall"}) == "snow"
+    assert video_renderer.effect_for({**record, "effect": None}) is None  # chose no effect
+    assert video_renderer.effect_for({**record, "effect": "meteors"}) == "meteors"
+
+    _reel_workspace(workspace, monkeypatch, weather="monsoon_rain", profile_id="rational_thoughts")
+    review_ui.update_post_settings("post_001", {"weather_look": True})
+    assert workspace.read()["weather_look"] is True
+    assert not video_renderer.reel_video_path("post_001").exists()
+    with pytest.raises(ValueError, match="on or off"):
+        review_ui.update_post_settings("post_001", {"weather_look": "yes"})
