@@ -1278,3 +1278,17 @@ def test_reel_goes_to_facebook_after_instagram_and_facebook_errors_do_not_undo_i
     calls.clear()
     review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
     assert calls == []  # this Reel opted out
+
+
+def test_performance_report_lists_hashtags_and_sorts_by_reach(tmp_path, monkeypatch):
+    import analytics
+    assert analytics.hashtags_of("Hook #Buddhism\n\nSource\n\n#Dhammapada #Mindfulness #Dharma #Grief") == [
+        "#Buddhism", "#Dhammapada", "#Mindfulness", "#Dharma", "#Grief"]
+    assert analytics.hashtags_of("No tags here, issue#4") == []
+    cache = tmp_path / "performance.json"
+    cache.write_text(json.dumps({"fetched_at": "x", "groups": {}, "posts": [
+        {"id": "post_001", "reach": 5}, {"id": "post_002", "reach": 50}]}))
+    monkeypatch.setattr(analytics, "load_post", lambda cid: {"caption": f"{cid} #Buddhism #Zen"})
+    report = analytics.cached_report(cache)
+    assert [row["id"] for row in report["posts"]] == ["post_002", "post_001"]
+    assert report["posts"][0]["hashtags"] == ["#Buddhism", "#Zen"]

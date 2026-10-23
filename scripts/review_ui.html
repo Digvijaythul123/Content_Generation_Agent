@@ -2050,15 +2050,15 @@
         `Updated ${new Date(report.fetched_at).toLocaleString()}. Numbers can lag a few hours.`;
       body.className = "";
       body.append(performanceTable(
-        ["Post", "Views", "Reach", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
+        ["Post", "Hashtags", "Reach", "Views", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
         report.posts.map((post) => {
           const link = document.createElement("a");
           link.href = post.permalink;
           link.target = "_blank";
           link.rel = "noopener noreferrer";
           link.textContent = `${post.id} · ${post.title.replaceAll("**", "")}`;
-          return [link, post.views, post.reach, post.saved, post.shares,
-            post.avg_watch_seconds, post.story_mode, post.visual_style];
+          return [link, (post.hashtags || []).join(" ") || "–", post.reach, post.views, post.saved,
+            post.shares, post.avg_watch_seconds, post.story_mode, post.visual_style];
         })
       ));
       Object.entries(report.groups).forEach(([label, items]) => {

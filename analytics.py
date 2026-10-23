@@ -6,6 +6,7 @@ choices the generator made: story mode, visual style, and thinker.
 """
 
 import json
+import re
 from datetime import datetime, timezone
 
 from instagram_publisher import InstagramPublisher, InstagramPublishError
@@ -14,12 +15,18 @@ from project_paths import GENERATED_ASSETS_DIRECTORY, GENERATED_POSTS_DIRECTORY
 
 
 CACHE_PATH = GENERATED_ASSETS_DIRECTORY / "performance.json"
+_HASHTAG_PATTERN = re.compile(r"(?<![\w#])#(\w+)")
 _METRICS = ("views", "reach", "saved", "shares", "total_interactions")
 _GROUPS = (
     ("story_mode", "Story mode"),
     ("visual_style", "Visual style"),
     ("thinker", "Thinker"),
 )
+
+
+def hashtags_of(caption):
+    """The caption's hashtags in order, e.g. ['#Buddhism', '#Dharma']."""
+    return [f"#{tag}" for tag in _HASHTAG_PATTERN.findall(caption or "")]
 
 
 def _published_records(posts_directory=GENERATED_POSTS_DIRECTORY):
@@ -72,6 +79,7 @@ def fetch_performance(publisher=None, records=None):
             {
                 "id": record["id"],
                 "title": record.get("title", ""),
+                "hashtags": hashtags_of(record.get("caption")),
                 "permalink": item.get("permalink"),
                 "posted_at": item.get("timestamp"),
                 "story_mode": record.get("subtype")
@@ -120,7 +128,7 @@ def refresh_report(publisher=None, cache_path=CACHE_PATH, records=None):
     rows = fetch_performance(publisher, records)
     report = {
         "fetched_at": datetime.now(timezone.utc).isoformat(),
-        "posts": sorted(rows, key=lambda row: row["views"], reverse=True),
+        "posts": sorted(rows, key=lambda row: row["reach"], reverse=True),
         "groups": summarize(rows),
     }
     cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,6 +138,17 @@ def refresh_report(publisher=None, cache_path=CACHE_PATH, records=None):
 
 def cached_report(cache_path=CACHE_PATH):
     try:
-        return json.loads(cache_path.read_text(encoding="utf-8"))
+        report = json.loads(cache_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
+    # Reports saved before hashtags were added still show them.
+    for row in report.get("posts", []):
+        if "hashtags" not in row:
+            try:
+                row["hashtags"] = hashtags_of(load_post(row["id"]).get("caption"))
+            except Exception:
+                row["hashtags"] = []
+    report["posts"] = sorted(
+        report.get("posts", []), key=lambda row: row.get("reach") or 0, reverse=True
+    )
+    return report
