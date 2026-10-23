@@ -565,11 +565,21 @@
           const open = document.createElement("a");
           open.href = `#${item.type}/${item.id}/instagram`;
           open.textContent = `${item.id} · ${item.title.replaceAll("**", "")}`;
-          open.addEventListener("click", (event) => {
+          open.addEventListener("click", async (event) => {
             event.preventDefault();
             state.activeTab = "instagram";
             state.selected = item;
-            loadSelected(item);
+            renderItems();
+            try {
+              await loadSelected(item);
+              history.replaceState(null, "", `#${item.type}/${item.id}/instagram`);
+            } catch (error) {
+              $("detail").textContent = error.message;
+            }
+            // Go straight to the publishing controls (retry, reschedule).
+            const target = document.getElementById("schedule-alert")
+              || document.getElementById("review-before-posting") || $("detail");
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
           });
           const when = new Date(item.scheduled_at);
           const status = item.schedule_failed
@@ -988,7 +998,48 @@
       return state.selected?.type === "post" && state.record?.format_id === "image_reel";
     }
 
+    function scheduleAlert() {
+      // A failed or retrying scheduled post gets its fixes at the top of the tab.
+      const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
+      if (state.record.status === "Published"
+          || !(publishing.schedule_failed || publishing.schedule_retry_at)) return null;
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      box.id = "schedule-alert";
+      const text = document.createElement("p");
+      text.className = publishing.schedule_failed ? "message error" : "message";
+      text.textContent = publishing.schedule_failed
+        ? `This scheduled post failed: ${publishing.schedule_failed}`
+        : `Network problem (${publishing.schedule_last_error}); trying again at `
+          + new Date(publishing.schedule_retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ".";
+      const retry = makeAction("Try again now", async () => {
+        if (!window.confirm("Post this Reel to Instagram now? This cannot be undone from here.")) return;
+        retry.disabled = true;
+        retry.textContent = "Publishing… (a minute or two)";
+        try {
+          await requestJson(contentUrl(state.selected, "publish"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true })
+          });
+        } catch (error) {
+          window.alert(error.message);
+        }
+        await refreshItems(state.selected);
+      });
+      retry.disabled = !publishing.can_run;
+      const reschedule = makeAction("Reschedule", () => {
+        const picker = document.querySelector('#review-before-posting input[type="datetime-local"]');
+        picker?.scrollIntoView({ behavior: "smooth", block: "center" });
+        picker?.focus();
+      }, "secondary");
+      box.append(text, retry, reschedule);
+      return box;
+    }
+
     function renderInstagram(container) {
+      const alert = scheduleAlert();
+      if (alert) container.append(alert);
       const hint = document.createElement("p");
       hint.className = "hint";
       hint.textContent = isImageReel()
@@ -1543,6 +1594,7 @@
       const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
       const panel = document.createElement("section");
       panel.className = "field";
+      panel.id = "review-before-posting";
       const heading = document.createElement("div");
       heading.className = "field-name";
       heading.textContent = "Review before posting";
@@ -1654,21 +1706,12 @@
           + `Trying again at ${new Date(publishing.schedule_retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`;
         panel.append(retry);
       }
-      if (publishing.schedule_failed || publishing.schedule_retry_at) {
-        const failedBox = document.createElement("div");
-        failedBox.className = "inline-actions";
-        if (publishing.schedule_failed) {
-          const failed = document.createElement("p");
-          failed.className = "message error";
-          failed.textContent = `The scheduled post failed: ${publishing.schedule_failed} `
-            + "Post it now, or pick a new time above and press Schedule.";
-          failedBox.append(failed);
-        }
-        // Same as "Publish Reel now", placed where the failure is shown.
-        const retryNow = makeAction("Try again now", () => publishNow.click());
-        retryNow.disabled = !publishing.can_run;
-        failedBox.append(retryNow);
-        panel.insertBefore(failedBox, actions);
+      if (publishing.schedule_failed) {
+        const failed = document.createElement("p");
+        failed.className = "message error";
+        failed.textContent = `The scheduled post failed: ${publishing.schedule_failed} `
+          + "Use Publish Reel now, or pick a new time and press Schedule.";
+        panel.insertBefore(failed, actions);
       }
       const manual = document.createElement("p");
       manual.className = "hint";
