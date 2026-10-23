@@ -224,6 +224,22 @@ subtypes:
       today.
     background: A warm, cinematic photo of an old monk and a young monk talking by lotus water or in a forest with soft god rays, with a calm, darker area in the lower third for the words; slow flute.
     example: 'A monk was asked, "What is peace?" He answered: "Wanting nothing from this moment."'
+  - id: real_or_fake
+    default_visual_style: thinker_statue
+    name: Real or Fake? (quote quiz)
+    definition: A popular quote shown with the question "Real or fake?"; viewers guess in the comments, and the answer with its source comes in the first comment.
+    structure: >-
+      Title is "Real or fake?"; Main_point is one popular quote in quotation
+      marks, at most 16 words, either a real line from the texts (cite it in
+      the answer) or a famous misattribution; Supporting_copy is "Did the
+      Buddha say this? Guess in the comments." The caption must not give the
+      answer: hook line, one line on why checking sources matters, "Answer in
+      the first comment.", then the hashtags. Put the answer on its own last
+      line of the caption starting with "Answer:" (it is moved to the first
+      comment), for example "Answer: Fake. It comes from a 2000s self-help
+      book; the closest real teaching is Dhammapada 5."
+    background: A calm museum-like portrait or statue scene with a question-like mood (half in light, half in shadow); a slow, curious music bed.
+    example: '"Holding on to anger is like drinking poison and expecting the other person to die." Answer: Fake (modern saying); the real teaching on anger is Dhammapada 3-5.'
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote
@@ -603,3 +619,16 @@ weathers:
   - id: lamplight
     name: Lamplight
     description: Darkness lit only by oil lamps or candles, warm small pools of light in deep shadow
+
+# Engagement: the closing call to action shown in a Reel's last seconds, and
+# the numbered series ("Day 4 of 30") a post can join.
+engagement:
+  default_cta: Send this to someone who needs it
+  ctas:
+    - Send this to someone who needs it
+    - Save this for a hard day
+    - Follow for one teaching a day
+    - Which one are you? Tell me below
+  series:
+    name: 30 days with the Buddha
+    length: 30

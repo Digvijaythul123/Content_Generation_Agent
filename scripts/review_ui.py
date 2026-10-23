@@ -14,6 +14,7 @@ from config_loader import (
     load_format,
     load_platform,
     load_profile_config,
+    load_profile_engagement,
     load_profile_subtypes,
     load_focus_thinkers,
     load_profile_thinkers,
@@ -22,7 +23,12 @@ from config_loader import (
     load_profile_weathers,
 )
 from content_agent import simplify_copy
-from content_models import ContentValidationError, validate_instagram_caption
+from content_models import (
+    THREADS_MAX_CHARACTERS,
+    ContentValidationError,
+    split_first_comment,
+    validate_instagram_caption,
+)
 from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from media_host import MediaHostError, R2MediaHost
@@ -1055,13 +1061,15 @@ def update_post_settings(content_id, payload):
     if not _is_image_reel(record):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
-            {"layout", "caption", "scenery", "weather", "weather_look", "share_to_facebook"}
+            {"layout", "caption", "scenery", "weather", "weather_look", "share_to_facebook",
+             "first_comment"}
             | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
                 "Only the layout, caption, and on-image text can be changed for feed posts."
             )
-    if record.get("status") == "Published":
+    if record.get("status") == "Published" and set(payload) - {"first_comment"}:
+        # Only the first comment (posted by hand) can change after publishing.
         raise ValueError("This Reel is already published.")
     changed = []
     if "caption" in payload:
@@ -1095,6 +1103,35 @@ def update_post_settings(content_id, payload):
         else:
             record.pop(field, None)
         changed.append(field)
+    if "cta" in payload:
+        cta = payload["cta"]
+        if cta is not None and not isinstance(cta, str):
+            raise ValueError("The closing line must be text.")
+        cta = (cta or "").strip()
+        if len(cta) > 70:
+            raise ValueError("Keep the closing line under 70 characters.")
+        if cta:
+            record["cta"] = cta
+        else:
+            record.pop("cta", None)
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("cta")
+    if "first_comment" in payload:
+        comment = payload["first_comment"]
+        if comment is not None and not isinstance(comment, str):
+            raise ValueError("The first comment must be text.")
+        if (comment or "").strip():
+            record["first_comment"] = comment.strip()
+        else:
+            record.pop("first_comment", None)
+        changed.append("first_comment")
+    if "series" in payload:
+        if not isinstance(payload["series"], bool):
+            raise ValueError("The series must be on or off.")
+        _set_series(content_id, record, payload["series"])
+        post_image_path(content_id).unlink(missing_ok=True)
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("series")
     if "share_to_facebook" in payload:
         if not isinstance(payload["share_to_facebook"], bool):
             raise ValueError("Posting to Facebook must be on or off.")
@@ -1186,6 +1223,43 @@ def simplify_post_text(content_id, fresh=False):
     suggestion = simplify_copy(record, fresh=fresh)
     _append_history("post", content_id, "text_suggested", fresh=fresh)
     return suggestion
+
+
+_SERIES_LINE = re.compile(r"^Day \d+ of \d+ · [^\n]*\n+")
+
+
+def _set_series(content_id, record, joined):
+    """Join (next number) or leave the profile's numbered series."""
+    caption = _SERIES_LINE.sub("", record.get("caption") or "")
+    if not joined:
+        for key in ("series_number", "series_length", "series_name"):
+            record.pop(key, None)
+        record["caption"] = caption
+        return
+    if record.get("series_number"):
+        return
+    series = load_profile_engagement(record.get("profile_id") or "").get("series") or {}
+    if not series.get("name"):
+        raise ValueError("This profile has no series set up.")
+    numbers = []
+    for path in _CONTENT_DIRECTORIES["post"].glob("post_*.json"):
+        if path.stem == content_id:
+            continue
+        try:
+            other = load_post(path.stem)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        if other.get("series_name") == series["name"] and other.get("series_number"):
+            numbers.append(int(other["series_number"]))
+    number = max(numbers, default=0) + 1
+    record.update(
+        series_number=number,
+        series_length=series.get("length"),
+        series_name=series["name"],
+    )
+    line = f"Day {number} of {series.get('length')} · {series['name']}\n\n" if series.get("length") else f"Day {number} · {series['name']}\n\n"
+    # Lead the caption with the series line when it still fits Threads.
+    record["caption"] = line + caption if len(line + caption) <= THREADS_MAX_CHARACTERS else caption
 
 
 def _write_art_prompt(content_id, record):
@@ -1670,6 +1744,17 @@ def get_generation_options():
     options["music_tracks"] = [path.name for path in list_tracks()]
     options["profile_thinkers"] = {}
     options["profile_visual_styles"] = {}
+    options["profile_engagement"] = {}
+    for profile in options.get("profiles", []):
+        try:
+            engagement = load_profile_engagement(profile["id"])
+        except ConfigurationError:
+            continue
+        if engagement:
+            options["profile_engagement"][profile["id"]] = {
+                "ctas": engagement.get("ctas") or [],
+                "series": engagement.get("series") or {},
+            }
     options["profile_sceneries"] = {}
     options["profile_weathers"] = {}
     profile_errors = []
@@ -1788,10 +1873,23 @@ def generate_and_save(payload):
         data["scenery"] = result.request.scenery
     if result.request.weather:
         data["weather"] = result.request.weather
+    if data.get("caption"):
+        # A quiz answer goes in the first comment, not the caption.
+        data["caption"], first_comment = split_first_comment(
+            data["caption"], hide_source=data.get("subtype") == "real_or_fake"
+        )
+        if first_comment:
+            data["first_comment"] = first_comment
     if payload.get("caption_language") == "hinglish":
         data["caption_language"] = "hinglish"
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
+        try:
+            default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
+        except ConfigurationError:
+            default_cta = None
+        if default_cta:
+            data["cta"] = default_cta
 
     if result.request.content_format.content_kind == "post":
         content_id, file_path = create_post(data)

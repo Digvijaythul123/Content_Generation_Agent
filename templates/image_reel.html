@@ -83,6 +83,22 @@
   body.only-title .quote, body.only-title .takeaway, body.only-title .handle,
   body.only-quote .title, body.only-quote .takeaway, body.only-quote .handle,
   body.only-takeaway .title, body.only-takeaway .quote { visibility: hidden; }
+  body.only-quote .kicker, body.only-takeaway .kicker { visibility: hidden; }
+  /* Closing call to action: only its own video layer shows it, near the end. */
+  .cta {
+    display: none; position: absolute; left: 120px; right: 120px; top: 330px;
+    text-align: center; font-size: 40px; font-style: italic; line-height: 1.25;
+    padding: 18px 28px; border-radius: 40px;
+    background: rgba(10, 8, 6, .55); color: #F7E7C4;
+  }
+  body.only-cta .cta { display: block; }
+  body.only-cta .column { visibility: hidden; }
+  /* Series label, for example "Day 4 of 30". */
+  .kicker {
+    margin-bottom: 18px; font-family: -apple-system, Helvetica, Arial, sans-serif;
+    font-size: 24px; letter-spacing: 5px; text-transform: uppercase; opacity: .85;
+  }
+  .kicker:empty { display: none; }
 </style>
 </head>
 <body class="layer-$layer look-$look">
@@ -91,12 +107,14 @@ $art
 <div class="wash"></div>
 <main class="column">
   <div class="copy">
+    <div class="kicker">$kicker</div>
     <div class="title" data-fit="34">$title</div>
     <div class="quote" data-fit="34">$main_point</div>
     <div class="takeaway" data-fit="30">$supporting_copy</div>
   </div>
   <div class="handle">$footer</div>
 </main>
+<div class="cta">$cta</div>
 <script>
   // Shrink long copy until it fits inside the text column.
   const copy = document.querySelector(".copy");

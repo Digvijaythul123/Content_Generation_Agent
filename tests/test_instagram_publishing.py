@@ -1314,3 +1314,50 @@ def test_performance_adds_facebook_views_to_match_the_app():
     assert rows["post_006"]["facebook_views"] == 133 and rows["post_006"]["total_views"] == 325
     assert rows["post_007"]["facebook_views"] is None and rows["post_007"]["total_views"] == 192
     assert facebook._graph.call_args.args[1] == "fb1"
+
+
+def test_closing_line_series_and_first_comment(tmp_path, workspace, monkeypatch):
+    from content_models import split_first_comment
+    caption, comment = split_first_comment(
+        "Real or fake?\n\nAnswer in the first comment.\n\nAnswer: Fake. Closest teaching: Dhammapada 5.\n\n#Buddhism")
+    assert comment == "Fake. Closest teaching: Dhammapada 5." and "Answer:" not in caption
+    assert caption.endswith("first comment.\n\n#Buddhism")
+    assert split_first_comment("No answer here") == ("No answer here", None)
+
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    record = {**IMAGE_REEL, "layout": "poster", "cta": "Save this for a hard day",
+              "series_number": 4, "series_length": 30}
+    html = build_post_html(record, artwork=art)
+    assert '<div class="cta">Save this for a hard day</div>' in html
+    assert '<div class="kicker">Day 4 of 30</div>' in html
+    assert '<div class="kicker"></div>' in build_post_html(IMAGE_REEL, artwork=art)
+
+    _reel_workspace(workspace, monkeypatch, status="Approved", profile_id="rational_thoughts",
+                    caption="Hook line.\n\n#Buddhism")
+    review_ui.update_post_settings("post_001", {"cta": "Follow for one teaching a day", "series": True})
+    saved = workspace.read()
+    assert saved["cta"] == "Follow for one teaching a day" and saved["series_number"] >= 1
+    assert saved["caption"].startswith(f"Day {saved['series_number']} of 30 · 30 days with the Buddha\n\n")
+    review_ui.update_post_settings("post_001", {"series": False, "cta": None})
+    saved = workspace.read()
+    assert "series_number" not in saved and "cta" not in saved and saved["caption"] == "Hook line.\n\n#Buddhism"
+    with pytest.raises(ValueError, match="70 characters"):
+        review_ui.update_post_settings("post_001", {"cta": "x" * 71})
+    workspace.write({**workspace.read(), "status": "Published"})
+    review_ui.update_post_settings("post_001", {"first_comment": "Source: SN 12.2"})
+    assert workspace.read()["first_comment"] == "Source: SN 12.2"
+    with pytest.raises(ValueError, match="already published"):
+        review_ui.update_post_settings("post_001", {"cta": "Hi"})
+
+
+def test_quiz_posts_hide_their_source_until_the_first_comment(tmp_path):
+    from content_models import split_first_comment
+    caption, comment = split_first_comment(
+        "Real or fake?\n\nTeaching: Gratitude (AN 2.31-32)\n\nAnswer in the first comment.\n\n"
+        "Answer: Real.\n\n#Buddhism", hide_source=True)
+    assert "AN 2.31" not in caption and comment == "Real.\n\nTeaching: Gratitude (AN 2.31-32)"
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    quiz = {**IMAGE_REEL, "subtype": "real_or_fake", "caption": "x\n\nTeaching: Gratitude (AN 2.31-32)"}
+    assert "AN 2.31" not in build_post_html(quiz, artwork=art)

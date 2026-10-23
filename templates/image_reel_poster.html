@@ -116,7 +116,23 @@
   body.layer-text { background: transparent; }
   body.layer-text .art, body.layer-text .glow, body.layer-text .foot { display: none; }
   body.only-quote .takeaway, body.only-quote .handle,
-  body.only-takeaway .quote { visibility: hidden; }
+  body.only-takeaway .quote, body.only-takeaway .kicker { visibility: hidden; }
+  /* Closing call to action: only its own video layer shows it, near the end. */
+  .cta {
+    display: none; position: absolute; left: 120px; right: 120px; top: 1330px;
+    text-align: center; font-size: 40px; font-style: italic; line-height: 1.25;
+    padding: 18px 28px; border-radius: 40px;
+    background: rgba(10, 8, 6, .5); color: #F7E7C4;
+  }
+  body.tone-light .cta { background: rgba(255, 247, 232, .72); color: #2A1A0F; }
+  body.only-cta .cta { display: block; }
+  body.only-cta .column, body.only-cta .handle { visibility: hidden; }
+  /* Series label, for example "Day 4 of 30". */
+  .kicker {
+    margin-bottom: 22px; font-family: -apple-system, Helvetica, Arial, sans-serif;
+    font-size: 26px; letter-spacing: 5px; text-transform: uppercase; opacity: .85;
+  }
+  .kicker:empty { display: none; }
   body.only-title .column, body.only-title .handle { visibility: hidden; }
 </style>
 </head>
@@ -128,10 +144,12 @@ $art
 <main class="column">
   <div class="copy">
     <div class="title">$title</div>
+    <div class="kicker">$kicker</div>
     <div class="quote" data-fit="44">$main_point</div>
     <div class="takeaway" data-fit="28">$supporting_copy</div>
   </div>
 </main>
+<div class="cta">$cta</div>
 <div class="handle"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 28c-5-3-8-8-8-13 4 1 7 4 8 7 1-3 4-6 8-7 0 5-3 10-8 13z"/><path d="M17 28c-2-5-2-11 0-17 2 6 2 12 0 17z"/></svg>$footer</div>
 <script>
   // Shrink long copy until it fits inside the text area.

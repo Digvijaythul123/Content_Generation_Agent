@@ -1218,7 +1218,7 @@
         container.append(preview);
       }
       if (isImageReel()) {
-        if (state.record.status !== "Published") container.append(musicControls());
+        if (state.record.status !== "Published") container.append(musicControls(), engagementControls());
         stageButton("reel_video", "Reel video", container);
         const video = state.assets.find((asset) => asset.key === "reel_video");
         if (video) {
@@ -1240,7 +1240,7 @@
           if (state.record.caption) container.append(createField("caption", state.record.caption));
           container.append(manualPostControls());
           const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
-          container.append(facebookControls(publishing));
+          container.append(firstCommentBox(), facebookControls(publishing));
         } else {
           container.append(reelReviewPanel());
         }
@@ -1867,12 +1867,106 @@
           + "Use Publish Reel now, or pick a new time and press Schedule.";
         panel.insertBefore(failed, actions);
       }
-      panel.append(facebookControls(publishing));
+      panel.append(firstCommentBox(), facebookControls(publishing));
       const manual = document.createElement("p");
       manual.className = "hint";
       manual.textContent = "Posted it yourself in the Instagram app instead? Mark it below.";
       panel.append(manual, manualPostControls());
       return panel;
+    }
+
+    function engagementControls() {
+      // Closing call to action (last seconds of the video) and the series.
+      const settings = state.options.profile_engagement?.[state.record.profile_id] || {};
+      const box = document.createElement("div");
+      box.className = "inline-actions";
+      const ctaLabel = document.createElement("label");
+      ctaLabel.textContent = "Closing line ";
+      const cta = document.createElement("select");
+      const current = state.record.cta || "";
+      const choices = [...(settings.ctas || [])];
+      if (current && !choices.includes(current)) choices.push(current);
+      cta.append(new Option("None", ""));
+      choices.forEach((text) => cta.append(new Option(text, text)));
+      cta.append(new Option("Write my own…", "__custom__"));
+      cta.value = current;
+      cta.addEventListener("change", async () => {
+        let value = cta.value;
+        if (value === "__custom__") {
+          value = window.prompt("Closing line (shown in the last 2 seconds, under 70 characters):", current) || "";
+          if (!value.trim()) { cta.value = current; return; }
+        }
+        try {
+          await saveReelSettings({ cta: value || null }, "Closing line saved. Render the Reel video again.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      ctaLabel.append(cta);
+      ctaLabel.title = "Shown in the last 2 seconds of the video (not on the cover). Asking for a send or a save helps reach most.";
+      box.append(ctaLabel);
+      if (settings.series?.name) {
+        const seriesLabel = document.createElement("label");
+        const series = document.createElement("input");
+        series.type = "checkbox";
+        series.checked = Boolean(state.record.series_number);
+        series.addEventListener("change", async () => {
+          try {
+            await saveReelSettings({ series: series.checked },
+              series.checked ? "Added to the series. Render the image and video again." : "Removed from the series.");
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+        const number = state.record.series_number ? ` (Day ${state.record.series_number})` : "";
+        seriesLabel.append(series, ` Part of "${settings.series.name}"${number}`);
+        box.append(seriesLabel);
+      }
+      return box;
+    }
+
+    function defaultFirstComment() {
+      // Source line plus the caption's question: worth pinning under the Reel.
+      const lines = String(state.record.caption || "").split("\n").map((line) => line.trim()).filter(Boolean);
+      const source = lines.find((line) => /^(Teaching|Source|Idea):/i.test(line));
+      const question = [...lines].reverse().find((line) => line.endsWith("?"));
+      return [source, question].filter(Boolean).join("\n\n");
+    }
+
+    function firstCommentBox() {
+      const box = document.createElement("section");
+      box.className = "field";
+      const name = document.createElement("div");
+      name.className = "field-name";
+      name.textContent = "First comment (post it under the Reel, then pin it)";
+      const text = document.createElement("textarea");
+      text.rows = 3;
+      text.style.width = "100%";
+      text.value = state.record.first_comment || defaultFirstComment();
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      const message = document.createElement("span");
+      message.className = "message";
+      const copy = makeAction("Copy comment", async () => {
+        try {
+          await navigator.clipboard.writeText(text.value);
+          message.textContent = "Copied. In Instagram: open the Reel, comment, then press and hold it → Pin.";
+        } catch (error) {
+          text.select();
+          message.textContent = "Select the text and press Cmd+C.";
+        }
+      }, "secondary");
+      const save = makeAction("Save", async () => {
+        try {
+          await saveReelSettings({ first_comment: text.value });
+          message.textContent = "Saved.";
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary");
+      actions.append(copy, save, message);
+      box.append(name, text, actions);
+      return box;
     }
 
     function facebookControls(publishing) {

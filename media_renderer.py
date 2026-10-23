@@ -112,7 +112,8 @@ def source_line(record):
 
 
 def _footer_text(record, handle):
-    source = source_line(record)
+    # A quiz must not print its answer's source on the image.
+    source = "" if record.get("subtype") == "real_or_fake" else source_line(record)
     # Quote posts already show the source in their attribution line.
     if source and source.lower() in str(record.get("supporting_copy") or "").lower():
         source = ""
@@ -188,6 +189,15 @@ def text_tone(artwork, record):
     if brightness > TONE_LIGHT:
         return "light"
     return "mid" if brightness > TONE_MID else "dark"
+
+
+def series_label(record):
+    """'Day 4 of 30' for posts in the profile's series, else ''."""
+    number = record.get("series_number")
+    if not number:
+        return ""
+    length = record.get("series_length")
+    return f"Day {number} of {length}" if length else f"Day {number}"
 
 
 def is_image_reel(record):
@@ -286,6 +296,8 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             else "dark"
         ),
         title=_copy_html(record["title"]),
+        kicker=escape(series_label(record)),
+        cta=escape(str(record.get("cta") or "").strip()),
         main_point=_copy_html(record["main_point"]),
         supporting_copy=_copy_html(record["supporting_copy"]),
         labels=labels_html,

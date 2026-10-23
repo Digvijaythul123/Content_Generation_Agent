@@ -315,6 +315,8 @@ def render_effect_layers(effect, folder, seconds=DEFAULT_DURATION_SECONDS):
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
 # Posters have no title on screen: the quote is the hook from frame one.
 POSTER_REVEALS = (("quote", 0), ("takeaway", 1.5))
+# The closing call to action fades in this long before the end.
+CTA_LEAD_SECONDS = 2.2
 
 
 def reel_video_path(post_id):
@@ -503,7 +505,14 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 ),
                 start,
             )
-            for part, start in (POSTER_REVEALS if poster else TEXT_REVEALS)
+            for part, start in (
+                (POSTER_REVEALS if poster else TEXT_REVEALS)
+                + (
+                    (("cta", max(seconds - CTA_LEAD_SECONDS, 3.0)),)
+                    if str(record.get("cta") or "").strip()
+                    else ()
+                )
+            )
         ]
         command = build_ffmpeg_command(
             ffmpeg_executable(),

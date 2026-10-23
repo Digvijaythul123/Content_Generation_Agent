@@ -42,6 +42,10 @@ hook, and Supporting_copy is usually the credit (for example "— Seneca").
   a paradox, contrast, or permission works best. For a verified quote, use
   the exact quote even if longer.
 - Supporting_copy: a short payoff, twist, credit, or question, at most 12 words.
+Watch time matters most: the first line must stop the scroll on its own
+(a feeling, a surprise, or a question the viewer has asked themselves), and
+the last line should be the payoff, so viewers read to the end and replay.
+Keep the first and last moments calm so the Reel loops smoothly.
 Copy devices that earn rereads and comments, used only when they fit: a
 twist that reverses the reading ("Now read that right to left"), a single
 story moment with its lesson, or a list of short parallel lines.
@@ -81,7 +85,9 @@ Write the caption for Instagram: open with a one-line hook, add one or two
 short lines of context, name the teaching and its reference (for example
 "Teaching: The Second Arrow (SN 36.6)"), end with either one question that invites
 comments or a share prompt such as "Send this to someone who needs it today",
-then exactly 5 hashtags: one broad niche tag (for example
+then exactly 5 hashtags. Never use engagement bait such as "Like if you
+agree", "Comment AMEN", or "Type YES" (Instagram shows such posts less);
+ask a real question or invite a share instead. The 5 hashtags are: one broad niche tag (for example
 #Buddhism), one tag for the source or tradition (for example #Dhammapada or
 #Zen), one everyday-angle tag (for example #Mindfulness), #Dharma, and one more
 tag specific to the post. Keep the whole caption, hashtags included, under

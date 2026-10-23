@@ -2,11 +2,14 @@ import argparse
 from pathlib import Path
 
 from config_loader import (
+    ConfigurationError,
     load_brand,
+    load_profile_engagement,
     load_comedy_config,
     load_profile_subtypes,
     load_focus_thinkers,
 )
+from content_models import split_first_comment
 from content_pipeline import generate_content
 from post_prompt import build_post_prompt_file
 from project_paths import GENERATED_ASSETS_DIRECTORY
@@ -45,10 +48,23 @@ def _save_result(result, caption_language="english"):
         data["scenery"] = result.request.scenery
     if result.request.weather:
         data["weather"] = result.request.weather
+    if data.get("caption"):
+        # A quiz answer goes in the first comment, not the caption.
+        data["caption"], first_comment = split_first_comment(
+            data["caption"], hide_source=data.get("subtype") == "real_or_fake"
+        )
+        if first_comment:
+            data["first_comment"] = first_comment
     if caption_language != "english":
         data["caption_language"] = caption_language
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
+        try:
+            default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
+        except ConfigurationError:
+            default_cta = None
+        if default_cta:
+            data["cta"] = default_cta
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)

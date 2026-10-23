@@ -199,6 +199,14 @@ def _load_named_options(profile_id, key):
     return items
 
 
+def load_profile_engagement(profile_id):
+    """Closing calls to action and the numbered series for a profile."""
+    engagement = _load_profile_data(profile_id).get("engagement") or {}
+    if not isinstance(engagement, dict):
+        raise ConfigurationError(f"Content profile {profile_id!r} 'engagement' must be a mapping.")
+    return engagement
+
+
 def load_profile_sceneries(profile_id):
     """Places around the world that the art can be set in."""
     return _load_named_options(profile_id, "sceneries")

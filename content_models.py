@@ -582,6 +582,32 @@ def tidy_caption(caption):
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+_ANSWER_PATTERN = re.compile(r"^\s*(?:Answer|First comment)\s*:\s*(.+?)\s*$", re.I | re.M)
+
+
+_SOURCE_LINE_PATTERN = re.compile(r"^\s*(?:Teaching|Source|Idea)\s*:.*$", re.I | re.M)
+
+
+def split_first_comment(caption, hide_source=False):
+    """Move an "Answer:" line out of the caption (it goes in the first comment).
+
+    With ``hide_source`` (quiz posts), the Teaching/Source line moves too,
+    since it would give the answer away. Returns (caption, first_comment).
+    """
+    match = _ANSWER_PATTERN.search(caption or "")
+    if not match:
+        return caption, None
+    answer = match.group(1).strip()
+    cleaned = caption[: match.start()] + caption[match.end():]
+    if hide_source:
+        source = _SOURCE_LINE_PATTERN.search(cleaned)
+        if source:
+            cleaned = cleaned[: source.start()] + cleaned[source.end():]
+            answer = f"{answer}\n\n{source.group(0).strip()}"
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned.strip())
+    return cleaned, answer
+
+
 def trim_hashtags(caption, limit=None):
     """Drop hashtags beyond the limit, keeping the first ones in order."""
     limit = INSTAGRAM_MAX_HASHTAGS if limit is None else limit
