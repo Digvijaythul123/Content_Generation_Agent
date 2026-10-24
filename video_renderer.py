@@ -26,7 +26,7 @@ from project_paths import GENERATED_ASSETS_DIRECTORY, PROJECT_ROOT
 DEFAULT_DURATION_SECONDS = 8
 FRAME_RATE = 30
 # How far the camera pushes into the painting over the whole clip.
-ZOOM_AMOUNT = 0.08
+ZOOM_AMOUNT = 0.05
 # Illustrated designs carry words near their edges, so push in gently.
 DESIGNED_ZOOM_AMOUNT = 0.025
 TEXT_FADE_SECONDS = 0.5
@@ -34,7 +34,7 @@ TEXT_FADE_SECONDS = 0.5
 # breath, grain strength). Kept low so the text layers stay calm and crisp.
 LIGHT_BREATH = 0.025
 LIGHT_PERIOD = 4
-GRAIN = 6
+GRAIN = 3
 # Optional overlay effects, after common compositing practice: depth layers
 # of differing size, speed, blur, and opacity; soft streaks rather than hard
 # lines; rays that fan out from one light source with dust catching the
@@ -55,7 +55,7 @@ VIDEO_EFFECTS = {
         ("meteor", 5, 7, (240, 460), (0.75, 1.0), ("flash",)),
     ),
     "rain": (
-        ("mist", 1, 1, (0, 0), (0.22, 0.22), ("still",)),
+        ("mist", 1, 1, (0, 0), (0.1, 0.1), ("still",)),
         ("rain", 3, 380, (22, 48), (0.22, 0.4), ("scroll", 0, 1150)),
         ("rain", 11, 160, (60, 120), (0.32, 0.55), ("scroll", 0, 1750)),
         ("raindrop", 17, 20, (180, 320), (0.14, 0.26), ("scroll", 0, 2600)),
@@ -354,7 +354,7 @@ def build_ffmpeg_command(
     # moving grain, so the background feels like a shot from a film.
     finish = (
         f"eq=eval=frame:brightness='{LIGHT_BREATH}*sin(2*PI*t/{LIGHT_PERIOD})',"
-        f"vignette=angle=PI/5,noise=alls={GRAIN}:allf=t[vbase]"
+        f"vignette=angle=PI/8,noise=alls={GRAIN}:allf=t[vbase]"
     )
     if motion_clip:
         top = "0" if clip_zoom > 1 else f"(ih-{height})/2"
@@ -560,7 +560,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             music,
             motion_clip=motion_clip,
             # Crop the bottom strip where tools put watermarks.
-            clip_zoom=1.11,
+            clip_zoom=1.06,
             effects=(
                 render_effect_layers(effect_for(record), Path(folder), seconds)
                 if effect_for(record)

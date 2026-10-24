@@ -157,8 +157,8 @@ def _region_brightness(path, modified, size, region):
     """Average luminance of a region of the art as the page crops it."""
     width, height = size
     left, top, region_width, region_height = region
-    # Match the poster's crop: cover the frame, then zoom 1.11 from the top.
-    zoom_w, zoom_h = round(width * 1.11), round(height * 1.11)
+    # Match the poster's crop: cover the frame, then zoom 1.06 from the top.
+    zoom_w, zoom_h = round(width * 1.06), round(height * 1.06)
     result = subprocess.run(
         [ffmpeg_executable(), "-loglevel", "error", "-i", path, "-vf",
          f"scale={width}:{height}:force_original_aspect_ratio=increase,"
@@ -184,7 +184,7 @@ def _row_profile(path, modified, size):
     """Per-row busyness (edge detail across the text width) and brightness of
     the art as the page shows it; None when the art cannot be read."""
     width, height = size
-    zoom_w, zoom_h = round(width * 1.11), round(height * 1.11)
+    zoom_w, zoom_h = round(width * 1.06), round(height * 1.06)
     columns = 64
     result = subprocess.run(
         [ffmpeg_executable(), "-loglevel", "error", "-i", path, "-vf",

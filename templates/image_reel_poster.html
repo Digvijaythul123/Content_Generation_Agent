@@ -16,7 +16,7 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; object-position: center bottom;
     /* Crop the bottom strip where image tools put their watermark. */
-    transform: scale(1.11); transform-origin: center top;
+    transform: scale(1.06); transform-origin: center top;
   }
   /* A soft glow behind the words keeps them readable without a box. */
   .glow {
@@ -28,7 +28,7 @@
   .foot {
     position: absolute; left: 0; right: 0; bottom: 0; height: 420px;
     background: linear-gradient(180deg, transparent 0%,
-      $background_rgba_soft 40%, $background_rgba_strong 70%, $background 100%);
+      $background_rgba_faint 45%, $background_rgba_soft 100%);
   }
   /* Text sits in the open top third, below Instagram's top bar. */
   .column {
@@ -73,7 +73,7 @@
   }
   body.tone-mid .glow {
     background: radial-gradient(ellipse 80% 28% at 50% var(--glow-y, 560px),
-      $background_rgba_strong 0%, $background_rgba_soft 45%, transparent 78%);
+      $background_rgba_soft 0%, $background_rgba_faint 50%, transparent 78%);
   }
   body.tone-mid .quote, body.tone-mid .takeaway {
     text-shadow: 0 2px 18px $background_rgba_strong, 0 0 4px $background_rgba_soft;
