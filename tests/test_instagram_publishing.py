@@ -1492,3 +1492,24 @@ def test_placement_data_comes_with_poster_and_carousel_covers(tmp_path, monkeypa
     assert "window.PLACEMENT" not in inner
     monkeypatch.setattr(media_renderer, "_row_profile", lambda *a: None)
     assert "window.PLACEMENT = null" in build_post_html({**IMAGE_REEL, "layout": "poster"}, artwork=art)
+
+
+def test_illustrated_reels_leave_the_payoff_to_fade_in_later(tmp_path):
+    record = {
+        **IMAGE_REEL, "profile_id": "rational_thoughts", "subtype": "parable_card",
+        "visual_style": "cinematic_photo", "brand_id": "default",
+        "title": "A young monk asked the **Buddha**,", "main_point": '"How much effort is enough?"',
+        "supporting_copy": 'The Buddha answered: "Like a **lute string**."',
+        "design_prompt": "The Buddha and a young monk by a lake.",
+    }
+    prompt = art_generator.build_art_prompt(record)
+    assert "Closing line" not in prompt and "58% to 76%" in prompt
+    assert "Like a lute string" not in prompt and 'Headline: "A young monk asked the Buddha,"' in prompt
+    feed = art_generator.build_art_prompt({**record, "format_id": "single_page"})
+    assert "Closing line" in feed and "58% to 76%" not in feed
+
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    cover = build_post_html(record, artwork=art)
+    assert 'class="payoff"' in cover and "lute string" in cover
+    assert "lute string" not in build_post_html({**record, "format_id": "single_page"}, artwork=art).split("<script>")[0].split('class="payoff"')[1][:40]

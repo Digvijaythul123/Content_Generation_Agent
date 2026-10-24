@@ -492,7 +492,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 artwork = extract_video_frame(artwork, Path(folder) / "frame.png")
                 motion_clip = False
             background = render_html_to_jpeg(
-                build_post_html(record, brand, artwork),
+                build_post_html(record, brand, artwork, layer="background"),
                 Path(folder) / "background.jpg",
                 IMAGE_REEL_SIZE,
             )
@@ -515,7 +515,18 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 Path(folder) / "background.jpg",
                 IMAGE_REEL_SIZE,
             )
-        text_layers = [] if designed else chrome + [
+        designed_layers = []
+        if designed and str(record.get("supporting_copy") or "").strip():
+            # The payoff the image tool left room for fades in after the hook.
+            designed_layers = [(
+                render_html_to_png(
+                    build_post_html(record, brand, artwork, layer="text only-takeaway"),
+                    Path(folder) / "payoff.png",
+                    IMAGE_REEL_SIZE,
+                ),
+                POSTER_REVEALS[1][1],
+            )]
+        text_layers = designed_layers if designed else chrome + [
             (
                 render_html_to_png(
                     build_post_html(

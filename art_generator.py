@@ -445,7 +445,10 @@ def _designed_art_prompt(record, scene, style, art_style=None):
     elif lines:
         words.append("Lines, in this order, one per row or panel:")
         words += [f"- {quoted(line)}" for line in lines]
-    if plain(record.get("supporting_copy")):
+    # In a Reel the closing line is the payoff: the app fades it in a few
+    # seconds later, so the image tool leaves room for it instead.
+    payoff_later = reel and bool(plain(record.get("supporting_copy")))
+    if plain(record.get("supporting_copy")) and not payoff_later:
         words.append(f'Closing line: {quoted(plain(record["supporting_copy"]))}')
     handle = _handle_for(record)
     if handle:
@@ -458,6 +461,12 @@ def _designed_art_prompt(record, scene, style, art_style=None):
         words.append(
             "Make these words bold and in the accent color: "
             + ", ".join(dict.fromkeys(emphasis))
+        )
+    if payoff_later:
+        safe_area += (
+            " Leave the band from 58% to 76% of the height plain and calm "
+            "(sky, mist, ground, or water) with nothing drawn on it: one more "
+            "line is added there later."
         )
     parts = [
         f"Create one finished, illustrated image for {canvas}. The words are "

@@ -460,6 +460,11 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         ),
         layer=layer,
         look=weather_look(record) or "none",
+        payoff=(
+            _copy_html(record.get("supporting_copy") or "")
+            if layout == "designed" and is_image_reel(record)
+            else ""
+        ),
         placement=(
             placement_script(
                 artwork, record, IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE
