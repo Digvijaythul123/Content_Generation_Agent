@@ -184,6 +184,14 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict):
             self._send_json({"error": "Request body must be a JSON object."}, 400)
             return
+        if request.path == "/api/plan_week":
+            try:
+                self._send_json({"planned": ui.plan_week()})
+            except ui.AIServiceError as error:
+                self._send_json({"error": str(error)}, 502)
+            except (ui.ConfigurationError, ValueError) as error:
+                self._send_json({"error": str(error)}, 400)
+            return
         if request.path == "/api/performance/refresh":
             try:
                 self._send_json({"report": ui.refresh_report()})

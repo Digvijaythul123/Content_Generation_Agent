@@ -182,6 +182,8 @@ def list_content_items():
                     "scheduled_at": record.get("scheduled_at") or "",
                     "schedule_failed": bool(record.get("schedule_failed")),
                     "schedule_retrying": bool(record.get("schedule_retry_at")),
+                    "planned_for": record.get("planned_for") or "",
+                    "plan_label": record.get("plan_label") or "",
                     "format_id": record.get(
                         "format_id", "reel" if content_type == "reel" else ""
                     ),
@@ -1066,6 +1068,59 @@ def import_artwork(content_type, content_id, image_id):
 
 # The Reel cover frame: after every line of text has faded in.
 REEL_COVER_OFFSET_MS = 5000
+
+
+def plan_week(profile_id="rational_thoughts", start=None, generate=None):
+    """Draft the next 7 days from the profile's weekly plan.
+
+    Each draft gets a planned date and time (it still needs review, art, and
+    scheduling); a Buddhist day in the week shapes that day's draft.
+    """
+    from datetime import date, time as clock
+
+    generate = generate or generate_and_save
+    engagement = load_profile_engagement(profile_id)
+    plan = engagement.get("weekly_plan") or {}
+    if not plan:
+        raise ValueError("This profile has no weekly plan.")
+    hour, minute = (int(part) for part in str(engagement.get("plan_time", "19:30")).split(":"))
+    start = start or (date.today() + timedelta(days=1))
+    observances = {}
+    for item in upcoming_buddhist_days(today=start, days=8):
+        observances.setdefault(item["post_on"], item)
+    planned = []
+    for offset in range(7):
+        day = start + timedelta(days=offset)
+        slot = plan.get(day.strftime("%A").lower())
+        if not slot:
+            continue
+        observance = observances.get(day.isoformat())
+        format_id = slot.get("format", "image_reel")
+        payload = {
+            "profile_id": profile_id,
+            "brand_id": "default",
+            "format_id": format_id,
+            "platform_id": "instagram_feed" if format_id in ("carousel", "single_page") else "instagram",
+            "subtype": slot.get("subtype"),
+            "thinker_id": "buddha",
+            "scenery": "auto",
+            "weather": "auto",
+        }
+        if observance:
+            payload["brief"] = observance["brief"]
+        label = slot.get("name", day.strftime("%A")) + (f" · {observance['name']}" if observance else "")
+        try:
+            result = generate(payload)
+        except (AIServiceError, ConfigurationError, ContentValidationError, ValueError) as error:
+            planned.append({"date": day.isoformat(), "label": label, "error": str(error)})
+            continue
+        record = load_post(result["id"])
+        when = datetime.combine(day, clock(hour, minute)).astimezone()
+        record.update(planned_for=when.astimezone(timezone.utc).isoformat(), plan_label=label)
+        save_post(result["id"], record)
+        _append_history("post", result["id"], "content_generated", title=result.get("title"))
+        planned.append({"date": day.isoformat(), "label": label, "id": result["id"]})
+    return planned
 
 
 def upcoming_observances(days=45):

@@ -1559,3 +1559,27 @@ def test_buddhist_calendar_lists_upcoming_days_with_a_post_date(tmp_path):
     # A season already running still shows; the real file loads.
     assert buddhist_calendar.upcoming(today=date(2026, 11, 1), days=10, path=path)[0]["name"] == "Kathina season"
     assert isinstance(buddhist_calendar.upcoming(today=date(2026, 10, 24)), list)
+
+
+def test_plan_week_drafts_each_day_with_its_theme_and_planned_time(workspace, monkeypatch):
+    from datetime import date
+    made = []
+
+    def fake_generate(payload):
+        post_id = f"post_{len(made) + 1:03}"
+        made.append((post_id, payload))
+        review_ui.save_post(post_id, {**IMAGE_REEL, "id": post_id, "status": "Draft",
+                                      "format_id": payload["format_id"]})
+        return {"id": post_id, "title": "t"}
+
+    monkeypatch.setattr(review_ui, "upcoming_buddhist_days", lambda today, days: [
+        {"post_on": "2026-10-25", "name": "Pavarana", "brief": "For Pavarana."}])
+    planned = review_ui.plan_week(start=date(2026, 10, 25), generate=fake_generate)
+    assert len(planned) == 7 and all("id" in day for day in planned)
+    sunday = made[0][1]
+    assert sunday["format_id"] == "carousel" and sunday["platform_id"] == "instagram_feed"
+    assert sunday["subtype"] == "numbered_list" and sunday["brief"] == "For Pavarana."
+    monday = made[1][1]
+    assert monday["subtype"] == "real_or_fake" and "brief" not in monday
+    record = review_ui.load_post("post_001")
+    assert record["plan_label"] == "Sunday Carousel · Pavarana" and record["planned_for"].startswith("2026-10-25")

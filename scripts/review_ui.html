@@ -319,6 +319,8 @@
         <p class="message error" id="subtype-error" hidden></p>
         <div class="form-actions">
           <button class="primary" id="generate-button" type="submit">Generate draft</button>
+          <button class="secondary" id="plan-week-button" type="button"
+            title="Drafts the next 7 days from the weekly plan (Myth Monday, Mirror Tuesday, Wisdom Wednesday, Dialogue Thursday, Story Friday, and weekend carousels), each with a planned time. Buddhist days that week shape that day's draft.">Plan my week</button>
           <div class="message" id="generate-message" role="status" aria-live="polite"></div>
         </div>
       </form>
@@ -712,6 +714,13 @@
         top.append(kind, currentStatus);
         const scheduled = scheduleBadge(item);
         if (scheduled) top.append(scheduled);
+        if (!scheduled && item.planned_for && item.status !== "Published") {
+          const planned = document.createElement("span");
+          planned.className = "badge";
+          planned.textContent = `Planned · ${new Date(item.planned_for).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+          planned.title = item.plan_label || "";
+          top.append(planned);
+        }
         const title = document.createElement("span");
         title.className = "item-title";
         title.textContent = String(item.title || "").replaceAll("**", "");
@@ -1843,6 +1852,12 @@
 
     // The page's daily posting time, 7:30 PM local; tomorrow if already past.
     function nextPostingSlot() {
+      // A post drafted by "Plan my week" keeps its planned time.
+      const pad = (n) => String(n).padStart(2, "0");
+      const planned = state.record?.planned_for ? new Date(state.record.planned_for) : null;
+      if (planned && planned > new Date()) {
+        return `${planned.getFullYear()}-${pad(planned.getMonth() + 1)}-${pad(planned.getDate())}T${pad(planned.getHours())}:${pad(planned.getMinutes())}`;
+      }
       const slot = new Date();
       slot.setHours(19, 30, 0, 0);
       if (slot <= new Date()) slot.setDate(slot.getDate() + 1);
@@ -2584,6 +2599,32 @@
       $("performance-refresh").addEventListener("click", () => loadPerformance(true));
       loadPerformance();
       loadCalendar();
+      $("plan-week-button").addEventListener("click", async () => {
+        if (!window.confirm("Draft the next 7 days from the weekly plan? This takes a few minutes (one draft per day).")) return;
+        const button = $("plan-week-button");
+        const message = $("generate-message");
+        button.disabled = true;
+        button.textContent = "Planning the week… (a few minutes)";
+        message.className = "message";
+        message.textContent = "Writing one draft per day…";
+        try {
+          const { planned } = await requestJson("/api/plan_week", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+          });
+          const made = planned.filter((day) => day.id);
+          const failed = planned.filter((day) => day.error);
+          message.textContent = `Planned ${made.length} drafts: `
+            + made.map((day) => `${day.label} (${day.id})`).join(", ")
+            + (failed.length ? `. Could not write: ${failed.map((day) => day.label).join(", ")}.` : ".");
+          await refreshItems();
+        } catch (error) {
+          message.className = "message error";
+          message.textContent = error.message;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Plan my week";
+        }
+      });
       const selection = location.hash.slice(1).split("/");
       if (selection.length === 3) {
         const item = state.items.find(

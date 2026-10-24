@@ -636,3 +636,13 @@ engagement:
   series:
     name: 30 days with the Buddha
     length: 30
+  # "Plan my week": one themed draft per day, planned for plan_time (local).
+  plan_time: "19:30"
+  weekly_plan:
+    monday: {name: Myth Monday, subtype: real_or_fake, format: image_reel}
+    tuesday: {name: Mirror Tuesday, subtype: mirror, format: image_reel}
+    wednesday: {name: Wisdom Wednesday, subtype: one_liner, format: image_reel}
+    thursday: {name: Dialogue Thursday, subtype: dialogue, format: image_reel}
+    friday: {name: Story Friday, subtype: parable_card, format: image_reel}
+    saturday: {name: Mind Saturday, subtype: mind_states, format: carousel}
+    sunday: {name: Sunday Carousel, subtype: numbered_list, format: carousel}
