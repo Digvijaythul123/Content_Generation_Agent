@@ -1862,7 +1862,6 @@
       const slot = new Date();
       slot.setHours(19, 30, 0, 0);
       if (slot <= new Date()) slot.setDate(slot.getDate() + 1);
-      const pad = (n) => String(n).padStart(2, "0");
       return `${slot.getFullYear()}-${pad(slot.getMonth() + 1)}-${pad(slot.getDate())}T${pad(slot.getHours())}:${pad(slot.getMinutes())}`;
     }
 
