@@ -20,9 +20,10 @@ from pathlib import Path
 
 from app_settings import get_setting
 from instagram_publisher import InstagramPublisher, InstagramPublishError
+from threads_publisher import ThreadsPublishError, ThreadsPublisher
 from project_paths import GENERATED_ASSETS_DIRECTORY, PROJECT_ROOT
 from scripts.backup_content import backup_if_due
-from scripts.review_ui import publish_due_posts, retry_facebook_posts
+from scripts.review_ui import publish_due_posts, retry_facebook_posts, retry_threads_posts
 
 
 LABEL = "com.dagnosticbeing.publish-scheduled"
@@ -36,6 +37,8 @@ TOKEN_STATE_PATH = GENERATED_ASSETS_DIRECTORY / ".token_refresh.json"
 TOKEN_REFRESH_EVERY = timedelta(days=7)
 TOKEN_RETRY_AFTER = timedelta(days=1)
 TOKEN_SETTING = "INSTAGRAM_ACCESS_TOKEN"
+THREADS_TOKEN_SETTING = "THREADS_ACCESS_TOKEN"
+THREADS_TOKEN_STATE_PATH = GENERATED_ASSETS_DIRECTORY / ".threads_token_refresh.json"
 
 
 def replace_env_value(env_path, name, value):
@@ -61,9 +64,11 @@ def refresh_token_if_due(
     env_path=ENV_PATH,
     state_path=TOKEN_STATE_PATH,
     publisher_factory=InstagramPublisher,
+    setting=TOKEN_SETTING,
+    label="token",
 ):
-    """Extend the Instagram token about weekly; return a log line or None."""
-    if not get_setting(TOKEN_SETTING):
+    """Extend a long-lived token about weekly; return a log line or None."""
+    if not get_setting(setting):
         return None
     now = now or datetime.now(timezone.utc)
     try:
@@ -83,15 +88,15 @@ def refresh_token_if_due(
     state["last_attempt"] = now.isoformat()
     try:
         token, expires_in = publisher_factory().refresh_access_token()
-        replace_env_value(env_path, TOKEN_SETTING, token)
-        os.environ[TOKEN_SETTING] = token
+        replace_env_value(env_path, setting, token)
+        os.environ[setting] = token
         state["last_success"] = now.isoformat()
         state.pop("last_error", None)
         days = int(expires_in) // 86400 if expires_in else None
-        message = "token refreshed" + (f"; valid for ~{days} days" if days else "")
-    except (InstagramPublishError, OSError, ValueError) as error:
+        message = f"{label} refreshed" + (f"; valid for ~{days} days" if days else "")
+    except (InstagramPublishError, ThreadsPublishError, OSError, ValueError) as error:
         state["last_error"] = str(error)
-        message = f"token refresh failed: {error}"
+        message = f"{label} refresh failed: {error}"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state), encoding="utf-8")
     return message
@@ -113,6 +118,16 @@ def run_once():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
         for content_id, outcome, detail in retry_facebook_posts():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
+        for content_id, outcome, detail in retry_threads_posts():
+            print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
+        refreshed = refresh_token_if_due(
+            state_path=THREADS_TOKEN_STATE_PATH,
+            publisher_factory=ThreadsPublisher,
+            setting=THREADS_TOKEN_SETTING,
+            label="Threads token",
+        )
+        if refreshed:
+            print(f"{stamp} {refreshed}", flush=True)
         backed_up = backup_if_due()
         if backed_up:
             print(f"{stamp} {backed_up}", flush=True)

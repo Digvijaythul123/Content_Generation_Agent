@@ -40,6 +40,15 @@ def facebook_configured():
     return bool(get_setting("FACEBOOK_PAGE_ID") and get_setting("FACEBOOK_PAGE_TOKEN"))
 
 
+def facebook_auto_enabled():
+    """Automatic posting after Instagram; FACEBOOK_AUTO_POST=off pauses it
+    (for example while Facebook rate-limits a new app). Manual posting from
+    the review UI still works."""
+    return facebook_configured() and (get_setting("FACEBOOK_AUTO_POST", "on") or "on").lower() not in (
+        "off", "false", "0", "no",
+    )
+
+
 class FacebookPublisher:
     def __init__(
         self,

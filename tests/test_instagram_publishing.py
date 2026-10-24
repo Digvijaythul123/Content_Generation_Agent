@@ -1261,7 +1261,8 @@ def test_reel_goes_to_facebook_after_instagram_and_facebook_errors_do_not_undo_i
     host.upload.return_value = ("key", "https://cdn.example/reel.mp4")
     publisher = Mock()
     publisher.publish_reel.return_value = {"media_id": "m1", "permalink": "https://www.instagram.com/reel/m1/"}
-    monkeypatch.setattr(review_ui, "facebook_configured", lambda: True)
+    monkeypatch.setattr(review_ui, "facebook_auto_enabled", lambda: True)
+    monkeypatch.setattr(review_ui, "threads_configured", lambda: False)
     calls = []
 
     def failing_facebook(content_id, **kwargs):

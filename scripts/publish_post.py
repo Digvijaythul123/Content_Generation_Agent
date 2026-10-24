@@ -5,6 +5,7 @@ from art_generator import ArtGenerationError
 from content_models import ContentValidationError
 from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
 from instagram_publisher import InstagramPublishError, InstagramPublisher
+from threads_publisher import ThreadsPublishError, ThreadsPublisher, threads_configured
 from media_host import MediaHostError
 from media_renderer import MediaRenderError, post_image_path
 from post_storage import PostStorageError, load_post
@@ -24,6 +25,7 @@ _ERRORS = (
     ContentValidationError,
     InstagramPublishError,
     FacebookPublishError,
+    ThreadsPublishError,
     MediaHostError,
     MediaRenderError,
     PostStorageError,
@@ -113,6 +115,11 @@ def main(argv=None):
                 print(f"Facebook Page connected: {page.get('name')} (ID {page.get('id')}).")
             else:
                 print("Facebook Page: not set up (FACEBOOK_PAGE_ID / FACEBOOK_PAGE_TOKEN in .env).")
+            if threads_configured():
+                profile = ThreadsPublisher().profile()
+                print(f"Threads connected: @{profile.get('username')} (ID {profile.get('id')}).")
+            else:
+                print("Threads: not set up (THREADS_ACCESS_TOKEN / THREADS_USER_ID in .env).")
             return 0
         if args.refresh_token:
             token, expires_in = InstagramPublisher().refresh_access_token()

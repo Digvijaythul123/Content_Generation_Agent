@@ -29,8 +29,14 @@ from content_models import (
     split_first_comment,
     validate_instagram_caption,
 )
-from facebook_publisher import FacebookPublishError, FacebookPublisher, facebook_configured
+from facebook_publisher import (
+    FacebookPublishError,
+    FacebookPublisher,
+    facebook_auto_enabled,
+    facebook_configured,
+)
 from instagram_publisher import InstagramPublishError, InstagramPublisher
+from threads_publisher import ThreadsPublishError, ThreadsPublisher, threads_configured
 from media_host import MediaHostError, R2MediaHost
 from art_generator import (
     MAX_ARTWORK_BYTES,
@@ -110,6 +116,7 @@ _STAGE_ACTION_ERRORS = (
     MediaHostError,
     InstagramPublishError,
     FacebookPublishError,
+    ThreadsPublishError,
     ContentValidationError,
     OSError,
     ValueError,
@@ -717,6 +724,12 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
                 "error": record.get("facebook_error"),
                 "retry_at": record.get("facebook_retry_at"),
             },
+            "threads": {
+                "share": record.get("share_to_threads", True),
+                "permalink": record.get("threads_permalink"),
+                "error": record.get("threads_error"),
+                "retry_at": record.get("threads_retry_at"),
+            },
         }
     if content_type != "post" or not _is_instagram_post(record):
         return {
@@ -766,6 +779,12 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
             "permalink": record.get("facebook_permalink"),
             "error": record.get("facebook_error"),
             "retry_at": record.get("facebook_retry_at"),
+        },
+        "threads": {
+            "share": record.get("share_to_threads", True),
+            "permalink": record.get("threads_permalink"),
+            "error": record.get("threads_error"),
+            "retry_at": record.get("threads_retry_at"),
         },
     }
 
@@ -1047,6 +1066,8 @@ def publishing_connection():
             and get_setting("INSTAGRAM_ACCOUNT_ID")
         ),
         "facebook": facebook_configured(),
+        "facebook_auto": facebook_auto_enabled(),
+        "threads": threads_configured(),
         "media_host": all(
             get_setting(name)
             for name in (
@@ -1081,7 +1102,7 @@ def update_post_settings(content_id, payload):
         # Feed posts only have a layout choice; music and schedules are Reels.
         if not _is_instagram_post(record) or set(payload) - (
             {"layout", "caption", "scenery", "weather", "weather_look", "share_to_facebook",
-             "first_comment", "scheduled_at"}
+             "share_to_threads", "first_comment", "scheduled_at"}
             | set(ON_IMAGE_TEXT_FIELDS)
         ):
             raise ValueError(
@@ -1151,6 +1172,11 @@ def update_post_settings(content_id, payload):
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("series")
+    if "share_to_threads" in payload:
+        if not isinstance(payload["share_to_threads"], bool):
+            raise ValueError("Posting to Threads must be on or off.")
+        record["share_to_threads"] = payload["share_to_threads"]
+        changed.append("share_to_threads")
     if "share_to_facebook" in payload:
         if not isinstance(payload["share_to_facebook"], bool):
             raise ValueError("Posting to Facebook must be on or off.")
@@ -1559,14 +1585,21 @@ def publish_content(
                 pass
         uploaded_keys = []
         facebook = None
-        if facebook_configured() and record.get("share_to_facebook", True):
+        if threads_configured() and record.get("share_to_threads", True):
+            try:
+                threads = post_to_threads(content_id, host=host)
+            except (ThreadsPublishError, MediaHostError) as error:
+                threads = {"error": str(error)}
+        else:
+            threads = None
+        if facebook_auto_enabled() and record.get("share_to_facebook", True):
             # Instagram is done; a Facebook problem is recorded and retried
             # on its own, never undoing or repeating the Instagram post.
             try:
                 facebook = post_to_facebook(content_id)
             except FacebookPublishError as error:
                 facebook = {"error": str(error)}
-        return {"dry_run": False, **result, "facebook": facebook}
+        return {"dry_run": False, **result, "facebook": facebook, "threads": threads}
     except _STAGE_ACTION_ERRORS as error:
         _append_history(
             content_type, content_id, "stage_failed",
@@ -1662,6 +1695,96 @@ def post_to_facebook(content_id, publisher=None, now=None):
     return result
 
 
+THREADS_RETRY_MINUTES = (5, 15, 30, 60)
+THREADS_RATE_LIMIT_MINUTES = (60, 120, 240, 480)
+
+
+def post_to_threads(content_id, publisher=None, host=None, now=None):
+    """Post a Reel, image, or carousel (already on Instagram) to Threads.
+
+    Threads fetches media from a public URL, so the files are uploaded to R2
+    for the post and deleted afterwards.
+    """
+    record = load_post(content_id)
+    if not (_is_image_reel(record) or _is_instagram_post(record)):
+        raise ValueError("Only Instagram Reels and feed posts can go to Threads.")
+    if record.get("threads_media_id"):
+        raise ValueError("This post is already on Threads.")
+    media = _rendered_media(content_id, record)
+    text = strip_highlights(record.get("caption") or "").strip()
+    uploaded = []
+    try:
+        host = host or R2MediaHost()
+        urls = []
+        for path in media:
+            key, url = host.upload(path, content_id)
+            uploaded.append(key)
+            urls.append(url)
+        publisher = publisher or ThreadsPublisher()
+        if _is_image_reel(record):
+            result = publisher.publish_video(urls[0], text)
+        else:
+            result = publisher.publish_carousel(urls, text)
+    except ThreadsPublishError as error:
+        record = load_post(content_id)
+        attempts = int(record.get("threads_attempts") or 0)
+        record["threads_error"] = str(error)
+        waits = THREADS_RATE_LIMIT_MINUTES if error.rate_limited else THREADS_RETRY_MINUTES
+        if error.transient and attempts < len(waits):
+            record["threads_attempts"] = attempts + 1
+            record["threads_retry_at"] = (
+                (now or datetime.now(timezone.utc)) + timedelta(minutes=waits[attempts])
+            ).isoformat()
+        else:
+            record.pop("threads_retry_at", None)
+        save_post(content_id, record)
+        _append_history("post", content_id, "threads_failed", error=str(error))
+        raise
+    finally:
+        for key in uploaded:
+            try:
+                host.delete(key)  # Threads keeps its own copy.
+            except MediaHostError:
+                pass
+    record = load_post(content_id)
+    record.update(
+        threads_media_id=result["media_id"],
+        threads_permalink=result.get("permalink"),
+        threads_published_at=datetime.now(timezone.utc).isoformat(),
+    )
+    for key in ("threads_error", "threads_attempts", "threads_retry_at"):
+        record.pop(key, None)
+    save_post(content_id, record)
+    _append_history("post", content_id, "threads_published", permalink=result.get("permalink"))
+    return result
+
+
+def retry_threads_posts(now=None, publisher=None, host=None):
+    """Retry Threads posts that failed for network reasons or rate limits."""
+    now = now or datetime.now(timezone.utc)
+    results = []
+    for path in sorted(_CONTENT_DIRECTORIES["post"].glob("post_*.json")):
+        content_id = path.stem
+        try:
+            record = load_post(content_id)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        retry_at = record.get("threads_retry_at")
+        if (
+            not retry_at
+            or record.get("threads_media_id")
+            or _parse_schedule(retry_at) > now
+            or not threads_configured()
+        ):
+            continue
+        try:
+            result = post_to_threads(content_id, publisher=publisher, host=host, now=now)
+            results.append((content_id, "threads published", result.get("permalink")))
+        except (ThreadsPublishError, MediaHostError, ValueError, OSError) as error:
+            results.append((content_id, "threads failed", str(error)))
+    return results
+
+
 def retry_facebook_posts(now=None, publisher=None):
     """Retry Facebook uploads that failed for network reasons."""
     now = now or datetime.now(timezone.utc)
@@ -1678,7 +1801,7 @@ def retry_facebook_posts(now=None, publisher=None):
             or record.get("facebook_video_id")
             or record.get("facebook_post_id")
             or _parse_schedule(retry_at) > now
-            or not facebook_configured()
+            or not facebook_auto_enabled()
         ):
             continue
         try:

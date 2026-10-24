@@ -2032,52 +2032,75 @@
 
     function facebookControls(publishing) {
       const box = document.createElement("div");
+      box.append(shareControls(publishing, "facebook"), shareControls(publishing, "threads"));
+      return box;
+    }
+
+    function shareControls(publishing, kind) {
+      // Facebook Page or Threads: switch before posting, link or retry after.
+      const names = {
+        facebook: { label: "Facebook Page", setting: "share_to_facebook", posted: ["facebook_video_id", "facebook_post_id"],
+          env: "FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN" },
+        threads: { label: "Threads", setting: "share_to_threads", posted: ["threads_media_id"],
+          env: "THREADS_USER_ID and THREADS_ACCESS_TOKEN" },
+      }[kind];
+      const box = document.createElement("div");
       box.className = "inline-actions";
-      const facebook = publishing.facebook || {};
-      if (!(publishing.connection || {}).facebook) {
+      const info = publishing[kind] || {};
+      const connection = publishing.connection || {};
+      if (!connection[kind]) {
         const hint = document.createElement("span");
         hint.className = "hint";
-        hint.textContent = "Facebook Page not connected (FACEBOOK_PAGE_ID and FACEBOOK_PAGE_TOKEN in .env).";
+        hint.textContent = `${names.label} not connected (${names.env} in .env).`;
         box.append(hint);
         return box;
       }
+      const paused = kind === "facebook" && connection.facebook_auto === false;
       if (state.record.status !== "Published") {
+        if (paused) {
+          const note = document.createElement("span");
+          note.className = "hint";
+          note.textContent = "Automatic Facebook posting is paused (FACEBOOK_AUTO_POST=off). "
+            + "After this goes to Instagram, share it from Instagram or use Post to Facebook now.";
+          box.append(note);
+          return box;
+        }
         const label = document.createElement("label");
         const share = document.createElement("input");
         share.type = "checkbox";
-        share.checked = facebook.share !== false;
+        share.checked = info.share !== false;
         share.addEventListener("change", async () => {
           try {
-            await saveReelSettings({ share_to_facebook: share.checked });
+            await saveReelSettings({ [names.setting]: share.checked });
           } catch (error) {
             window.alert(error.message);
           }
         });
-        label.append(share, " Also post to my Facebook Page");
+        label.append(share, ` Also post to ${kind === "facebook" ? "my Facebook Page" : "Threads"}`);
         box.append(label);
         return box;
       }
-      if (facebook.permalink || state.record.facebook_video_id) {
+      if (info.permalink || names.posted.some((key) => state.record[key])) {
         const link = document.createElement("a");
-        link.href = facebook.permalink || "https://www.facebook.com/";
+        link.href = info.permalink || (kind === "facebook" ? "https://www.facebook.com/" : "https://www.threads.net/");
         link.target = "_blank";
         link.rel = "noopener";
-        link.textContent = "View on Facebook";
+        link.textContent = `View on ${names.label}`;
         box.append(link);
         return box;
       }
-      if (facebook.error) {
+      if (info.error) {
         const error = document.createElement("span");
         error.className = "message error";
-        error.textContent = `Facebook: ${facebook.error}`
-          + (facebook.retry_at ? ` Trying again at ${new Date(facebook.retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "");
+        error.textContent = `${names.label}: ${info.error}`
+          + (info.retry_at ? ` Trying again at ${new Date(info.retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "");
         box.append(error);
       }
-      const post = makeAction("Post to Facebook now", async () => {
+      const post = makeAction(`Post to ${names.label} now`, async () => {
         post.disabled = true;
-        post.textContent = "Posting to Facebook… (a minute or two)";
+        post.textContent = `Posting to ${names.label}… (a minute or two)`;
         try {
-          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/facebook`, {
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/${kind}`, {
             method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
           });
         } catch (error) {

@@ -63,6 +63,8 @@ def reel(tmp_path, monkeypatch):
     (posts / "post_001.json").write_text("{}")
     monkeypatch.setitem(review_ui._CONTENT_DIRECTORIES, "post", posts)
     monkeypatch.setattr(review_ui, "facebook_configured", lambda: True)
+    monkeypatch.setattr(review_ui, "facebook_auto_enabled", lambda: True)
+    monkeypatch.setattr(review_ui, "threads_configured", lambda: False)
     store = {}
     monkeypatch.setattr(review_ui, "load_post", lambda cid: dict(store[cid]))
     monkeypatch.setattr(review_ui, "save_post", lambda cid, rec: store.__setitem__(cid, dict(rec)))
@@ -153,3 +155,46 @@ def test_posting_too_often_is_retried_hours_later(reel):
     with pytest.raises(FacebookPublishError):
         review_ui.post_to_facebook("post_001", publisher=failing, now=now)
     assert reel["post_001"]["facebook_retry_at"] == (now + timedelta(minutes=60)).isoformat()
+
+
+def test_threads_posts_upload_publish_and_clean_up(reel, tmp_path, monkeypatch):
+    from threads_publisher import ThreadsPublishError, ThreadsPublisher
+    # The client: container, wait, publish, link.
+    session = Mock()
+    session.post.side_effect = [_response({"id": "C1"}), _response({"id": "T1"})]
+    session.get.side_effect = [_response({"status": "FINISHED"}), _response({"permalink": "https://threads/p/1"})]
+    client = ThreadsPublisher("TOKEN", "U1", session=session, sleep=lambda s: None)
+    assert client.publish_video("https://cdn/v.mp4", "Hook") == {"media_id": "T1", "permalink": "https://threads/p/1"}
+    first = session.post.call_args_list[0].kwargs["data"]
+    assert first["media_type"] == "VIDEO" and first["video_url"] == "https://cdn/v.mp4" and first["text"] == "Hook"
+    assert session.post.call_args_list[1].kwargs["data"]["creation_id"] == "C1"
+
+    # The app: uploads the Reel, posts it, deletes the public copy.
+    host = Mock()
+    host.upload.return_value = ("k1", "https://cdn/reel.mp4")
+    threads = Mock()
+    threads.publish_video.return_value = {"media_id": "T9", "permalink": "https://threads/p/9"}
+    review_ui.post_to_threads("post_001", publisher=threads, host=host)
+    assert threads.publish_video.call_args.args == ("https://cdn/reel.mp4", "Hook line\n\n#Buddhism")
+    host.delete.assert_called_once_with("k1")
+    assert reel["post_001"]["threads_media_id"] == "T9"
+    with pytest.raises(ValueError, match="already on Threads"):
+        review_ui.post_to_threads("post_001", publisher=threads, host=host)
+
+    # A network failure keeps the copy cleaned up and schedules a retry.
+    reel["post_001"].pop("threads_media_id")
+    threads.publish_video.side_effect = ThreadsPublishError("Could not reach Threads.", transient=True)
+    now = datetime(2026, 10, 24, 5, 0, tzinfo=timezone.utc)
+    with pytest.raises(ThreadsPublishError):
+        review_ui.post_to_threads("post_001", publisher=threads, host=host, now=now)
+    assert reel["post_001"]["threads_retry_at"] == (now + timedelta(minutes=5)).isoformat()
+    assert host.delete.call_count == 2
+
+
+def test_facebook_auto_posting_can_be_paused(monkeypatch):
+    import facebook_publisher
+    monkeypatch.setattr(facebook_publisher, "facebook_configured", lambda: True)
+    monkeypatch.setattr(facebook_publisher, "get_setting", lambda name, default=None: "off")
+    assert facebook_publisher.facebook_auto_enabled() is False
+    monkeypatch.setattr(facebook_publisher, "get_setting", lambda name, default=None: default)
+    assert facebook_publisher.facebook_auto_enabled() is True
