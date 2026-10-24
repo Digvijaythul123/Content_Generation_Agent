@@ -1100,7 +1100,7 @@ def _parse_schedule(value):
 
 
 # The words drawn on the image; editable until the post is published.
-ON_IMAGE_TEXT_FIELDS = ("title", "main_point", "supporting_copy")
+ON_IMAGE_TEXT_FIELDS = ("title", "main_point", "supporting_copy", "slides")
 
 
 def update_post_settings(content_id, payload):

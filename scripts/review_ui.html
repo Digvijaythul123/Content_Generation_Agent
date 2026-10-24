@@ -1092,7 +1092,7 @@
     function isInstagramPost() {
       return state.selected?.type === "post"
         && String(state.record?.platform_id || "").startsWith("instagram")
-        && ["single_page", "image_reel"].includes(state.record?.format_id || "single_page");
+        && ["single_page", "image_reel", "carousel"].includes(state.record?.format_id || "single_page");
     }
 
     function isImageReel() {
@@ -1208,7 +1208,9 @@
         container.append(manualArtworkControls());
       }
       if (state.record.status !== "Published") container.append(onImageTextEditor());
-      if (!isImageReel() && state.record.status !== "Published") container.append(feedPostControls());
+      if (!isImageReel() && state.record.format_id !== "carousel" && state.record.status !== "Published") {
+        container.append(feedPostControls());
+      }
       stageButton("instagram_image", "Instagram image", container);
       const image = state.assets.find((asset) => asset.key === "instagram_image");
       if (image) {
@@ -1608,7 +1610,10 @@
         + "Wrap one to three key words in **double asterisks** to highlight them. "
         + "In the Poster layout the title is not shown; keep the main point short (about 14 words).";
       box.append(hint);
-      const fields = [["title", "Title"], ["main_point", "Main point"], ["supporting_copy", "Supporting copy"]];
+      const fields = state.record.format_id === "carousel"
+        ? [["title", "Cover headline"], ["main_point", "Cover line"], ["slides", "Slides (one per line)"],
+           ["supporting_copy", "Closing slide"]]
+        : [["title", "Title"], ["main_point", "Main point"], ["supporting_copy", "Supporting copy"]];
       const inputs = {};
       for (const [key, name] of fields) {
         const label = document.createElement("label");
@@ -1637,6 +1642,7 @@
               { method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ fresh }) });
             for (const [key] of fields) {
+              if (suggestion[key] === undefined) continue;
               inputs[key].value = suggestion[key];
               inputs[key].dispatchEvent(new Event("input"));
             }
