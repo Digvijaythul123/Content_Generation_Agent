@@ -624,7 +624,7 @@
         return;
       }
       body.className = "";
-      body.append(performanceTable(
+      body.append(pagedTable("scheduled",
         ["When", "Post", "Status"],
         queued.map((item) => {
           const open = document.createElement("a");
@@ -2270,6 +2270,34 @@
       }
     }
 
+    // Long tables show 5 rows per page; each table remembers its page.
+    const PAGE_SIZE = 5;
+    const tablePages = {};
+
+    function pagedTable(key, headers, rows) {
+      const box = document.createElement("div");
+      const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+      tablePages[key] = Math.min(tablePages[key] || 0, pages - 1);
+      function draw() {
+        const page = tablePages[key];
+        box.replaceChildren(performanceTable(headers, rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)));
+        if (pages < 2) return;
+        const pager = document.createElement("div");
+        pager.className = "inline-actions pager";
+        const previous = makeAction("‹ Previous", () => { tablePages[key] = page - 1; draw(); }, "secondary");
+        previous.disabled = page === 0;
+        const label = document.createElement("span");
+        label.className = "message";
+        label.textContent = `Page ${page + 1} of ${pages} · ${rows.length} items`;
+        const next = makeAction("Next ›", () => { tablePages[key] = page + 1; draw(); }, "secondary");
+        next.disabled = page >= pages - 1;
+        pager.append(previous, label, next);
+        box.append(pager);
+      }
+      draw();
+      return box;
+    }
+
     function performanceTable(headers, rows) {
       const table = document.createElement("table");
       table.className = "performance-table";
@@ -2304,7 +2332,7 @@
         `Updated ${new Date(report.fetched_at).toLocaleString()}. Total views = Instagram + Facebook, `
         + "which is what the Instagram app shows. Numbers can lag a few hours.";
       body.className = "";
-      body.append(performanceTable(
+      body.append(pagedTable("performance-posts",
         ["Post", "Hashtags", "Reach", "IG views", "FB views", "Total views", "Saves", "Shares", "Avg watch (s)", "Mode", "Style"],
         report.posts.map((post) => {
           const link = document.createElement("a");
@@ -2320,7 +2348,7 @@
       Object.entries(report.groups).forEach(([label, items]) => {
         const heading = document.createElement("h3");
         heading.textContent = `By ${label.toLowerCase()}`;
-        body.append(heading, performanceTable(
+        body.append(heading, pagedTable(`performance-${label}`,
           [label, "Posts", "Avg total views", "Avg reach", "Saves", "Shares", "Avg watch (s)"],
           items.map((item) => [item.value, item.posts, item.avg_views, item.avg_reach,
             item.saves, item.shares, item.avg_watch_seconds])
