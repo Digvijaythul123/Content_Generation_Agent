@@ -52,7 +52,7 @@ _FEED_POSTER_ART_RULES = (
     "Background artwork for a 4:5 portrait Instagram post. Place the main "
     "subject in the lower 55% of the frame, large and clear. Keep the upper "
     "40% open, luminous, and uncluttered (open sky, soft mist, or a gentle "
-    "beam of light) with nothing in it. {wordless}"
+    "beam of light), calm and uncluttered (a moon or soft clouds are fine). {wordless}"
 )
 _WORDLESS = (
     "A purely pictorial image: every surface is blank and unmarked, with no "
@@ -66,7 +66,7 @@ _POSTER_COMPOSITION = (
 )
 _POSTER_TEXT_AREA = (
     "Keep the upper 35% open, luminous, and uncluttered (open sky, soft mist, "
-    "or a gentle beam of light) with nothing in it."
+    "or a gentle beam of light), calm and uncluttered (a moon or soft clouds are fine)."
 )
 _PANEL_COMPOSITION = "Make the main subject large, filling about 60% of the upper frame."
 # Every Reel should look like a frame from a high-end film, not a stock image.
