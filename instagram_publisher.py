@@ -276,6 +276,16 @@ class InstagramPublisher:
             raise InstagramPublishError("Instagram did not return a carousel container ID.")
         return self._finish(container_id)
 
+    def post_comment(self, media_id, message):
+        """Comment on a published post (needs instagram_business_manage_comments)."""
+        payload = self._request(
+            "POST", f"{self._base_url}/{media_id}/comments", message=message
+        )
+        comment_id = payload.get("id")
+        if not comment_id:
+            raise InstagramPublishError("Instagram did not return a comment ID.")
+        return comment_id
+
     def refresh_access_token(self):
         """Extend a long-lived token; returns (token, expires_in_seconds)."""
         payload = self._request(

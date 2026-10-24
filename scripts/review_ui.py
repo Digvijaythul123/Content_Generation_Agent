@@ -717,6 +717,10 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
             "schedule_failed": record.get("schedule_failed"),
             "schedule_retry_at": record.get("schedule_retry_at"),
             "schedule_last_error": record.get("schedule_last_error"),
+            "first_comment": {
+                "posted": bool(record.get("instagram_comment_id")),
+                "error": record.get("first_comment_error"),
+            },
             "connection": publishing_connection(),
             "facebook": {
                 "share": record.get("share_to_facebook", True),
@@ -773,6 +777,10 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
         "schedule_failed": record.get("schedule_failed"),
         "schedule_retry_at": record.get("schedule_retry_at"),
         "schedule_last_error": record.get("schedule_last_error"),
+        "first_comment": {
+            "posted": bool(record.get("instagram_comment_id")),
+            "error": record.get("first_comment_error"),
+        },
         "connection": publishing_connection(),
         "facebook": {
             "share": record.get("share_to_facebook", True),
@@ -1585,6 +1593,14 @@ def publish_content(
                 pass
         uploaded_keys = []
         facebook = None
+        # The first comment goes under the Instagram post; pinning stays
+        # manual (the API cannot pin). A failure never undoes the post.
+        if (get_setting("AUTO_FIRST_COMMENT", "on") or "on").lower() not in ("off", "false", "0", "no"):
+            try:
+                if first_comment_text(record):
+                    post_first_comment(content_id, publisher=publisher)
+            except (InstagramPublishError, ValueError):
+                pass
         if threads_configured() and record.get("share_to_threads", True):
             try:
                 threads = post_to_threads(content_id, host=host)
@@ -1697,6 +1713,51 @@ def post_to_facebook(content_id, publisher=None, now=None):
 
 THREADS_RETRY_MINUTES = (5, 15, 30, 60)
 THREADS_RATE_LIMIT_MINUTES = (60, 120, 240, 480)
+
+
+_SOURCE_LINE = re.compile(r"^(?:Teaching|Source|Idea)\s*:", re.I)
+
+
+def first_comment_text(record):
+    """The saved first comment, or the caption's source line and question."""
+    saved = str(record.get("first_comment") or "").strip()
+    if saved:
+        return saved
+    lines = [line.strip() for line in strip_highlights(record.get("caption") or "").splitlines() if line.strip()]
+    source = next((line for line in lines if _SOURCE_LINE.match(line)), None)
+    question = next((line for line in reversed(lines) if line.endswith("?")), None)
+    return "\n\n".join(part for part in (source, question) if part)
+
+
+def post_first_comment(content_id, publisher=None):
+    """Post the first comment under a published post (you pin it in the app)."""
+    record = load_post(content_id)
+    if record.get("status") != "Published" or not record.get("instagram_media_id"):
+        raise ValueError("Publish the post first.")
+    if record.get("instagram_comment_id"):
+        raise ValueError("The first comment is already posted.")
+    text = first_comment_text(record)
+    if not text:
+        raise ValueError("There is no first comment to post.")
+    try:
+        comment_id = (publisher or InstagramPublisher()).post_comment(
+            record["instagram_media_id"], text
+        )
+    except InstagramPublishError as error:
+        record = load_post(content_id)
+        message = str(error)
+        if "permission" in message.lower() or "(#10)" in message or "(#200)" in message:
+            message += " (The Instagram token needs the instagram_business_manage_comments permission.)"
+        record["first_comment_error"] = message
+        save_post(content_id, record)
+        _append_history("post", content_id, "first_comment_failed", error=message)
+        raise InstagramPublishError(message) from error
+    record = load_post(content_id)
+    record.update(instagram_comment_id=comment_id, first_comment=text)
+    record.pop("first_comment_error", None)
+    save_post(content_id, record)
+    _append_history("post", content_id, "first_comment_posted")
+    return comment_id
 
 
 def post_to_threads(content_id, publisher=None, host=None, now=None):

@@ -2027,6 +2027,43 @@
       }, "secondary");
       actions.append(copy, save, message);
       box.append(name, text, actions);
+      const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
+      const status = publishing.first_comment || {};
+      const result = document.createElement("div");
+      result.className = "inline-actions";
+      if (status.posted) {
+        const done = document.createElement("span");
+        done.className = "message";
+        done.textContent = "Posted under the post. Now pin it: open the post in Instagram, press and hold the comment → Pin.";
+        result.append(done);
+      } else if (state.record.status === "Published") {
+        if (status.error) {
+          const error = document.createElement("span");
+          error.className = "message error";
+          error.textContent = `Could not post the comment: ${status.error}`;
+          result.append(error);
+        }
+        const post = makeAction("Post comment now", async () => {
+          if (text.value !== (state.record.first_comment || defaultFirstComment())) {
+            await saveReelSettings({ first_comment: text.value });
+          }
+          try {
+            await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/first_comment`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+            });
+          } catch (error) {
+            window.alert(error.message);
+          }
+          await refreshItems(state.selected);
+        }, "secondary");
+        result.append(post);
+      } else {
+        const note = document.createElement("span");
+        note.className = "hint";
+        note.textContent = "This is posted automatically right after the post goes live; then you pin it.";
+        result.append(note);
+      }
+      box.append(result);
       return box;
     }
 

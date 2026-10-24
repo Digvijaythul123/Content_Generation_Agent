@@ -1442,3 +1442,33 @@ def test_end_card_cross_fades_after_the_reel(tmp_path):
     plain = video_renderer.build_ffmpeg_command(
         "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8)
     assert "xfade" not in plain[plain.index("-filter_complex") + 1]
+
+
+def test_first_comment_is_posted_after_publishing(workspace, monkeypatch):
+    _reel_workspace(workspace, monkeypatch, status="Approved",
+                    caption="Hook.\n\nTeaching: The Second Arrow (SN 36.6)\n\nWhich arrow is yours?\n\n#Buddhism")
+    assert review_ui.first_comment_text(workspace.read()) == "Teaching: The Second Arrow (SN 36.6)\n\nWhich arrow is yours?"
+    monkeypatch.setattr(review_ui, "facebook_auto_enabled", lambda: False)
+    monkeypatch.setattr(review_ui, "threads_configured", lambda: False)
+    host = Mock()
+    host.upload.return_value = ("key", "https://cdn.example/reel.mp4")
+    publisher = Mock()
+    publisher.publish_reel.return_value = {"media_id": "m1", "permalink": "https://www.instagram.com/reel/m1/"}
+    publisher.post_comment.return_value = "c1"
+    review_ui.publish_content("post", "post_001", host=host, publisher=publisher)
+    assert publisher.post_comment.call_args.args == ("m1", "Teaching: The Second Arrow (SN 36.6)\n\nWhich arrow is yours?")
+    assert workspace.read()["instagram_comment_id"] == "c1"
+    with pytest.raises(ValueError, match="already posted"):
+        review_ui.post_first_comment("post_001", publisher=publisher)
+
+
+def test_first_comment_failure_keeps_the_post_and_explains_permission(workspace, monkeypatch):
+    from instagram_publisher import InstagramPublishError
+    _reel_workspace(workspace, monkeypatch, status="Published", instagram_media_id="m1",
+                    first_comment="Source: SN 36.6")
+    publisher = Mock()
+    publisher.post_comment.side_effect = InstagramPublishError("Instagram returned HTTP 403: (#10) Application does not have permission")
+    with pytest.raises(InstagramPublishError, match="manage_comments"):
+        review_ui.post_first_comment("post_001", publisher=publisher)
+    saved = workspace.read()
+    assert saved["status"] == "Published" and "manage_comments" in saved["first_comment_error"]
