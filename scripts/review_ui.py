@@ -38,6 +38,7 @@ from facebook_publisher import (
 )
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from threads_publisher import ThreadsPublishError, ThreadsPublisher, threads_configured
+from cloud_scheduler import CloudScheduler, CloudSchedulerError, cloud_configured
 from media_host import MediaHostError, R2MediaHost
 from art_generator import (
     MAX_ARTWORK_BYTES,
@@ -937,6 +938,9 @@ def run_production_stage(content_type, content_id, stage):
             stage=stage,
             output=str(output),
         )
+        if content_type == "post" and stage in ("instagram_image", "reel_video"):
+            # A scheduled post's cloud copy must carry the new render.
+            _refresh_cloud_job(content_id)
         return {"stage": stage, "status": "ready"}
     except _STAGE_ACTION_ERRORS as error:
         _append_history(
@@ -1318,6 +1322,10 @@ def update_post_settings(content_id, payload):
             record.pop(key, None)
         changed.append("scheduled_at")
     save_post(content_id, record)
+    if "scheduled_at" in changed and not record.get("scheduled_at"):
+        cancel_cloud_job(content_id)
+    elif set(changed) & {"scheduled_at", "caption", "first_comment", "share_to_facebook", "share_to_threads"}:
+        _refresh_cloud_job(content_id)
     if (is_designed(record) and set(changed) & set(ON_IMAGE_TEXT_FIELDS)) or (
         set(changed) & {"scenery", "weather"}
     ):
@@ -1448,6 +1456,203 @@ def _published_copy(record, publisher, since):
     return None
 
 
+# ----------------------------------------------------------- cloud scheduler
+
+def _cloud_kind(record):
+    if _is_image_reel(record):
+        return "reel"
+    return "carousel" if is_carousel(record) else "image"
+
+
+def queue_cloud_job(content_id, host=None, cloud=None, dry_run=False, due=None):
+    """Hand a scheduled post to the cloud scheduler.
+
+    Uploads its media to R2 (the Worker posts from there and deletes it
+    afterwards) and queues the job. Returns the job, or None when the cloud
+    scheduler is not set up.
+    """
+    if cloud is None and not cloud_configured():
+        return None
+    record = load_post(content_id)
+    if record.get("status") != "Approved":
+        raise ValueError("Approve this post before scheduling it.")
+    due = due or record.get("scheduled_at")
+    if not due:
+        raise ValueError("Schedule the post first.")
+    media = _rendered_media(content_id, record)
+    host = host or R2MediaHost()
+    cloud = cloud or CloudScheduler()
+    keys, urls = [], []
+    try:
+        for path in media:
+            key, url = host.upload(path, content_id)
+            keys.append(key)
+            urls.append(url)
+        cover_url = None
+        if _is_image_reel(record) and post_image_path(content_id).is_file():
+            key, cover_url = host.upload(post_image_path(content_id), content_id)
+            keys.append(key)
+        kind = _cloud_kind(record)
+        job = {
+            "due": due,
+            "kind": kind,
+            "media": (
+                {"video_url": urls[0], "cover_url": cover_url}
+                if kind == "reel"
+                else {"image_urls": urls}
+            ),
+            "r2_keys": keys,
+            "caption": validate_instagram_caption(strip_highlights(record.get("caption") or "")),
+            "first_comment": (
+                first_comment_text(record)
+                if (get_setting("AUTO_FIRST_COMMENT", "on") or "on").lower() not in ("off", "false", "0", "no")
+                else ""
+            ),
+            "thumb_offset_ms": REEL_COVER_OFFSET_MS,
+            "platforms": {
+                "instagram": True,
+                "facebook": facebook_auto_enabled() and record.get("share_to_facebook", True),
+                "threads": threads_configured() and record.get("share_to_threads", True),
+            },
+            "dry_run": dry_run,
+        }
+        cloud.put_job(content_id, job)
+    except (CloudSchedulerError, MediaHostError, ValueError, ContentValidationError):
+        for key in keys:
+            try:
+                host.delete(key)
+            except MediaHostError:
+                pass
+        raise
+    record = load_post(content_id)
+    old_keys = (record.get("cloud_job") or {}).get("keys", [])
+    record["cloud_job"] = {"keys": keys, "due": due, "dry_run": dry_run,
+                           "queued_at": datetime.now(timezone.utc).isoformat()}
+    record.pop("cloud_job_error", None)
+    save_post(content_id, record)
+    for key in old_keys:  # the previous upload of this post
+        try:
+            host.delete(key)
+        except MediaHostError:
+            pass
+    _append_history("post", content_id, "cloud_job_queued", due=due, dry_run=dry_run)
+    return job
+
+
+def cancel_cloud_job(content_id, host=None, cloud=None):
+    """Take a post out of the cloud queue and delete its uploaded media."""
+    record = load_post(content_id)
+    job = record.get("cloud_job")
+    if not job:
+        return False
+    try:
+        (cloud or CloudScheduler()).delete_job(content_id)
+    except CloudSchedulerError as error:
+        record["cloud_job_error"] = str(error)
+        save_post(content_id, record)
+        raise
+    host = host or R2MediaHost()
+    for key in job.get("keys", []):
+        try:
+            host.delete(key)
+        except MediaHostError:
+            pass
+    record = load_post(content_id)
+    record.pop("cloud_job", None)
+    save_post(content_id, record)
+    _append_history("post", content_id, "cloud_job_cancelled")
+    return True
+
+
+def _refresh_cloud_job(content_id):
+    """Re-queue a scheduled post after its text or media changed. If the
+    cloud is unreachable, the Mac scheduler still has the post."""
+    if not cloud_configured():
+        return
+    record = load_post(content_id)
+    if not record.get("scheduled_at") or record.get("status") != "Approved":
+        return
+    try:
+        queue_cloud_job(content_id)
+    except (CloudSchedulerError, MediaHostError, ValueError, ContentValidationError) as error:
+        record = load_post(content_id)
+        record["cloud_job_error"] = str(error)
+        save_post(content_id, record)
+        _append_history("post", content_id, "cloud_job_failed", error=str(error))
+
+
+def sync_cloud_jobs(cloud=None, host=None):
+    """Collect results from the cloud scheduler and update the posts."""
+    if cloud is None and not cloud_configured():
+        return []
+    pending = {}
+    for path in sorted(_CONTENT_DIRECTORIES["post"].glob("post_*.json")):
+        try:
+            record = load_post(path.stem)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        if record.get("cloud_job"):
+            pending[path.stem] = record
+    if not pending:
+        return []
+    cloud = cloud or CloudScheduler()
+    results = []
+    for job in cloud.get_jobs(sorted(pending)):
+        content_id = job.get("id")
+        if content_id not in pending or job.get("status") not in ("done", "failed"):
+            continue
+        record = load_post(content_id)
+        ig = job.get("ig") or {}
+        if job.get("status") == "done" and ig.get("media_id"):
+            record.update(
+                status="Published",
+                instagram_media_id=ig["media_id"],
+                instagram_permalink=ig.get("permalink"),
+                published_at=ig.get("published_at") or job.get("finished_at"),
+            )
+            for key in ("scheduled_at", "schedule_failed", "schedule_attempts",
+                        "schedule_retry_at", "schedule_last_error"):
+                record.pop(key, None)
+            if job.get("comment_id"):
+                record["instagram_comment_id"] = job["comment_id"]
+            facebook = job.get("facebook") or {}
+            if facebook.get("video_id"):
+                record["facebook_video_id"] = facebook["video_id"]
+            if facebook.get("post_id"):
+                record["facebook_post_id"] = facebook["post_id"]
+            threads = job.get("threads") or {}
+            if threads.get("media_id"):
+                record["threads_media_id"] = threads["media_id"]
+                record["threads_permalink"] = threads.get("permalink")
+            errors = job.get("errors") or {}
+            for platform, field in (("facebook", "facebook_error"), ("threads", "threads_error"),
+                                    ("comment", "first_comment_error")):
+                if errors.get(platform):
+                    record[field] = errors[platform]
+            outcome = "published"
+        elif job.get("status") == "done":
+            outcome = "dry run ok"  # a test: Instagram accepted the media
+        else:
+            record["schedule_failed"] = job.get("last_error") or "The cloud scheduler could not publish it."
+            outcome = "failed"
+            host = host or R2MediaHost()
+            for key in (record.get("cloud_job") or {}).get("keys", []):
+                try:
+                    host.delete(key)
+                except MediaHostError:
+                    pass
+        record.pop("cloud_job", None)
+        save_post(content_id, record)
+        try:
+            cloud.delete_job(content_id)  # collected; clear it in the cloud
+        except CloudSchedulerError:
+            pass
+        _append_history("post", content_id, "cloud_job_result", outcome=outcome,
+                        permalink=ig.get("permalink"))
+        results.append((content_id, outcome, ig.get("permalink") or job.get("last_error")))
+    return results
+
+
 def publish_due_posts(now=None, host=None, publisher=None):
     """Publish every scheduled one-image Reel whose time has come.
 
@@ -1474,8 +1679,24 @@ def publish_due_posts(now=None, host=None, publisher=None):
                 record.get("schedule_retry_at")
                 and _parse_schedule(record["schedule_retry_at"]) > now
             )
+            # The cloud scheduler publishes this one; step in only if it is
+            # 20 minutes late (the duplicate check below still applies).
+            or (record.get("cloud_job") and _parse_schedule(scheduled) > now - timedelta(minutes=20))
         ):
             continue
+        if record.get("cloud_job"):
+            # Only take over when the cloud cannot be reached or lost the job.
+            try:
+                jobs = CloudScheduler().get_jobs([content_id])
+            except CloudSchedulerError:
+                jobs = []
+                reachable = False
+            else:
+                reachable = True
+            if reachable and any(job.get("status") in ("queued", "done") for job in jobs):
+                continue
+            # Check Instagram first, in case the cloud did post it.
+            record["schedule_attempts"] = max(int(record.get("schedule_attempts") or 0), 1)
         attempts = int(record.get("schedule_attempts") or 0)
         try:
             if attempts:

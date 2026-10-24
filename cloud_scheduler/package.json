@@ -1,0 +1,12 @@
+{
+  "name": "buddha-scheduler",
+  "private": true,
+  "description": "Cloudflare Worker that publishes scheduled posts while the Mac is off.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "4.149.0"
+  }
+}

@@ -23,7 +23,13 @@ from instagram_publisher import InstagramPublisher, InstagramPublishError
 from threads_publisher import ThreadsPublishError, ThreadsPublisher
 from project_paths import GENERATED_ASSETS_DIRECTORY, PROJECT_ROOT
 from scripts.backup_content import backup_if_due
-from scripts.review_ui import publish_due_posts, retry_facebook_posts, retry_threads_posts
+from scripts.review_ui import (
+    publish_due_posts,
+    retry_facebook_posts,
+    retry_threads_posts,
+    sync_cloud_jobs,
+)
+from cloud_scheduler import CloudSchedulerError
 
 
 LABEL = "com.dagnosticbeing.publish-scheduled"
@@ -114,6 +120,11 @@ def run_once():
         refreshed = refresh_token_if_due()
         if refreshed:
             print(f"{stamp} {refreshed}", flush=True)
+        try:
+            for content_id, outcome, detail in sync_cloud_jobs():
+                print(f"{stamp} {content_id} cloud {outcome}: {detail or ''}", flush=True)
+        except CloudSchedulerError as error:
+            print(f"{stamp} cloud scheduler unreachable: {error}", flush=True)
         for content_id, outcome, detail in publish_due_posts():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
         for content_id, outcome, detail in retry_facebook_posts():
