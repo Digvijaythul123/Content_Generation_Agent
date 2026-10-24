@@ -192,6 +192,7 @@ class ContentAgent:
             prompt = section() + prompt
         return self.ai_service.generate_reel(
             prompt + self._designed_reminder() + self._hashtag_reminder()
+            + self._brief_reminder()
         )
 
     def _base_prompt(self):
@@ -624,6 +625,27 @@ class ContentAgent:
         # Many viewers read English as a second language; plain words reach
         # them, and the wider audience the page is aiming for.
         return PLAIN_ENGLISH_RULES
+
+    def _brief_reminder(self):
+        """Restate the brief last: a small model follows the final
+        instructions, and the brief's topic must decide the post."""
+        if not self.brief:
+            return ""
+        reminder = (
+            "\n\nIMPORTANT: the post's topic comes from this brief; keep the "
+            "story mode's shape, but make every line about it:\n"
+            f"{self.brief.strip()}\n"
+        )
+        if self.brief.strip().startswith("Occasion:"):
+            reminder += (
+                "Main_point (the first line people see; the title is often "
+                "hidden) must name the day, for example \"Tomorrow is the full "
+                "moon.\" or \"Today is Pavarana.\"; Supporting_copy gives the "
+                "teaching or the way to observe it. The caption must say in one "
+                "plain line what the day is and give one way to observe it, "
+                "before the source line.\n"
+            )
+        return reminder
 
     def _brief_section(self):
         if not self.brief:
