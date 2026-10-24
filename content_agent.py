@@ -636,7 +636,10 @@ def simplify_copy(record, ai_service=None, fresh=False):
         + PLAIN_ENGLISH_RULES
         + "Rules for the rewrite:\n"
         "- Title: 2-5 plain words.\n"
-        "- Main_point: at most 14 words.\n"
+        "- Main_point: at most 14 words. It is shown alone first, as the hook: "
+        "raise the question or tension, but do not give the answer.\n"
+        "- Supporting_copy appears a few seconds later as the payoff that "
+        "answers or turns the hook.\n"
         "- Supporting_copy: at most 12 words.\n"
         "- Wrap one to three key words in Title, Main_point, and "
         "Supporting_copy in **double asterisks**.\n"

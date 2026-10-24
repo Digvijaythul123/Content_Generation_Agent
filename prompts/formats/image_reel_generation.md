@@ -33,15 +33,21 @@ Voice: speak to the viewer as "you", start from something they feel or live
 plain everyday words. Write lines a viewer would send to a friend or loved
 one. Stay hopeful but honest: no false guarantees.
 
-On-screen copy (read in under 8 seconds in total). In the default poster
-layout the Title is not shown on screen, so Main_point must work alone as the
-hook, and Supporting_copy is usually the credit (for example "— Seneca").
+On-screen copy (read in under 8 seconds in total). The lines appear one
+after another: Main_point is on screen alone for about 3.5 seconds, then
+Supporting_copy appears as the payoff. So Main_point is the hook: it raises
+a question, a tension, or a feeling, and it never gives the answer away.
+Supporting_copy delivers it (the answer, the twist, the lesson, or the reply)
+and should make the wait worth it. In the default poster layout the Title is
+not shown on screen, so Main_point must work alone as the hook. For a verified
+quote, Supporting_copy is the credit (for example "— Seneca").
 - Title: a 2-5 word plain hook, often naming who it is for (for example "For
   the overthinker"); never an abstract label like "The Barrier of Certainty".
 - Main_point: the core line, at most 14 words, in second person where it fits;
   a paradox, contrast, or permission works best. For a verified quote, use
   the exact quote even if longer.
-- Supporting_copy: a short payoff, twist, credit, or question, at most 12 words.
+- Supporting_copy: the payoff that answers or turns the hook (a twist, the
+  lesson, the reply, or the credit for a quote), at most 12 words.
 Watch time matters most: the first line must stop the scroll on its own
 (a feeling, a surprise, or a question the viewer has asked themselves), and
 the last line should be the payoff, so viewers read to the end and replay.

@@ -311,11 +311,12 @@ def render_effect_layers(effect, folder, seconds=DEFAULT_DURATION_SECONDS):
     return layers
 
 
-# The hook is on screen from the first frame (average watch time was ~2.6s),
-# then the main line and the payoff follow quickly.
-TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
+# Hook first, payoff later: the hook is on screen from the first frame,
+# alone long enough to read and wonder (about 3 seconds), and the payoff
+# arrives after it, so viewers wait for it instead of scrolling on.
+TEXT_REVEALS = (("title", 0), ("quote", 2.0), ("takeaway", 4.5))
 # Posters have no title on screen: the quote is the hook from frame one.
-POSTER_REVEALS = (("quote", 0), ("takeaway", 1.5))
+POSTER_REVEALS = (("quote", 0), ("takeaway", 3.5))
 # The closing line gets its own end card after the main Reel: the picture
 # cross-fades into it over END_CARD_FADE seconds and it stays on screen.
 END_CARD_SECONDS = 2.2

@@ -955,7 +955,7 @@ def test_poster_art_prompt_opens_the_sky_and_asks_for_cinematic_quality():
 
 
 def test_poster_video_reveals_quote_first_and_layout_can_be_switched(workspace, monkeypatch):
-    assert video_renderer.POSTER_REVEALS[0] == ("quote", 0)
+    assert video_renderer.POSTER_REVEALS == (("quote", 0), ("takeaway", 3.5))  # hook alone first
     _reel_workspace(workspace, monkeypatch)
     workspace.render()
     review_ui.update_post_settings("post_001", {"layout": "poster"})
