@@ -65,22 +65,28 @@ Visual_labels: write "None".
 
 Design_prompt (90-130 words): a wordless, realistic scene for a 9:16 vertical
 frame, written as six labelled parts on one line each:
-Subject: who or what, with expression and age; make the subject large and
-clear in the lower half of the frame, often seen from behind or in profile. If a thinker appears, name them (for example
+The picture must show what the post is about: if the words ask the viewer
+to meditate, show someone meditating; to give, show giving; on a full moon
+day, show the full moon. Pick the moment from the post, not a generic figure.
+Subject: who or what, with expression and age, doing the post's action;
+make the subject large and clear in the lower half of the frame. If a
+thinker appears, name them (for example
 "Osho in his later years") instead of describing their face; the image tool
 knows famous figures, and a reference photo can be attached for likeness.
-Pose: body position and hand gesture.
-Shot: shot type, camera angle, and lens (for example "medium close-up, eye
-level, 85mm, shallow depth of field").
+Pose: body position and hand gesture that act out the post (for example
+seated in meditation with hands in the lap, offering a bowl, listening).
+Shot: shot type, camera angle, and lens. Vary the angle from post to post
+(front, three-quarter, side, from behind, or a close-up of hands or face);
+do not default to a back view.
 Lighting: one key light with its direction and color, plus rim or fill light.
 Setting: place, era, atmosphere (mist, dust, smoke, god-rays), and textures.
 Color: the color grade and mood (vary the light and weather from post to post:
 overcast, rain, mist, night, and golden light all work), with the upper
 third kept open and luminous (sky, mist, or a soft light beam) for text.
-Prefer compositions that age well: a back view or silhouette rim-lit against
-the light, a hand or object in macro, or a statue in profile often looks more
-real than a front-facing face. Showing only part of a revered figure (a
-hand, a robe sleeve) is a respectful, striking option.
+Options that look real and respectful: a calm three-quarter view, a statue
+in profile, a hand or object in macro, or a silhouette against the light.
+Showing only part of a revered figure (hands in meditation, a robe sleeve)
+is also a striking option.
 Be concrete and visual. Never ask for text, letters, or signs in the image.
 
 Music_cue: one line describing the background-music mood and tempo to pick in

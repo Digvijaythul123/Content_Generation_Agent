@@ -643,7 +643,10 @@ class ContentAgent:
                 "moon.\" or \"Today is Pavarana.\"; Supporting_copy gives the "
                 "teaching or the way to observe it. The caption must say in one "
                 "plain line what the day is and give one way to observe it, "
-                "before the source line.\n"
+                "before the source line. The Design_prompt must show the day "
+                "and the practice the post suggests (for example a bright full "
+                "moon over a temple with someone meditating), not a generic "
+                "figure.\n"
             )
         return reminder
 

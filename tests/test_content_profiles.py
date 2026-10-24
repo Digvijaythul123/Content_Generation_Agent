@@ -1342,3 +1342,14 @@ def test_send_line_hashtag_count_and_languages():
     sent = service.generate_reel.call_args.args[0]
     assert "use NO hashtags" in sent and "Thai (Thai script)" in sent
     assert '"Send this to the friend who ..."' in sent and "people type into search" in sent
+
+
+def test_weather_rotation_skips_clashing_places(monkeypatch, tmp_path):
+    import content_pipeline
+    monkeypatch.setattr(content_pipeline, "_POSTS_DIRECTORY", tmp_path)
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram")
+    for _ in range(40):
+        weather = content_pipeline._pick_setting(request, "weathers", "auto",
+                                                 avoid=content_pipeline._CLASHES["frozen_north"])
+        assert weather not in ("monsoon_rain", "after_rain", "golden_hour")

@@ -82,10 +82,14 @@ def generate_content(
             thinker_id=thinker_id,
             visual_style=visual_style,
         )
+    chosen_scenery = _pick_setting(request, "sceneries", scenery)
+    # A full moon post needs the moon in the sky.
+    if (weather in (None, "auto")) and brief and "full moon" in brief.lower():
+        weather = "moonlit_night"
     request = replace(
         request,
-        scenery=_pick_setting(request, "sceneries", scenery),
-        weather=_pick_setting(request, "weathers", weather),
+        scenery=chosen_scenery,
+        weather=_pick_setting(request, "weathers", weather, avoid=_CLASHES.get(chosen_scenery, ())),
     )
     agent = ContentAgent(
         profile_id=request.profile.id,
@@ -160,7 +164,24 @@ def _uses_setting(request):
     return True
 
 
-def _pick_setting(request, kind, choice):
+# Weather that does not belong in a place (rotation skips these pairs).
+_CLASHES = {
+    "frozen_north": ("monsoon_rain", "after_rain", "golden_hour"),
+    "snowy_forest": ("monsoon_rain", "after_rain"),
+    "himalayan_peaks": ("monsoon_rain",),
+    "desert_dunes": ("snowfall", "monsoon_rain", "after_rain"),
+    "tropical_beach": ("snowfall",),
+    "savanna": ("snowfall",),
+    "rice_terraces": ("snowfall",),
+    "lotus_pond": ("snowfall",),
+    "forest_waterfall": ("snowfall",),
+    "cherry_blossoms": ("snowfall", "storm_clouds"),
+    "cave_temple": ("snowfall",),
+    "sea_cave": ("snowfall",),
+}
+
+
+def _pick_setting(request, kind, choice, avoid=()):
     loader = load_profile_sceneries if kind == "sceneries" else load_profile_weathers
     field = "scenery" if kind == "sceneries" else "weather"
     options = [item["id"] for item in loader(request.profile.id)]
@@ -181,8 +202,9 @@ def _pick_setting(request, kind, choice):
             recent.append(value)
         if len(recent) >= _SETTING_MEMORY:
             break
-    fresh = [option for option in options if option not in recent]
-    return random.choice(fresh or options)
+    allowed = [option for option in options if option not in avoid] or options
+    fresh = [option for option in allowed if option not in recent]
+    return random.choice(fresh or allowed)
 
 
 def _pick_thinker(profile_id, story_mode):
