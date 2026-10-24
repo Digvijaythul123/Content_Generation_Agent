@@ -31,6 +31,9 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if request.path == "/api/performance":
             self._send_json({"report": ui.cached_report()})
             return
+        if request.path == "/api/best_times":
+            self._send_json(ui.best_posting_hours())
+            return
         if request.path == "/api/calendar":
             self._send_json({"items": ui.upcoming_observances()})
             return

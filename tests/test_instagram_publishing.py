@@ -1583,3 +1583,23 @@ def test_plan_week_drafts_each_day_with_its_theme_and_planned_time(workspace, mo
     assert monday["subtype"] == "real_or_fake" and "brief" not in monday
     record = review_ui.load_post("post_001")
     assert record["plan_label"] == "Sunday Carousel · Pavarana" and record["planned_for"].startswith("2026-10-25")
+
+
+def test_best_posting_hours_falls_back_from_audience_data_to_own_posts():
+    import analytics
+    from datetime import datetime, timezone
+    publisher = Mock()
+    publisher._base_url, publisher._account_id = "https://graph.example", "A"
+    publisher._request.return_value = {"data": [{"values": [{"value": {"13": 40, "2": 90, "14": 60}}]}]}
+    result = analytics.best_posting_hours(publisher=publisher, now=datetime(2026, 10, 24, tzinfo=timezone.utc))
+    assert result["source"].startswith("Instagram") and [h["hour"] for h in result["hours"]] == [2, 14, 13]
+
+    publisher._request.return_value = {"data": []}
+    report = {"posts": [
+        {"posted_at": "2026-10-23T14:00:00+0000", "total_views": 300},
+        {"posted_at": "2026-10-23T14:05:00+0000", "total_views": 100},
+        {"posted_at": "2026-10-23T02:00:00+0000", "total_views": 50},
+    ]}
+    result = analytics.best_posting_hours(report=report, publisher=publisher)
+    assert result["source"].startswith("Your posts so far") and "avg 200 views" in result["hours"][0]["detail"]
+    assert analytics.best_posting_hours(report={"posts": []}, publisher=publisher)["source"].startswith("Suggested")

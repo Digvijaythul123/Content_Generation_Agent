@@ -279,6 +279,7 @@
           <p class="hint">Reels and posts queued to post automatically (your Mac must be on at the time).</p>
         </div>
       </div>
+      <p class="hint" id="best-times">Best posting times: loading…</p>
       <div id="scheduled-body" class="hint">Nothing scheduled.</div>
     </section>
 
@@ -2382,6 +2383,16 @@
       });
     }
 
+    async function loadBestTimes() {
+      try {
+        const { source, hours } = await requestJson("/api/best_times");
+        $("best-times").textContent = `Best posting times: ${hours.map((item) =>
+          item.detail ? `${item.label} (${item.detail})` : item.label).join(", ")}. Source: ${source}.`;
+      } catch (error) {
+        $("best-times").textContent = "Best posting times: not available right now.";
+      }
+    }
+
     async function loadCalendar() {
       const body = $("calendar-body");
       try {
@@ -2599,6 +2610,7 @@
       $("performance-refresh").addEventListener("click", () => loadPerformance(true));
       loadPerformance();
       loadCalendar();
+      loadBestTimes();
       $("plan-week-button").addEventListener("click", async () => {
         if (!window.confirm("Draft the next 7 days from the weekly plan? This takes a few minutes (one draft per day).")) return;
         const button = $("plan-week-button");

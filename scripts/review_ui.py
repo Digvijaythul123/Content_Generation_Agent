@@ -62,7 +62,7 @@ from media_renderer import (
     render_post_image,
 )
 from content_pipeline import generate_content
-from analytics import cached_report, refresh_report
+from analytics import best_posting_hours, cached_report, refresh_report
 from buddhist_calendar import upcoming as upcoming_buddhist_days
 from music_library import SILENT, list_tracks
 from video_renderer import VIDEO_EFFECTS, reel_video_path, render_image_reel_video

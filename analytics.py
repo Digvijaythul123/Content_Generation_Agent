@@ -179,3 +179,58 @@ def cached_report(cache_path=CACHE_PATH):
         report.get("posts", []), key=lambda row: row.get("reach") or 0, reverse=True
     )
     return report
+
+
+# Used until there is data: evenings and early mornings suit reflective content.
+DEFAULT_BEST_HOURS = (19, 7, 21)
+
+
+def _hour_label(hour):
+    return f"{hour % 12 or 12} {'AM' if hour < 12 else 'PM'}"
+
+
+def best_posting_hours(report=None, publisher=None, now=None):
+    """Up to three good posting hours (local time) and where they come from.
+
+    Instagram's online-followers data needs about 100 followers; until then
+    the hours with the best average views of your own posts are used, and
+    with fewer than three posts, sensible defaults.
+    """
+    try:
+        publisher = publisher or InstagramPublisher()
+        data = publisher._request(
+            "GET", f"{publisher._base_url}/{publisher._account_id}/insights",
+            metric="online_followers", period="lifetime",
+        ).get("data") or []
+        values = (data[0].get("values") or [{}])[-1].get("value") if data else None
+    except (InstagramPublishError, IndexError, AttributeError):
+        values = None
+    if values:
+        # Instagram reports these hours in UTC; show them in local time.
+        offset = round((now or datetime.now().astimezone()).utcoffset().total_seconds() / 3600)
+        ranked = sorted(values.items(), key=lambda item: item[1], reverse=True)[:3]
+        hours = [((int(hour) + offset) % 24, count) for hour, count in ranked]
+        return {
+            "source": "Instagram: when your followers are online",
+            "hours": [{"hour": hour, "label": _hour_label(hour), "detail": f"{count} followers online"} for hour, count in hours],
+        }
+    posts = (report or cached_report() or {}).get("posts", [])
+    by_hour = {}
+    for post in posts:
+        try:
+            posted = datetime.strptime(post["posted_at"], "%Y-%m-%dT%H:%M:%S%z").astimezone()
+        except (KeyError, TypeError, ValueError):
+            continue
+        by_hour.setdefault(posted.hour, []).append(post.get("total_views") or post.get("views") or 0)
+    if sum(len(items) for items in by_hour.values()) >= 3:
+        ranked = sorted(by_hour.items(), key=lambda item: sum(item[1]) / len(item[1]), reverse=True)[:3]
+        return {
+            "source": f"Your posts so far ({sum(len(v) for v in by_hour.values())} posts; Instagram's audience data needs about 100 followers)",
+            "hours": [{"hour": hour, "label": _hour_label(hour),
+                       "detail": f"avg {round(sum(views) / len(views))} views over {len(views)} post(s)"}
+                      for hour, views in ranked],
+        }
+    return {
+        "source": "Suggested defaults (not enough data yet)",
+        "hours": [{"hour": hour, "label": _hour_label(hour), "detail": ""} for hour in DEFAULT_BEST_HOURS],
+    }
