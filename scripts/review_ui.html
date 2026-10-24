@@ -141,7 +141,11 @@
     .workspace-nav a:hover, .secondary:hover { border-color: var(--accent); }
     .dashboard { margin-top: 20px; }
     .carousel-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
-    .carousel-strip img { width: 180px; aspect-ratio: 4 / 5; border-radius: 8px; flex: none; object-fit: cover; }
+    .carousel-strip img { width: 110px; aspect-ratio: 4 / 5; border-radius: 6px; flex: none; object-fit: cover;
+      cursor: pointer; opacity: .6; border: 2px solid transparent; }
+    .carousel-strip img.active { opacity: 1; border-color: var(--accent); }
+    .carousel-viewer .instagram-preview { cursor: pointer; }
+    .carousel-viewer:focus { outline: none; }
     .performance-table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: 14px; }
     .performance-table th, .performance-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
     .performance-table th { color: var(--muted); font-weight: 600; }
@@ -1150,6 +1154,53 @@
       return box;
     }
 
+    function carouselViewer(cover) {
+      // All slides, one at a time: Previous / Next, arrow keys, or a thumbnail.
+      const version = Date.now();
+      const slides = [cover, ...state.assets
+        .filter((asset) => /^slide_\d+$/.test(asset.key))
+        .sort((a, b) => Number(a.key.split("_")[1]) - Number(b.key.split("_")[1]))];
+      const box = document.createElement("div");
+      box.className = "carousel-viewer";
+      box.tabIndex = 0;
+      const main = document.createElement("img");
+      main.className = "instagram-preview";
+      const bar = document.createElement("div");
+      bar.className = "inline-actions";
+      const counter = document.createElement("span");
+      counter.className = "message";
+      const strip = document.createElement("div");
+      strip.className = "carousel-strip";
+      const thumbs = slides.map((asset, index) => {
+        const thumb = document.createElement("img");
+        thumb.src = `${asset.url}?v=${version}`;
+        thumb.alt = `Slide ${index + 1}`;
+        thumb.title = `Slide ${index + 1}`;
+        thumb.addEventListener("click", () => show(index));
+        strip.append(thumb);
+        return thumb;
+      });
+      let current = 0;
+      function show(index) {
+        current = (index + slides.length) % slides.length;
+        main.src = `${slides[current].url}?v=${version}`;
+        main.alt = `Slide ${current + 1} of ${slides.length}`;
+        counter.textContent = `Slide ${current + 1} of ${slides.length}`;
+        thumbs.forEach((thumb, i) => thumb.classList.toggle("active", i === current));
+      }
+      const previous = makeAction("‹ Previous", () => show(current - 1), "secondary");
+      const next = makeAction("Next ›", () => show(current + 1), "secondary");
+      bar.append(previous, counter, next);
+      box.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") show(current - 1);
+        if (event.key === "ArrowRight") show(current + 1);
+      });
+      main.addEventListener("click", () => show(current + 1));
+      box.append(main, bar, strip);
+      show(0);
+      return box;
+    }
+
     function scheduleAlert() {
       // A failed or retrying scheduled post gets its fixes at the top of the tab.
       const publishing = state.pipeline.find((stage) => stage.id === "publishing") || {};
@@ -1213,33 +1264,15 @@
       }
       stageButton("instagram_image", "Instagram image", container);
       const image = state.assets.find((asset) => asset.key === "instagram_image");
-      if (image) {
+      if (image && state.record.format_id === "carousel") {
+        container.append(carouselViewer(image));
+      } else if (image) {
         const preview = document.createElement("img");
         preview.className = "instagram-preview";
         if (isImageReel()) preview.style.aspectRatio = "9 / 16";
         preview.src = `${image.url}?v=${Date.now()}`;
         preview.alt = "Rendered Instagram post";
         container.append(preview);
-      }
-      if (state.record.format_id === "carousel") {
-        const slides = state.assets
-          .filter((asset) => /^slide_\d+$/.test(asset.key))
-          .sort((a, b) => Number(a.key.split("_")[1]) - Number(b.key.split("_")[1]));
-        if (slides.length) {
-          const strip = document.createElement("div");
-          strip.className = "carousel-strip";
-          slides.forEach((asset) => {
-            const thumb = document.createElement("img");
-            thumb.src = `${asset.url}?v=${Date.now()}`;
-            thumb.alt = asset.name;
-            thumb.title = asset.name;
-            strip.append(thumb);
-          });
-          const note = document.createElement("p");
-          note.className = "hint";
-          note.textContent = `Slides 2 to ${slides.length + 1} (slide 1 is above). They reuse the cover art, blurred.`;
-          container.append(note, strip);
-        }
       }
       if (isImageReel()) {
         if (state.record.status !== "Published") container.append(musicControls(), engagementControls());
