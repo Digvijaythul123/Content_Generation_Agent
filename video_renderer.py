@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from art_generator import artwork_path
-from art_generator import is_designed, is_video_artwork
+from art_generator import designed_payoff, is_designed, is_video_artwork
 from media_renderer import (
     build_end_card_html,
     IMAGE_REEL_SIZE,
@@ -516,7 +516,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 IMAGE_REEL_SIZE,
             )
         designed_layers = []
-        if designed and str(record.get("supporting_copy") or "").strip():
+        if designed and designed_payoff(record):
             # The payoff the image tool left room for fades in after the hook.
             designed_layers = [(
                 render_html_to_png(

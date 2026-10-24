@@ -1191,7 +1191,7 @@ def test_every_prompt_asks_for_plain_english():
 
 def test_one_liner_story_mode_reaches_prompt():
     prompt = _prompt_for(subtype="one_liner", thinker_id="buddha")
-    assert "One-Liner (Life Lesson)" in prompt and "at most 10 simple words" in prompt
+    assert "One-Liner (Life Lesson)" in prompt and "the second half that turns it" in prompt
 
 
 def test_simplify_copy_suggests_plain_text_and_keeps_quotes_and_credits():

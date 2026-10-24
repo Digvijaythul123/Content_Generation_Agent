@@ -415,6 +415,25 @@ def _handle_for(record):
         return ""
 
 
+# Lists whose last line is the turn (peace, the final point): a Reel holds
+# that line back with the closing line. Speech bubbles stay together.
+_LAST_LINE_IS_PAYOFF = ("mind_states", "numbered_list")
+
+
+def _holds_back_last_line(record):
+    return (record.get("subtype") or record.get("qa_subtype")) in _LAST_LINE_IS_PAYOFF
+
+
+def designed_payoff(record):
+    """What an illustrated Reel holds back and fades in later: the last line
+    of a list (Mind States, Numbered List) and the closing line."""
+    lines = [line.strip() for line in str(record.get("main_point") or "").splitlines() if line.strip()]
+    parts = [lines[-1]] if len(lines) > 1 and _holds_back_last_line(record) else []
+    if str(record.get("supporting_copy") or "").strip():
+        parts.append(str(record["supporting_copy"]).strip())
+    return "\n".join(parts)
+
+
 def _designed_art_prompt(record, scene, style, art_style=None):
     """A finished illustrated post whose words the image tool draws."""
     from content_text import strip_highlights
@@ -440,6 +459,9 @@ def _designed_art_prompt(record, scene, style, art_style=None):
         words.append(f'Headline: {quoted(plain(record["title"]))}')
     lines = [plain(line) for line in str(record.get("main_point") or "").splitlines()]
     lines = [line for line in lines if line]
+    # In a Reel the last line of a list is part of the payoff, faded in later.
+    if reel and len(lines) > 1 and _holds_back_last_line(record):
+        lines = lines[:-1]
     if len(lines) == 1:
         words.append(f"Main line: {quoted(lines[0])}")
     elif lines:
@@ -447,16 +469,19 @@ def _designed_art_prompt(record, scene, style, art_style=None):
         words += [f"- {quoted(line)}" for line in lines]
     # In a Reel the closing line is the payoff: the app fades it in a few
     # seconds later, so the image tool leaves room for it instead.
-    payoff_later = reel and bool(plain(record.get("supporting_copy")))
+    payoff_later = reel and bool(designed_payoff(record))
     if plain(record.get("supporting_copy")) and not payoff_later:
         words.append(f'Closing line: {quoted(plain(record["supporting_copy"]))}')
     handle = _handle_for(record)
     if handle:
         words.append(f'Small handle near the bottom: "{handle}"')
-    emphasis = re.findall(
-        r"\*\*(.+?)\*\*",
-        " ".join(str(record.get(field) or "") for field in ("title", "main_point", "supporting_copy")),
-    )
+    # Bold words only from what the image tool actually draws.
+    drawn = [str(record.get("title") or "")]
+    raw_lines = [line for line in str(record.get("main_point") or "").splitlines() if line.strip()]
+    drawn += raw_lines[:-1] if reel and len(raw_lines) > 1 and _holds_back_last_line(record) else raw_lines
+    if not payoff_later:
+        drawn.append(str(record.get("supporting_copy") or ""))
+    emphasis = re.findall(r"\*\*(.+?)\*\*", " ".join(drawn))
     if emphasis:
         words.append(
             "Make these words bold and in the accent color: "

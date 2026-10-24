@@ -127,16 +127,16 @@ subtypes:
     default_visual_style: golden_light
     name: Mirror (Personal Truth)
     definition: A short, warm truth spoken to the viewer about something they feel (overthinking, conflict, comparison, setbacks, loneliness, people-pleasing), grounded in a thinker's idea and worth sending to someone you care about.
-    structure: Title names who it is for (for example "For the overthinker"); Main_point is one second-person line of at most 12 words, often a paradox, contrast, or permission; Supporting_copy is a small credit such as "— Seneca" for a verified quote or "— inspired by Epictetus" for a paraphrase; the caption adds one honest nuance and invites sharing.
+    structure: Title names who it is for (for example "For the overthinker"); Main_point is the setup of one second-person truth, at most 9 words, naming the feeling or situation without giving the turn; Supporting_copy is the turn that completes it (a permission, contrast, or reframe), at most 9 words, so the two read as one line; the credit ("inspired by Epictetus") goes in the caption, not on screen; the caption adds one honest nuance and invites sharing.
     background: An intimate, relatable everyday scene or a quiet symbolic image with one warm light; soft piano, flute, or lo-fi bed.
-    example: '"Not every opinion needs your reply." — inspired by Epictetus, with a caption that notes when replying does matter.'
+    example: 'Main_point "Not every opinion of you" then Supporting_copy "needs your reply." (inspired by Epictetus), with a caption that notes when replying does matter.'
   - id: one_liner
     default_visual_style: golden_light
     name: One-Liner (Life Lesson)
     definition: One short, simple line that carries a deep life lesson from the teaching, easy enough for anyone to understand on the first read and true enough to remember for years.
-    structure: Title is a 2-4 word plain hook; Main_point is the one-liner itself, at most 10 simple words, a whole life lesson in everyday language (a contrast or a turn works best); Supporting_copy is a small credit such as "— inspired by the Buddha" with the source; the caption explains the lesson in two or three short, plain sentences with one real-life example, then names the teaching and source.
+    structure: Title is a 2-4 word plain hook; Main_point is the first half of the one-liner (the setup, at most 7 simple words) and Supporting_copy is the second half that turns it (at most 7 simple words), so together they make one life lesson in everyday language; the credit and source go in the caption, not on screen; the caption explains the lesson in two or three short, plain sentences with one real-life example, then names the teaching and source.
     background: One calm, open image with a single warm light and lots of empty sky, so the line stands alone; soft flute or a gentle drone.
-    example: '"You don''t lose what you let go. You lose what you hold too tight." — inspired by the Buddha, with a caption about a friendship that ended because one person held on too hard.'
+    example: 'Main_point "You don''t lose what you let go." then Supporting_copy "You lose what you hold too tight." (inspired by the Buddha), with a caption about a friendship that ended because one person held on too hard.'
   - id: dialogue
     default_visual_style: narrative_painting
     name: Dialogue (Buddha and young monk)
@@ -167,8 +167,7 @@ subtypes:
       (2-5 words); Main_point holds three or four lines, one per line, each
       in the same pattern, with the state word bold, for example
       "**Worry** is when the mind lives in the future."; the last line is
-      the calm one (peace, joy, or freedom). Supporting_copy is one short
-      closing line or "— inspired by the Buddha". Each line is at most 10
+      the calm one (peace, joy, or freedom). Supporting_copy is one short closing line that lands the lesson (not a credit; the source goes in the caption). Each line is at most 10
       simple words. The caption explains each state in one plain line,
       names the teaching and source (for example the Bhaddekaratta Sutta,
       MN 131, on living in the present), and asks which one the viewer
@@ -201,8 +200,7 @@ subtypes:
       the lesson (for example "You don't have to answer every voice that
       shouts at you."); Main_point holds three to five short labels, one per
       line, that appear in the speech bubbles (one to three words each, for
-      example "Lazy", "Too quiet", "Not enough"); Supporting_copy is a short
-      credit such as "— inspired by the Buddha". The caption explains the
+      example "Lazy", "Too quiet", "Not enough"); Supporting_copy is the payoff line that resolves the headline's tension, at most 12 words (not a credit; the source goes in the caption). The caption explains the
       lesson in two plain sentences, gives the teaching and source (for
       example the Buddha's reply to the abusive Brahmin, SN 7.2), and asks
       a question.

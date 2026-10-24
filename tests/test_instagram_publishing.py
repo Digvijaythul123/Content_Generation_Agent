@@ -1114,8 +1114,11 @@ def test_designed_posts_put_exact_words_in_the_art_prompt_and_render_whole(tmp_p
     assert not art_generator.is_designed({**record, "subtype": "mirror"})
     prompt = art_generator.build_art_prompt(record)
     assert 'Headline: "Where is your mind?"' in prompt
-    assert '- "Regret is when the mind is in the past."' in prompt
-    assert '"@buddha.realteachings"' in prompt and "Regret, Peace" in prompt
+    # A Reel draws all but the last list line; the last one fades in later.
+    assert 'Main line: "Regret is when the mind is in the past."' in prompt
+    assert "Peace is when the mind is here" not in prompt
+    assert '"@buddha.realteachings"' in prompt and "accent color: mind, Regret" in prompt
+    assert "Peace" not in prompt  # held back for the Reel's payoff
     assert "purely pictorial" not in prompt and "watercolor" in prompt
 
     art = tmp_path / "art.png"
@@ -1513,3 +1516,23 @@ def test_illustrated_reels_leave_the_payoff_to_fade_in_later(tmp_path):
     cover = build_post_html(record, artwork=art)
     assert 'class="payoff"' in cover and "lute string" in cover
     assert "lute string" not in build_post_html({**record, "format_id": "single_page"}, artwork=art).split("<script>")[0].split('class="payoff"')[1][:40]
+
+
+def test_list_reels_hold_back_their_last_line_with_the_closing_line(tmp_path):
+    record = {
+        **IMAGE_REEL, "profile_id": "rational_thoughts", "subtype": "mind_states",
+        "visual_style": "illustrated_watercolor", "brand_id": "default",
+        "title": "Where is your **mind**?",
+        "main_point": "**Regret** is the past.\n**Worry** is the future.\n**Peace** is here.",
+        "supporting_copy": "Come back to now.",
+        "design_prompt": "Cream page, one monk per line.",
+    }
+    assert art_generator.designed_payoff(record) == "**Peace** is here.\nCome back to now."
+    prompt = art_generator.build_art_prompt(record)
+    assert '- "Regret is the past."' in prompt and "Peace is here" not in prompt
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    html = build_post_html(record, artwork=art)
+    assert '<span class="hl">Peace</span> is here.<br>Come back to now.' in html
+    feed = art_generator.build_art_prompt({**record, "format_id": "single_page"})
+    assert "Peace is here" in feed  # feed posts keep every line in the picture

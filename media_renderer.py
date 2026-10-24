@@ -15,6 +15,7 @@ from pathlib import Path
 from art_generator import (
     ArtGenerationError,
     artwork_path,
+    designed_payoff,
     is_designed,
     is_video_artwork,
     visual_style_for,
@@ -461,7 +462,7 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         layer=layer,
         look=weather_look(record) or "none",
         payoff=(
-            _copy_html(record.get("supporting_copy") or "")
+            "<br>".join(_copy_html(line) for line in designed_payoff(record).splitlines())
             if layout == "designed" and is_image_reel(record)
             else ""
         ),
