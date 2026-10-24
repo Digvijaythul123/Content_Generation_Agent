@@ -244,6 +244,21 @@ subtypes:
       book; the closest real teaching is Dhammapada 5."
     background: A calm museum-like portrait or statue scene with a question-like mood (half in light, half in shadow); a slow, curious music bed.
     example: '"Holding on to anger is like drinking poison and expecting the other person to die." Answer: Fake (modern saying); the real teaching on anger is Dhammapada 3-5.'
+  - id: life_story
+    default_visual_style: narrative_painting
+    name: Life of the Buddha (story moment)
+    definition: One true moment from the Buddha's life, with the other people in it, told in two plain lines and ending on the lesson it carries.
+    structure: >-
+      Title names the moment in a few plain words (for example "The bandit
+      who stopped"); Main_point sets up the moment as the hook, at most 14
+      words, in the present tense; Supporting_copy is what the Buddha said
+      or did and the lesson, at most 14 words. Keep close to the source;
+      paraphrase rather than invent dialogue. The Design_prompt shows the
+      whole scene with every person or animal in it (not the Buddha alone).
+      The caption tells the story in two or three short sentences, gives
+      the source, and says how the lesson applies today.
+    background: A rich story painting of the moment with all its people, era-accurate dress and places, warm natural light; gentle sitar or flute.
+    example: Main_point "A bandit with a sword runs after the Buddha." then Supporting_copy "He cannot catch him. 'I have stopped. You stop too.'" (MN 86)
   - id: verified_quote
     default_visual_style: thinker_statue
     name: Verified Quote
@@ -256,6 +271,84 @@ thinkers:
   - id: buddha
     name: The Buddha (Siddhartha Gautama)
     era: c. 5th century BCE, northern India
+    # Moments from the Buddha's life, with the people in them, for the
+    # "Life of the Buddha" story mode and as scene ideas for other posts.
+    life_scenes:
+      - id: mucalinda
+        episode: Mucalinda the serpent king shelters the Buddha from a seven-day storm after his awakening
+        source: Udana 2.1
+        scene: The Buddha seated in deep meditation under a tree by a lake, a giant serpent coiled beneath him with its many-hooded head spread over him like an umbrella, wind and rain all around
+        teaching: Peace that storms cannot touch
+      - id: angulimala
+        episode: The bandit Angulimala runs after the Buddha but cannot catch him; the Buddha says "I have stopped, Angulimala; you stop too"
+        source: Angulimala Sutta, MN 86
+        scene: A forest path, a fierce bandit with a sword running hard, the Buddha walking calmly ahead, untouched
+        teaching: Anyone can stop and change
+      - id: kisa_gotami
+        episode: Kisa Gotami, carrying her dead child, looks for a mustard seed from a house where no one has died
+        source: Therigatha commentary (Thig 10)
+        scene: A village lane at dusk, a grieving young mother holding her child, villagers at their doors shaking their heads kindly
+        teaching: Grief is shared by everyone
+      - id: sujata
+        episode: Sujata offers a bowl of milk-rice to the starving ascetic just before his awakening
+        source: Jataka Nidanakatha; the middle way, SN 56.11
+        scene: A young village woman kneeling to offer a golden bowl to a thin ascetic seated under a great banyan tree, morning light
+        teaching: The middle way, not self-punishment
+      - id: first_teaching
+        episode: The Buddha's first teaching to the five ascetics at the Deer Park, Sarnath
+        source: Dhammacakkappavattana Sutta, SN 56.11
+        scene: The Buddha seated teaching under trees, five ascetics seated before him listening closely, deer grazing nearby
+        teaching: The Four Noble Truths
+      - id: nalagiri
+        episode: Devadatta sends the maddened elephant Nalagiri charging; the Buddha calms it with loving-kindness
+        source: Vinaya, Cullavagga 7.3
+        scene: A city street, a huge elephant kneeling quietly before the calm Buddha, monks behind him and townspeople watching from doorways
+        teaching: Kindness can calm what force cannot
+      - id: mara
+        episode: Mara's armies attack under the Bodhi tree; the Buddha touches the earth and does not move
+        source: Padhana Sutta, Sn 3.2
+        scene: The Buddha seated under the Bodhi tree, his right hand touching the earth, a storm of shadowy demon figures dissolving around him
+        teaching: Staying steady against fear and temptation
+      - id: sick_monk
+        episode: The Buddha and Ananda wash a sick monk whom no one had cared for
+        source: Vinaya, Mahavagga 8.26
+        scene: A simple hut, the Buddha and Ananda gently bathing and lifting a frail, sick monk lying on a mat
+        teaching: "Whoever would care for me should care for the sick"
+      - id: sunita
+        episode: Sunita, a low-caste sweeper, is welcomed by the Buddha into the order of monks
+        source: Theragatha 620-631
+        scene: A street at dawn, a humble sweeper with a broom bowing, the Buddha and his monks greeting him warmly
+        teaching: Worth comes from conduct, not birth
+      - id: alms_round
+        episode: The Buddha walks on alms round at dawn with his monks following in a line
+        source: The alms round, Vinaya and Sutta Nipata 1.4
+        scene: A village lane at sunrise, the Buddha leading a line of monks with bowls, villagers offering food at their doors
+        teaching: Giving and receiving with simplicity
+      - id: rahula
+        episode: The Buddha teaches his young son Rahula to reflect like a mirror before, during, and after every action
+        source: Ambalatthika-Rahulovada Sutta, MN 61
+        scene: The Buddha seated with a young novice beside a bowl of still water that reflects them both
+        teaching: Reflect before you act
+      - id: parileyyaka
+        episode: Living alone in the Parileyyaka forest, the Buddha is cared for by an elephant and a monkey who offers honeycomb
+        source: Udana 4.5 and its commentary
+        scene: A deep forest, the Buddha seated in calm, a great elephant standing guard and a monkey offering honeycomb on a leaf
+        teaching: Peace in solitude
+      - id: kalamas
+        episode: The Kalama villagers ask the Buddha whom to believe among so many teachers
+        source: Kalama Sutta, AN 3.65
+        scene: Villagers of all ages seated around the Buddha under the trees, some asking questions with open hands
+        teaching: Test teachings for yourself
+      - id: patacara
+        episode: Patacara, wild with grief, runs into the assembly; the Buddha calms her and she finds peace
+        source: Therigatha 112-116 and commentary
+        scene: An assembly of monks and lay people, a distraught young woman kneeling before the Buddha as someone covers her with a cloth
+        teaching: Even the deepest grief can be healed
+      - id: last_words
+        episode: The Buddha's last words under the twin sal trees, with Ananda and the monks around him
+        source: Mahaparinibbana Sutta, DN 16
+        scene: The Buddha lying on his right side between two flowering sal trees, Ananda and many monks gathered quietly around
+        teaching: "All conditioned things pass; strive on with care"
     core_ideas:
       # Framework
       - Life involves dissatisfaction (dukkha), it has a cause, it can end, and there is a path (Four Noble Truths, SN 56.11)

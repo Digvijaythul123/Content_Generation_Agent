@@ -44,6 +44,8 @@ def _save_result(result, caption_language="english"):
         data["thinker_id"] = result.request.thinker_id
     if result.request.visual_style:
         data["visual_style"] = result.request.visual_style
+    if result.request.life_scene:
+        data["life_scene"] = result.request.life_scene
     if result.request.scenery:
         data["scenery"] = result.request.scenery
     if result.request.weather:

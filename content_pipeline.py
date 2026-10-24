@@ -82,12 +82,14 @@ def generate_content(
             thinker_id=thinker_id,
             visual_style=visual_style,
         )
+    life_scene = _pick_life_scene(request)
     chosen_scenery = _pick_setting(request, "sceneries", scenery)
     # A full moon post needs the moon in the sky.
     if (weather in (None, "auto")) and brief and "full moon" in brief.lower():
         weather = "moonlit_night"
     request = replace(
         request,
+        life_scene=life_scene,
         scenery=chosen_scenery,
         weather=_pick_setting(request, "weathers", weather, avoid=_CLASHES.get(chosen_scenery, ())),
     )
@@ -109,6 +111,7 @@ def generate_content(
         scenery=request.scenery,
         weather=request.weather,
         hashtag_count=hashtag_count,
+        life_scene=request.life_scene,
     )
     raw_content = agent.generate_content()
     try:
@@ -147,6 +150,38 @@ def generate_content(
     return GenerationResult(request=request, content=content)
 
 
+LIFE_STORY_MODE = "life_story"
+
+
+def _pick_life_scene(request):
+    """A moment from the thinker's life for the Life story mode, one the
+    recent posts have not used."""
+    if request.subtype != LIFE_STORY_MODE or not request.thinker_id:
+        return None
+    from config_loader import load_profile_thinkers
+
+    thinker = next(
+        (item for item in load_profile_thinkers(request.profile.id) if item["id"] == request.thinker_id),
+        None,
+    )
+    scenes = [scene["id"] for scene in (thinker or {}).get("life_scenes", [])]
+    if not scenes:
+        return None
+    recent = []
+    paths = sorted(_POSTS_DIRECTORY.glob("post_*.json"), key=lambda path: path.stat().st_mtime)
+    for path in reversed(paths):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8")).get("life_scene")
+        except (OSError, ValueError):
+            continue
+        if value:
+            recent.append(value)
+        if len(recent) >= max(1, len(scenes) - 3):
+            break
+    fresh = [scene for scene in scenes if scene not in recent]
+    return random.choice(fresh or scenes)
+
+
 # How many recent posts to look back on so a place or weather is not repeated.
 _SETTING_MEMORY = 8
 _POSTS_DIRECTORY = Path(__file__).resolve().parent / "generated_posts"
@@ -156,6 +191,8 @@ def _uses_setting(request):
     """Art-based posts get a place; illustrated list pages do not."""
     if "design_prompt" not in request.content_format.content_fields:
         return False
+    if request.subtype == "life_story":
+        return False  # the episode decides the place
     if not request.subtype or request.content_format.id == "carousel":
         return True
     for item in load_profile_subtypes(request.profile.id):

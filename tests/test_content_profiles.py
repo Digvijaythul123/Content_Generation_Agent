@@ -1353,3 +1353,31 @@ def test_weather_rotation_skips_clashing_places(monkeypatch, tmp_path):
         weather = content_pipeline._pick_setting(request, "weathers", "auto",
                                                  avoid=content_pipeline._CLASHES["frozen_north"])
         assert weather not in ("monsoon_rain", "after_rain", "golden_hour")
+
+
+def test_life_of_the_buddha_tells_one_episode_with_its_people(monkeypatch, tmp_path):
+    import content_pipeline
+    monkeypatch.setattr(content_pipeline, "_POSTS_DIRECTORY", tmp_path)
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
+        subtype="life_story", thinker_id="buddha")
+    scene = content_pipeline._pick_life_scene(request)
+    assert scene in {"mucalinda", "angulimala", "kisa_gotami", "sujata", "first_teaching", "nalagiri",
+                     "mara", "sick_monk", "sunita", "alms_round", "rahula", "parileyyaka",
+                     "kalamas", "patacara", "last_words"}
+    assert not content_pipeline._uses_setting(request)  # the episode sets the place
+
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id, profile=request.profile.to_mapping(),
+            content_format=request.content_format, platform=request.platform,
+            subtype="life_story", thinker_id="buddha", life_scene="mucalinda",
+        ).generate_content()
+    prompt = service.generate_reel.call_args.args[0]
+    assert "Mucalinda the serpent king" in prompt and "giant serpent coiled beneath him" in prompt
+    assert "Udana 2.1" in prompt
+
+    other = _prompt_for(subtype="mirror", thinker_id="buddha")
+    assert "show him with other people rather than alone" in other

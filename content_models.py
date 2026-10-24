@@ -434,6 +434,7 @@ class GenerationRequest:
     visual_style: Optional[str] = None
     scenery: Optional[str] = None
     weather: Optional[str] = None
+    life_scene: Optional[str] = None
 
 
     @property

@@ -92,9 +92,11 @@ class ContentAgent:
         scenery=None,
         weather=None,
         hashtag_count=None,
+        life_scene=None,
     ):
         self.ai_service = AIService()
         self.hashtag_count = hashtag_count
+        self.life_scene = life_scene
         self.scenery = scenery
         self.weather = weather
         self.profile = profile or load_profile(profile_id)
@@ -192,7 +194,7 @@ class ContentAgent:
             prompt = section() + prompt
         return self.ai_service.generate_reel(
             prompt + self._designed_reminder() + self._hashtag_reminder()
-            + self._brief_reminder()
+            + self._brief_reminder() + self._life_scene_reminder()
         )
 
     def _base_prompt(self):
@@ -319,6 +321,30 @@ class ContentAgent:
                 "the thinker's words):",
                 _as_bullets(thinker["misattributions"]),
             ]
+        scenes = thinker.get("life_scenes") or []
+        chosen = next((scene for scene in scenes if scene["id"] == self.life_scene), None)
+        if chosen:
+            thinker_lines += [
+                "Tell this moment from his life:",
+                f"- Moment: {chosen['episode']} ({chosen['source']}).",
+                f"- Scene for the Design_prompt, with everyone in it: {chosen['scene']}.",
+                f"- Lesson: {chosen['teaching']}.",
+                "On screen, tell the moment itself, not a general \"you\" line: "
+                "Main_point says who and what happens (for example \"A bandit "
+                "with a sword chases the Buddha.\"); Supporting_copy says what "
+                "the Buddha did or said and the lesson. The caption can then "
+                "speak to the viewer.",
+            ]
+        elif scenes:
+            # Show him among people, not always alone or with one monk.
+            thinker_lines.append(
+                "In the Design_prompt, when it fits the post, show him with "
+                "other people rather than alone: a few monks walking behind "
+                "him, villagers listening, someone offering food, or a moment "
+                "from his life such as "
+                + "; ".join(scene["episode"] for scene in random.sample(scenes, min(4, len(scenes))))
+                + "."
+            )
         if thinker.get("portrayal"):
             thinker_lines.append(f"Portrayal: {thinker['portrayal']}")
         if thinker.get("setting"):
@@ -625,6 +651,30 @@ class ContentAgent:
         # Many viewers read English as a second language; plain words reach
         # them, and the wider audience the page is aiming for.
         return PLAIN_ENGLISH_RULES
+
+    def _life_scene_reminder(self):
+        """Restate the chosen life moment last, so it wins over the format's
+        general voice."""
+        if not self.life_scene or not self.thinker_id:
+            return ""
+        thinker = next(
+            (item for item in load_profile_thinkers(self.profile["id"]) if item["id"] == self.thinker_id),
+            None,
+        )
+        scene = next(
+            (item for item in (thinker or {}).get("life_scenes", []) if item["id"] == self.life_scene),
+            None,
+        )
+        if scene is None:
+            return ""
+        return (
+            f"\n\nIMPORTANT: this post tells one moment: {scene['episode']} "
+            f"({scene['source']}). Main_point says who and what happens in that "
+            "moment (not a general \"you\" line); Supporting_copy says what the "
+            f"Buddha did or said and the lesson ({scene['teaching']}). The "
+            f"Design_prompt shows exactly this scene with everyone in it: "
+            f"{scene['scene']}.\n"
+        )
 
     def _brief_reminder(self):
         """Restate the brief last: a small model follows the final
