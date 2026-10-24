@@ -19,6 +19,7 @@ CACHE_PATH = GENERATED_ASSETS_DIRECTORY / "performance.json"
 _HASHTAG_PATTERN = re.compile(r"(?<![\w#])#(\w+)")
 _METRICS = ("views", "reach", "saved", "shares", "total_interactions")
 _GROUPS = (
+    ("hashtag_count", "Hashtag count"),
     ("story_mode", "Story mode"),
     ("visual_style", "Visual style"),
     ("thinker", "Thinker"),
@@ -101,6 +102,7 @@ def fetch_performance(publisher=None, records=None, facebook=None):
                 "id": record["id"],
                 "title": record.get("title", ""),
                 "hashtags": hashtags_of(record.get("caption")),
+                "hashtag_count": f"{len(hashtags_of(record.get('caption')))} hashtags",
                 "permalink": item.get("permalink"),
                 "posted_at": item.get("timestamp"),
                 "story_mode": record.get("subtype")
@@ -125,7 +127,7 @@ def summarize(rows):
     for key, label in _GROUPS:
         buckets = {}
         for row in rows:
-            buckets.setdefault(row[key], []).append(row)
+            buckets.setdefault(row.get(key, "unknown"), []).append(row)
         summary = []
         for value, items in buckets.items():
             watched = [r["avg_watch_seconds"] for r in items if r["avg_watch_seconds"]]

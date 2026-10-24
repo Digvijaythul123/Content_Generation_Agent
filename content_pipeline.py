@@ -46,6 +46,7 @@ def generate_content(
     caption_language="english",
     scenery=None,
     weather=None,
+    hashtag_count=None,
 ):
     """Resolve configuration, generate a draft, and validate its content.
 
@@ -103,6 +104,7 @@ def generate_content(
         caption_language=caption_language,
         scenery=request.scenery,
         weather=request.weather,
+        hashtag_count=hashtag_count,
     )
     raw_content = agent.generate_content()
     try:
@@ -123,7 +125,7 @@ def generate_content(
             profile_id=content.profile_id,
         )
     if request.platform.id.startswith("instagram") and "caption" in content.fields:
-        trimmed = tidy_caption(trim_hashtags(content.fields["caption"]))
+        trimmed = tidy_caption(trim_hashtags(content.fields["caption"], hashtag_count))
         if trimmed != content.fields["caption"]:
             content = GeneratedContent(
                 fields={**content.fields, "caption": trimmed},

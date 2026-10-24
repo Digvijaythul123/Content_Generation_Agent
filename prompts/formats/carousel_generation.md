@@ -45,10 +45,12 @@ mist, or soft light). The same image is softly blurred behind the inner
 slides, so choose rich, calm colors. Name a thinker if one appears (the image
 tool knows famous figures). Never ask for text, letters, or signs.
 
-Write the caption for Instagram: a one-line hook, one or two short lines of
-context, the teaching and its reference (for example "Teaching: The Second
-Arrow (SN 36.6)"), then a line inviting a save or a share (for example "Save
-this for a hard day"), then exactly 5 hashtags: #Buddhism, one source or
+Write the caption for Instagram: a one-line hook that uses the plain words
+people type into search (for example "Buddha's advice for anger"), one or two
+short lines of context, the teaching and its reference (for example
+"Teaching: The Second Arrow (SN 36.6)"), then a share line that names one
+specific person, written as "Send this to the friend who ..." (at most 60
+characters), then exactly 5 hashtags: #Buddhism, one source or
 tradition tag, #Mindfulness, #Dharma, and one tag specific to the post. Keep
 the whole caption under 450 characters, each part on its own line with a
 blank line between parts. Never use engagement bait such as "Like if you

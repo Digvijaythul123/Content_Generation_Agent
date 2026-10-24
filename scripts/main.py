@@ -9,7 +9,7 @@ from config_loader import (
     load_profile_subtypes,
     load_focus_thinkers,
 )
-from content_models import split_first_comment
+from content_models import send_line, split_first_comment
 from content_pipeline import generate_content
 from post_prompt import build_post_prompt_file
 from project_paths import GENERATED_ASSETS_DIRECTORY
@@ -66,8 +66,11 @@ def _save_result(result, caption_language="english"):
             default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
         except ConfigurationError:
             default_cta = None
-        if default_cta:
-            data["cta"] = default_cta
+        # The caption's "Send this to the friend who ..." line names a person,
+        # which gets more sends than a general line; use it for the end card.
+        targeted = send_line(data.get("caption"))
+        if targeted or default_cta:
+            data["cta"] = targeted or default_cta
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)
@@ -179,9 +182,17 @@ def main(argv=None):
     )
     parser.add_argument(
         "--caption-language",
-        choices=("english", "hinglish"),
+        choices=("english", "hinglish", "hindi", "thai", "sinhala", "vietnamese",
+                 "burmese", "japanese", "chinese"),
         default="english",
-        help="Add a short Hinglish line to the caption (on-screen copy stays English).",
+        help="Add one short line in another language to the caption (on-screen copy stays English).",
+    )
+    parser.add_argument(
+        "--hashtags",
+        type=int,
+        choices=range(0, 6),
+        default=None,
+        help="How many hashtags (0-5; default 5). Compare reach by count in Performance.",
     )
     parser.add_argument(
         "--count",
@@ -278,6 +289,7 @@ def main(argv=None):
             caption_language=args.caption_language,
             scenery=args.scenery,
             weather=args.weather,
+            hashtag_count=args.hashtags,
         )
         _save_result(result, args.caption_language)
     return 0

@@ -299,7 +299,8 @@
           <label id="visual-style-field" hidden>Visual style<select id="visual-style" name="visual_style"></select></label>
           <label id="scenery-field" hidden>Scenery<select id="scenery" name="scenery"></select></label>
           <label id="weather-field" hidden>Weather and light<select id="weather" name="weather"></select></label>
-          <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option></select></label>
+          <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
+          <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
@@ -2478,6 +2479,7 @@
         scenery: $("scenery").value || "auto",
         weather: $("weather").value || "auto",
         caption_language: $("caption-language").value,
+        hashtag_count: $("hashtag-count").value || null,
         format_id: $("format").value,
         platform_id: $("platform").value,
         count: Number($("count").value),

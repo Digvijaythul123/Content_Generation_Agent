@@ -22,7 +22,17 @@ from project_paths import (
 
 
 PROMPT_TEMPLATE_PATH = PROMPT_DIRECTORY / "content_generation.md"
-CAPTION_LANGUAGES = ("english", "hinglish")
+CAPTION_LANGUAGES = (
+    "english", "hinglish", "hindi", "thai", "sinhala", "vietnamese",
+    "burmese", "japanese", "chinese",
+)
+# Other languages add one line in their own script after the English hook.
+_LANGUAGE_NAMES = {
+    "hindi": "Hindi (Devanagari script)", "thai": "Thai (Thai script)",
+    "sinhala": "Sinhala (Sinhala script)", "vietnamese": "Vietnamese",
+    "burmese": "Burmese (Myanmar script)", "japanese": "Japanese",
+    "chinese": "Chinese (simplified characters)",
+}
 VERIFIED_QUOTE_MODE = "verified_quote"
 
 
@@ -81,8 +91,10 @@ class ContentAgent:
         caption_language="english",
         scenery=None,
         weather=None,
+        hashtag_count=None,
     ):
         self.ai_service = AIService()
+        self.hashtag_count = hashtag_count
         self.scenery = scenery
         self.weather = weather
         self.profile = profile or load_profile(profile_id)
@@ -178,7 +190,9 @@ class ContentAgent:
             self._brief_section,
         ):
             prompt = section() + prompt
-        return self.ai_service.generate_reel(prompt + self._designed_reminder())
+        return self.ai_service.generate_reel(
+            prompt + self._designed_reminder() + self._hashtag_reminder()
+        )
 
     def _base_prompt(self):
         previous_titles = self.get_previous_titles()
@@ -458,6 +472,22 @@ class ContentAgent:
         )
         return "\n".join(subtype_lines)
 
+    def _hashtag_reminder(self):
+        """Override the formats' "exactly 5 hashtags" (used to test fewer)."""
+        if self.hashtag_count is None or self.hashtag_count == 5:
+            return ""
+        if self.hashtag_count == 0:
+            return (
+                "\n\nHashtags: use NO hashtags in this caption. Instead make sure "
+                "the first line and the source line carry the words people "
+                "search for.\n"
+            )
+        return (
+            f"\n\nHashtags: use exactly {self.hashtag_count} hashtags (not 5), the "
+            "most relevant first: #Buddhism, then the source or tradition tag, "
+            "then #Mindfulness.\n"
+        )
+
     def _is_carousel(self):
         return getattr(self.content_format, "id", None) == "carousel"
 
@@ -572,6 +602,14 @@ class ContentAgent:
         return comedy_guidance
 
     def _caption_language_section(self):
+        if self.caption_language in _LANGUAGE_NAMES:
+            return (
+                "Caption language: after the caption's English hook line, add "
+                f"one short, natural line in {_LANGUAGE_NAMES[self.caption_language]} "
+                "that restates the idea warmly for readers of that language. "
+                "Keep every other caption line and all on-screen copy in "
+                "English, and keep the whole caption under 450 characters.\n\n"
+            )
         if self.caption_language != "hinglish":
             return ""
         return (

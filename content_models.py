@@ -588,6 +588,18 @@ _ANSWER_PATTERN = re.compile(r"^\s*(?:Answer|First comment)\s*:\s*(.+?)\s*$", re
 _SOURCE_LINE_PATTERN = re.compile(r"^\s*(?:Teaching|Source|Idea)\s*:.*$", re.I | re.M)
 
 
+_SEND_LINE = re.compile(r"^\s*((?:Send|Share) (?:this|it) (?:to|with) [^\n#]{3,80}?)\s*$", re.I | re.M)
+
+
+def send_line(caption):
+    """The caption's "Send this to the friend who ..." line, for the end card."""
+    match = _SEND_LINE.search(caption or "")
+    if not match:
+        return None
+    line = match.group(1).strip()
+    return line if len(line) <= 70 else None
+
+
 def split_first_comment(caption, hide_source=False):
     """Move an "Answer:" line out of the caption (it goes in the first comment).
 

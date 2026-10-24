@@ -87,10 +87,14 @@ Music_cue: one line describing the background-music mood and tempo to pick in
 the Instagram app (for example "slow, reflective flute with a soft drone").
 Do not name copyrighted songs.
 
-Write the caption for Instagram: open with a one-line hook, add one or two
-short lines of context, name the teaching and its reference (for example
-"Teaching: The Second Arrow (SN 36.6)"), end with either one question that invites
-comments or a share prompt such as "Send this to someone who needs it today",
+Write the caption for Instagram: open with a one-line hook that uses the
+plain words people type into search (for example "Buddha quote on anger" or
+"how to stop overthinking"), add one or two short lines of context, name the
+teaching and its reference (for example "Teaching: The Second Arrow
+(SN 36.6)"), then a share line that names one specific person to send it to,
+written as "Send this to the friend who ..." (for example "Send this to the
+friend who overthinks everything"), at most 60 characters, and end with one
+question that invites comments,
 then exactly 5 hashtags. Never use engagement bait such as "Like if you
 agree", "Comment AMEN", or "Type YES" (Instagram shows such posts less);
 ask a real question or invite a share instead. The 5 hashtags are: one broad niche tag (for example

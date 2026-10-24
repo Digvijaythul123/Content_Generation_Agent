@@ -693,6 +693,7 @@ def test_main_saves_selected_profile_id(
         caption_language="english",
         scenery=None,
         weather=None,
+        hashtag_count=None,
     ):
         del (
             thinker_id,
@@ -700,6 +701,7 @@ def test_main_saves_selected_profile_id(
             caption_language,
             scenery,
             weather,
+            hashtag_count,
             brand_id,
             format_id,
             platform_id,
@@ -1319,3 +1321,24 @@ def test_illustrated_modes_keep_the_carousel_sections():
     import art_generator
     assert not art_generator.is_designed(
         {"format_id": "carousel", "profile_id": "rational_thoughts", "subtype": "numbered_list"})
+
+
+def test_send_line_hashtag_count_and_languages():
+    from content_models import send_line, trim_hashtags
+    caption = "Buddha quote on anger.\n\nTeaching: SN 7.2\n\nSend this to the friend who overthinks everything\n\nWhere do you hold on?\n\n#Buddhism #Zen"
+    assert send_line(caption) == "Send this to the friend who overthinks everything"
+    assert send_line("No share line here") is None
+    assert trim_hashtags("Hook #Buddhism #Zen #Dharma", 1) == "Hook #Buddhism"
+    assert trim_hashtags("Hook #Buddhism #Zen", 0) == "Hook"
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    request = resolve_generation_request(profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram")
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id, profile=request.profile.to_mapping(),
+            content_format=request.content_format, platform=request.platform,
+            hashtag_count=0, caption_language="thai",
+        ).generate_content()
+    sent = service.generate_reel.call_args.args[0]
+    assert "use NO hashtags" in sent and "Thai (Thai script)" in sent
+    assert '"Send this to the friend who ..."' in sent and "people type into search" in sent

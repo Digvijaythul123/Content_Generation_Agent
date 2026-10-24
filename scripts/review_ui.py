@@ -26,6 +26,7 @@ from content_agent import simplify_copy
 from content_models import (
     THREADS_MAX_CHARACTERS,
     ContentValidationError,
+    send_line,
     split_first_comment,
     validate_instagram_caption,
 )
@@ -2094,6 +2095,9 @@ def generate_and_save(payload):
         thinker_id=payload.get("thinker_id") or None,
         visual_style=payload.get("visual_style") or None,
         caption_language=payload.get("caption_language") or "english",
+        hashtag_count=(
+            int(payload["hashtag_count"]) if str(payload.get("hashtag_count", "")).isdigit() else None
+        ),
         scenery=payload.get("scenery") or "auto",
         weather=payload.get("weather") or "auto",
     )
@@ -2129,8 +2133,8 @@ def generate_and_save(payload):
         )
         if first_comment:
             data["first_comment"] = first_comment
-    if payload.get("caption_language") == "hinglish":
-        data["caption_language"] = "hinglish"
+    if (payload.get("caption_language") or "english") != "english":
+        data["caption_language"] = payload["caption_language"]
     if result.request.content_format.id == "carousel":
         # The cover art keeps its upper part open, like a poster.
         data["layout"] = "poster"
@@ -2140,8 +2144,11 @@ def generate_and_save(payload):
             default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
         except ConfigurationError:
             default_cta = None
-        if default_cta:
-            data["cta"] = default_cta
+        # The caption's "Send this to the friend who ..." line names a person,
+        # which gets more sends than a general line; use it for the end card.
+        targeted = send_line(data.get("caption"))
+        if targeted or default_cta:
+            data["cta"] = targeted or default_cta
 
     if result.request.content_format.content_kind == "post":
         content_id, file_path = create_post(data)
