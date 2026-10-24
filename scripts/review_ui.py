@@ -63,6 +63,7 @@ from media_renderer import (
 )
 from content_pipeline import generate_content
 from analytics import cached_report, refresh_report
+from buddhist_calendar import upcoming as upcoming_buddhist_days
 from music_library import SILENT, list_tracks
 from video_renderer import VIDEO_EFFECTS, reel_video_path, render_image_reel_video
 from post_prompt import build_post_prompt_file
@@ -1065,6 +1066,11 @@ def import_artwork(content_type, content_id, image_id):
 
 # The Reel cover frame: after every line of text has faded in.
 REEL_COVER_OFFSET_MS = 5000
+
+
+def upcoming_observances(days=45):
+    """Buddhist days coming up, with a suggested post date and brief."""
+    return upcoming_buddhist_days(days=days)
 
 
 def publishing_connection():

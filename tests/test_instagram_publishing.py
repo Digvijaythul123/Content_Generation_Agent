@@ -1539,3 +1539,23 @@ def test_list_reels_put_their_last_line_with_the_closing_line_at_the_bottom():
     prompt = art_generator.build_art_prompt(record)
     assert 'Place "Peace is here." and everything after it in the lower part' in prompt
     assert '- "Peace is here."' in prompt and 'Closing line: "Come back to now."' in prompt
+
+
+def test_buddhist_calendar_lists_upcoming_days_with_a_post_date(tmp_path):
+    from datetime import date
+    import buddhist_calendar
+    path = tmp_path / "calendar.yaml"
+    path.write_text(
+        "events:\n"
+        "  - {date: 2026-10-26, name: Full moon (Uposatha), kind: uposatha}\n"
+        "  - date: 2026-10-27\n    end: 2026-11-24\n    name: Kathina season\n"
+        '    note: "Robe offering month."\n    idea: "Generosity (dana)."\n'
+        "  - {date: 2027-05-20, name: Vesak, kind: festival}\n"
+    )
+    items = buddhist_calendar.upcoming(today=date(2026, 10, 24), days=45, path=path)
+    assert [item["name"] for item in items] == ["Full moon (Uposatha)", "Kathina season"]
+    assert items[0]["post_on"] == "2026-10-25" and "Uposatha" in items[0]["idea"]
+    assert items[1]["end"] == "2026-11-24" and "Generosity" in items[1]["brief"]
+    # A season already running still shows; the real file loads.
+    assert buddhist_calendar.upcoming(today=date(2026, 11, 1), days=10, path=path)[0]["name"] == "Kathina season"
+    assert isinstance(buddhist_calendar.upcoming(today=date(2026, 10, 24)), list)

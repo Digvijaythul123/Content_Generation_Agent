@@ -262,6 +262,16 @@
       </div>
     </section>
 
+    <section class="panel generator" id="calendar" aria-labelledby="calendar-heading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="calendar-heading">Upcoming Buddhist days</h2>
+          <p class="hint">Full moons and festivals in the next weeks. Posting a day before lets people share the teaching ahead of the day. Dates for lunar festivals differ by country; check your local calendar.</p>
+        </div>
+      </div>
+      <div id="calendar-body" class="hint">Loading…</div>
+    </section>
+
     <section class="panel generator" id="scheduled" aria-labelledby="scheduled-heading">
       <div class="panel-heading">
         <div>
@@ -2357,6 +2367,36 @@
       });
     }
 
+    async function loadCalendar() {
+      const body = $("calendar-body");
+      try {
+        const { items } = await requestJson("/api/calendar");
+        if (!items.length) {
+          body.className = "hint";
+          body.textContent = "No Buddhist days in the next few weeks.";
+          return;
+        }
+        body.className = "";
+        const fmt = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+        body.replaceChildren(pagedTable("calendar", ["When", "Day", "Idea", "Post on", ""], items.map((item) => {
+          const when = item.end ? `${fmt(item.date)} – ${fmt(item.end)}` : fmt(item.date);
+          const name = document.createElement("span");
+          name.textContent = item.name;
+          name.title = item.note;
+          const use = makeAction("Use as brief", () => {
+            $("brief").value = item.brief;
+            $("brief").dispatchEvent(new Event("input"));
+            $("generate-form").scrollIntoView({ behavior: "smooth", block: "start" });
+            $("brief").focus();
+          }, "secondary");
+          return [when, name, item.idea, fmt(item.post_on), use];
+        })));
+      } catch (error) {
+        body.className = "hint";
+        body.textContent = `Could not load the calendar: ${error.message}`;
+      }
+    }
+
     async function loadPerformance(refresh = false) {
       const button = $("performance-refresh");
       const label = button.textContent;
@@ -2543,6 +2583,7 @@
       renderDashboard(summary, activity.items);
       $("performance-refresh").addEventListener("click", () => loadPerformance(true));
       loadPerformance();
+      loadCalendar();
       const selection = location.hash.slice(1).split("/");
       if (selection.length === 3) {
         const item = state.items.find(

@@ -1,0 +1,85 @@
+# Buddhist observances for planning posts. Full moon (Uposatha) dates are
+# astronomical (UTC) and can fall a day later in Asia. Lunar festivals are
+# marked on the full moon most traditions use; several countries observe
+# them on a different full moon, so the note says so. Check your local
+# temple calendar before posting a date-specific message.
+events:
+  # Full moons (Uposatha observance days)
+  - {date: 2026-10-26, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2026-11-24, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2026-12-24, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-01-22, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-02-20, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-03-22, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-04-20, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-05-20, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-06-19, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-07-18, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-08-17, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-09-15, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-10-15, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-11-14, name: Full moon (Uposatha), kind: uposatha}
+  - {date: 2027-12-13, name: Full moon (Uposatha), kind: uposatha}
+
+  # Festivals and remembrance days
+  - date: 2026-10-26
+    name: Pavarana (end of the rains retreat)
+    kind: festival
+    note: "The last day of the three-month rains retreat (Theravada); Kathina season follows."
+    idea: "Pavarana is a day of inviting honest feedback; the Buddha on wise speech."
+  - date: 2026-10-27
+    end: 2026-11-24
+    name: Kathina season
+    kind: festival
+    note: "The month after the rains retreat, when lay people offer robes to monastics (Theravada)."
+    idea: "Generosity (dana) and gratitude to teachers; the Buddha on giving (AN 5.35)."
+  - date: 2026-12-08
+    name: Bodhi Day
+    kind: festival
+    note: "The Buddha's awakening, as kept in Zen and many Mahayana traditions (December 8)."
+    idea: "The night of awakening under the Bodhi tree; what awakening means in plain words."
+  - date: 2027-02-15
+    name: Nirvana Day (Parinirvana)
+    kind: festival
+    note: "The Buddha's passing, kept by many Mahayana traditions on February 15."
+    idea: "The Buddha's last words, \"All conditioned things pass; strive on with care\" (DN 16)."
+  - date: 2027-02-20
+    name: Magha Puja (Sangha Day)
+    kind: festival
+    note: "Around the February/March full moon; in Thailand and Laos it can fall a month later."
+    idea: "The gathering of 1,250 arahants and the Ovada Patimokkha (Dhammapada 183)."
+  - date: 2027-04-08
+    name: Hanamatsuri (Buddha's birthday, Japan)
+    kind: festival
+    note: "Japan celebrates the Buddha's birth on April 8."
+    idea: "The baby Buddha's first steps and the lotus; new beginnings."
+  - date: 2027-04-11
+    name: Mahatma Phule Jayanti
+    kind: remembrance
+    note: "Jyotirao Phule's birth anniversary (April 11)."
+    idea: "Phule on education as freedom (Gulamgiri)."
+  - date: 2027-04-14
+    name: Dr. Ambedkar Jayanti
+    kind: remembrance
+    note: "Dr. B. R. Ambedkar's birth anniversary (April 14)."
+    idea: "Ambedkar on the Buddha's Dhamma as reason and equality (The Buddha and His Dhamma)."
+  - date: 2027-05-20
+    name: Vesak (Buddha Day)
+    kind: festival
+    note: "The Buddha's birth, awakening, and passing; most countries keep it on the May full moon, some a month later."
+    idea: "One teaching from each of the three moments: birth, awakening, and passing."
+  - date: 2027-07-18
+    name: Asalha Puja (Dhamma Day)
+    kind: festival
+    note: "The first teaching at Sarnath, on the July full moon (Theravada); the rains retreat begins the next day."
+    idea: "The Four Noble Truths in everyday words (SN 56.11)."
+  - date: 2027-10-14
+    name: Dhammachakra Pravartan Din
+    kind: remembrance
+    note: "Dr. Ambedkar's embrace of Buddhism at Nagpur (October 14, 1956)."
+    idea: "The 22 vows and Ambedkar's reasons for choosing the Buddha's path."
+  - date: 2027-10-15
+    name: Pavarana (end of the rains retreat)
+    kind: festival
+    note: "The last day of the three-month rains retreat (Theravada); Kathina season follows."
+    idea: "Pavarana is a day of inviting honest feedback; the Buddha on wise speech."
