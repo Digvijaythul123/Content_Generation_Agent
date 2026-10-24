@@ -1114,11 +1114,11 @@ def test_designed_posts_put_exact_words_in_the_art_prompt_and_render_whole(tmp_p
     assert not art_generator.is_designed({**record, "subtype": "mirror"})
     prompt = art_generator.build_art_prompt(record)
     assert 'Headline: "Where is your mind?"' in prompt
-    # A Reel draws all but the last list line; the last one fades in later.
-    assert 'Main line: "Regret is when the mind is in the past."' in prompt
-    assert "Peace is when the mind is here" not in prompt
-    assert '"@buddha.realteachings"' in prompt and "accent color: mind, Regret" in prompt
-    assert "Peace" not in prompt  # held back for the Reel's payoff
+    assert '- "Regret is when the mind is in the past."' in prompt
+    assert '- "Peace is when the mind is here."' in prompt
+    assert '"@buddha.realteachings"' in prompt and "accent color: mind, Regret, Peace" in prompt
+    # The Reel's payoff is drawn low so the video can veil it, then reveal it.
+    assert 'Place "Peace is when the mind is here." and everything after it in the lower part' in prompt
     assert "purely pictorial" not in prompt and "watercolor" in prompt
 
     art = tmp_path / "art.png"
@@ -1497,7 +1497,7 @@ def test_placement_data_comes_with_poster_and_carousel_covers(tmp_path, monkeypa
     assert "window.PLACEMENT = null" in build_post_html({**IMAGE_REEL, "layout": "poster"}, artwork=art)
 
 
-def test_illustrated_reels_leave_the_payoff_to_fade_in_later(tmp_path):
+def test_illustrated_reels_draw_the_answer_low_and_veil_it(tmp_path):
     record = {
         **IMAGE_REEL, "profile_id": "rational_thoughts", "subtype": "parable_card",
         "visual_style": "cinematic_photo", "brand_id": "default",
@@ -1506,19 +1506,27 @@ def test_illustrated_reels_leave_the_payoff_to_fade_in_later(tmp_path):
         "design_prompt": "The Buddha and a young monk by a lake.",
     }
     prompt = art_generator.build_art_prompt(record)
-    assert "Closing line" not in prompt and "58% to 76%" in prompt
-    assert "Like a lute string" not in prompt and 'Headline: "A young monk asked the Buddha,"' in prompt
+    assert 'Closing line: The Buddha answered: "Like a lute string."' in prompt
+    assert "between 60% and 85% of the height" in prompt
     feed = art_generator.build_art_prompt({**record, "format_id": "single_page"})
-    assert "Closing line" in feed and "58% to 76%" not in feed
+    assert "between 60% and 85%" not in feed
 
     art = tmp_path / "art.png"
     art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
     cover = build_post_html(record, artwork=art)
-    assert 'class="payoff"' in cover and "lute string" in cover
-    assert "lute string" not in build_post_html({**record, "format_id": "single_page"}, artwork=art).split("<script>")[0].split('class="payoff"')[1][:40]
+    assert 'class="payoff-text"></div>' in cover  # nothing added on top
+    veil = build_post_html(record, artwork=art, layer="veil")
+    assert 'class="layer-veil"' in veil and 'class="veil"' in veil
 
 
-def test_list_reels_hold_back_their_last_line_with_the_closing_line(tmp_path):
+def test_veil_layer_fades_out_when_the_answer_is_revealed(tmp_path):
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "veil.png", 0, 3.5)], tmp_path / "o.mp4", 8)
+    filters = command[command.index("-filter_complex") + 1]
+    assert "fade=t=out:st=3.5:d=0.5:alpha=1" in filters
+
+
+def test_list_reels_put_their_last_line_with_the_closing_line_at_the_bottom():
     record = {
         **IMAGE_REEL, "profile_id": "rational_thoughts", "subtype": "mind_states",
         "visual_style": "illustrated_watercolor", "brand_id": "default",
@@ -1529,10 +1537,5 @@ def test_list_reels_hold_back_their_last_line_with_the_closing_line(tmp_path):
     }
     assert art_generator.designed_payoff(record) == "**Peace** is here.\nCome back to now."
     prompt = art_generator.build_art_prompt(record)
-    assert '- "Regret is the past."' in prompt and "Peace is here" not in prompt
-    art = tmp_path / "art.png"
-    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
-    html = build_post_html(record, artwork=art)
-    assert '<span class="hl">Peace</span> is here.<br>Come back to now.' in html
-    feed = art_generator.build_art_prompt({**record, "format_id": "single_page"})
-    assert "Peace is here" in feed  # feed posts keep every line in the picture
+    assert 'Place "Peace is here." and everything after it in the lower part' in prompt
+    assert '- "Peace is here."' in prompt and 'Closing line: "Come back to now."' in prompt

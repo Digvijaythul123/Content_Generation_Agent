@@ -401,7 +401,7 @@ def build_ffmpeg_command(
         previous = label
     if not effects:
         filters[0] = filters[0].replace("[vbase]", "[v0]")
-    for index, (layer, start) in enumerate(text_layers, start=1):
+    for index, (layer, start, *hide) in enumerate(text_layers, start=1):
         inputs += [
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
             "-i", str(layer),
@@ -412,6 +412,9 @@ def build_ffmpeg_command(
             if start > 0
             else ""
         )
+        if hide:
+            # A veil that clears to reveal what is beneath it.
+            fade += f",fade=t=out:st={hide[0]}:d={TEXT_FADE_SECONDS}:alpha=1"
         filters.append(f"[{index}:v]format=rgba{fade}[t{index}]")
         filters.append(f"[v{index - 1}][t{index}]overlay=0:0[v{index}]")
     total = seconds + (END_CARD_SECONDS - END_CARD_FADE if end_card else 0)
@@ -517,15 +520,17 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             )
         designed_layers = []
         if designed and designed_payoff(record):
-            # The payoff the image tool left room for fades in after the hook.
+            # The answer is drawn in the picture: veil it, then clear the veil.
             designed_layers = [(
                 render_html_to_png(
-                    build_post_html(record, brand, artwork, layer="text only-takeaway"),
-                    Path(folder) / "payoff.png",
+                    build_post_html(record, brand, artwork, layer="veil"),
+                    Path(folder) / "veil.png",
                     IMAGE_REEL_SIZE,
                 ),
+                0,
                 POSTER_REVEALS[1][1],
             )]
+
         text_layers = designed_layers if designed else chrome + [
             (
                 render_html_to_png(

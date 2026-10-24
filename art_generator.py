@@ -459,39 +459,34 @@ def _designed_art_prompt(record, scene, style, art_style=None):
         words.append(f'Headline: {quoted(plain(record["title"]))}')
     lines = [plain(line) for line in str(record.get("main_point") or "").splitlines()]
     lines = [line for line in lines if line]
-    # In a Reel the last line of a list is part of the payoff, faded in later.
-    if reel and len(lines) > 1 and _holds_back_last_line(record):
-        lines = lines[:-1]
     if len(lines) == 1:
         words.append(f"Main line: {quoted(lines[0])}")
     elif lines:
         words.append("Lines, in this order, one per row or panel:")
         words += [f"- {quoted(line)}" for line in lines]
-    # In a Reel the closing line is the payoff: the app fades it in a few
-    # seconds later, so the image tool leaves room for it instead.
+    # In a Reel the closing line is the payoff: the image tool draws it low
+    # in the frame, and the video keeps it veiled until the hook has landed.
     payoff_later = reel and bool(designed_payoff(record))
-    if plain(record.get("supporting_copy")) and not payoff_later:
+    if plain(record.get("supporting_copy")):
         words.append(f'Closing line: {quoted(plain(record["supporting_copy"]))}')
     handle = _handle_for(record)
     if handle:
         words.append(f'Small handle near the bottom: "{handle}"')
-    # Bold words only from what the image tool actually draws.
-    drawn = [str(record.get("title") or "")]
-    raw_lines = [line for line in str(record.get("main_point") or "").splitlines() if line.strip()]
-    drawn += raw_lines[:-1] if reel and len(raw_lines) > 1 and _holds_back_last_line(record) else raw_lines
-    if not payoff_later:
-        drawn.append(str(record.get("supporting_copy") or ""))
-    emphasis = re.findall(r"\*\*(.+?)\*\*", " ".join(drawn))
+    emphasis = re.findall(
+        r"\*\*(.+?)\*\*",
+        " ".join(str(record.get(field) or "") for field in ("title", "main_point", "supporting_copy")),
+    )
     if emphasis:
         words.append(
             "Make these words bold and in the accent color: "
             + ", ".join(dict.fromkeys(emphasis))
         )
     if payoff_later:
+        held = plain(designed_payoff(record).splitlines()[0])
         safe_area += (
-            " Leave the band from 58% to 76% of the height plain and calm "
-            "(sky, mist, ground, or water) with nothing drawn on it: one more "
-            "line is added there later."
+            f" Place {quoted(held)} and everything after it in the lower part "
+            "of the frame, between 60% and 85% of the height, clearly apart "
+            "from the words above (the Reel reveals it a few seconds later)."
         )
     parts = [
         f"Create one finished, illustrated image for {canvas}. The words are "

@@ -6,7 +6,9 @@
   /* Illustrated designs already carry their words: show the whole picture,
      never cropped, over a soft blurred copy of itself if the shape differs. */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100vw; height: 100vh; overflow: hidden; background: $background; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  html { background: transparent; }
+  body { background: $background; }
   .fill, .main { position: absolute; inset: 0; }
   .fill .art {
     width: 100%; height: 100%; object-fit: cover;
@@ -28,6 +30,17 @@
   .payoff:has(.payoff-text:empty) { display: none; }
   .payoff .hl { color: #F5C542; font-weight: 700; }
   body.layer-background .payoff { display: none; }
+  /* Veil: hides the answer already drawn in the art until it is revealed. */
+  /* Soft top edge, so the veil reads as mist rather than a box. */
+  .veil {
+    display: none; position: absolute; overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
+  }
+  .veil .art { position: absolute; object-fit: fill; filter: blur(28px) brightness(.55); }
+  body.layer-veil { background: transparent; }
+  body.layer-veil .fill, body.layer-veil .main, body.layer-veil .payoff { display: none; }
+  body.layer-veil .veil { display: block; }
   body.layer-text { background: transparent; }
   body.layer-text .fill, body.layer-text .main { display: none; }
 </style>
@@ -35,6 +48,7 @@
 <body class="layer-$layer">
 <div class="fill">$art</div>
 <div class="main">$art</div>
+<div class="veil">$art</div>
 <div class="payoff" data-fit="34"><div class="payoff-text">$payoff</div></div>
 <script>
   // Shrink a long payoff line until it fits its band.
@@ -43,6 +57,26 @@
     const size = parseFloat(getComputedStyle(payoff).fontSize);
     if (size <= Number(payoff.dataset.fit)) break;
     payoff.style.fontSize = (size - 2) + "px";
+  }
+  // Place the veil over the lower part of the picture (where answers are
+  // drawn), matching the contained art exactly so the blur lines up. Runs
+  // once the image has loaded, since its size is needed.
+  const veil = document.querySelector(".veil");
+  const veilArt = veil && veil.querySelector(".art");
+  function placeVeil() {
+    if (!veilArt || !veilArt.naturalWidth) return;
+    const scale = Math.min(innerWidth / veilArt.naturalWidth, innerHeight / veilArt.naturalHeight);
+    const w = veilArt.naturalWidth * scale, h = veilArt.naturalHeight * scale;
+    const left = (innerWidth - w) / 2, top = (innerHeight - h) / 2;
+    const from = 0.58, to = 0.95;  // share of the art's height to cover
+    Object.assign(veil.style, { left: `$${left}px`, top: `$${top + h * from}px`,
+      width: `$${w}px`, height: `$${h * (to - from)}px` });
+    Object.assign(veilArt.style, { left: "0px", top: `$${-h * from}px`,
+      width: `$${w}px`, height: `$${h}px` });
+  }
+  if (veilArt) {
+    if (veilArt.complete) placeVeil();
+    else veilArt.addEventListener("load", placeVeil);
   }
   document.body.dataset.overflow = "false";
 </script>
