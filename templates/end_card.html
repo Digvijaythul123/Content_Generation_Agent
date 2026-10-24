@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* The Reel's closing card: the picture fades into near-black and the
+     closing line appears, centred, above the handle. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    position: relative; background: #0B0907; color: #F3E3BF;
+    font-family: Didot, "Bodoni 72", "Playfair Display", Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* A faint trace of the Reel's own art keeps the card from feeling empty. */
+  .art {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: blur(40px) brightness(.35) saturate(.8); transform: scale(1.2); opacity: .45;
+  }
+  .glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 40% at 50% 44%,
+      rgba(201, 154, 74, .16) 0%, rgba(11, 9, 7, 0) 70%);
+  }
+  /* Centred a little above the middle, clear of Instagram's caption area. */
+  .card {
+    position: absolute; left: 120px; right: 120px; top: 560px; height: 620px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 46px;
+  }
+  .line { font-size: 86px; line-height: 1.2; font-style: italic; }
+  .rule { width: 120px; height: 1.5px; background: #C99A4A; opacity: .7; }
+  .handle {
+    display: flex; align-items: center; gap: 14px;
+    font-size: 30px; letter-spacing: 1px; color: #D9BF86;
+  }
+  .handle svg { width: 34px; height: 34px; }
+</style>
+</head>
+<body>
+$art
+<div class="glow"></div>
+<div class="card">
+  <div class="line" data-fit="44">$cta</div>
+  <div class="rule"></div>
+  <div class="handle"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 28c-5-3-8-8-8-13 4 1 7 4 8 7 1-3 4-6 8-7 0 5-3 10-8 13z"/><path d="M17 28c-2-5-2-11 0-17 2 6 2 12 0 17z"/></svg>$handle</div>
+</div>
+<script>
+  // Shrink a long closing line until it fits.
+  const card = document.querySelector(".card");
+  const line = document.querySelector(".line");
+  for (let step = 0; step < 40 && card.scrollHeight > card.clientHeight; step++) {
+    const size = parseFloat(getComputedStyle(line).fontSize);
+    if (size <= Number(line.dataset.fit)) break;
+    line.style.fontSize = (size - 2) + "px";
+  }
+  document.body.dataset.overflow = String(card.scrollHeight > card.clientHeight);
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ from pathlib import Path
 from art_generator import artwork_path
 from art_generator import is_designed, is_video_artwork
 from media_renderer import (
+    build_end_card_html,
     IMAGE_REEL_SIZE,
     extract_video_frame,
     ffmpeg_executable,
@@ -315,8 +316,10 @@ def render_effect_layers(effect, folder, seconds=DEFAULT_DURATION_SECONDS):
 TEXT_REVEALS = (("title", 0), ("quote", 0.8), ("takeaway", 2.5))
 # Posters have no title on screen: the quote is the hook from frame one.
 POSTER_REVEALS = (("quote", 0), ("takeaway", 1.5))
-# The closing call to action fades in this long before the end.
-CTA_LEAD_SECONDS = 2.2
+# The closing line gets its own end card after the main Reel: the picture
+# cross-fades into it over END_CARD_FADE seconds and it stays on screen.
+END_CARD_SECONDS = 2.2
+END_CARD_FADE = 0.6
 
 
 def reel_video_path(post_id):
@@ -334,6 +337,7 @@ def build_ffmpeg_command(
     clip_zoom=1.0,
     effects=(),
     zoom=ZOOM_AMOUNT,
+    end_card=None,
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -409,14 +413,30 @@ def build_ffmpeg_command(
         )
         filters.append(f"[{index}:v]format=rgba{fade}[t{index}]")
         filters.append(f"[v{index - 1}][t{index}]overlay=0:0[v{index}]")
+    total = seconds + (END_CARD_SECONDS - END_CARD_FADE if end_card else 0)
     filters.append(
-        f"[v{len(text_layers)}]scale=out_range=tv,format=yuv420p[out]"
+        f"[v{len(text_layers)}]scale=out_range=tv,format=yuv420p"
+        + (f",fps={FRAME_RATE},settb=1/{FRAME_RATE}[main]" if end_card else "[out]")
     )
     for strip, *_ in effects:
         inputs += [
             "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(seconds),
             "-i", str(strip),
         ]
+    if end_card:
+        card = len(text_layers) + len(effects) + 1
+        inputs += [
+            "-loop", "1", "-framerate", str(FRAME_RATE), "-t", str(END_CARD_SECONDS),
+            "-i", str(end_card),
+        ]
+        filters.append(
+            f"[{card}:v]scale={width}:{height},setsar=1,scale=out_range=tv,"
+            f"format=yuv420p,fps={FRAME_RATE},settb=1/{FRAME_RATE}[card]"
+        )
+        filters.append(
+            f"[main][card]xfade=transition=fade:duration={END_CARD_FADE}:"
+            f"offset={round(seconds - END_CARD_FADE, 2)}[out]"
+        )
     audio = ["-an"]
     if music is not None:
         # Loop short tracks, then fade in and out so the Reel loops cleanly.
@@ -424,12 +444,12 @@ def build_ffmpeg_command(
         # Skip a silent intro, even out loudness for phone speakers, then
         # fade in and out so the Reel loops cleanly.
         filters.append(
-            f"[{len(text_layers) + len(effects) + 1}:a]"
+            f"[{len(text_layers) + len(effects) + (2 if end_card else 1)}:a]"
             "silenceremove=start_periods=1:start_threshold=-45dB,"
-            f"atrim=0:{seconds},asetpts=PTS-STARTPTS,"
+            f"atrim=0:{total},asetpts=PTS-STARTPTS,"
             "loudnorm=I=-16:TP=-1.5:LRA=11,"
             "afade=t=in:st=0:d=0.5,"
-            f"afade=t=out:st={max(seconds - 1.5, 0)}:d=1.5[aout]"
+            f"afade=t=out:st={max(total - 1.5, 0)}:d=1.5[aout]"
         )
         audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k", "-ar", "44100"]
     return [
@@ -439,7 +459,7 @@ def build_ffmpeg_command(
         "-c:v", "libx264", "-preset", "medium", "-crf", "18",
         # Cap the bitrate: grain on busy clips can otherwise bloat the file.
         "-maxrate", "12M", "-bufsize", "24M",
-        "-color_range", "tv", "-r", str(FRAME_RATE), "-t", str(seconds),
+        "-color_range", "tv", "-r", str(FRAME_RATE), "-t", str(total),
         "-movflags", "+faststart",
         str(output),
     ]
@@ -505,15 +525,15 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 ),
                 start,
             )
-            for part, start in (
-                (POSTER_REVEALS if poster else TEXT_REVEALS)
-                + (
-                    (("cta", max(seconds - CTA_LEAD_SECONDS, 3.0)),)
-                    if str(record.get("cta") or "").strip()
-                    else ()
-                )
-            )
+            for part, start in (POSTER_REVEALS if poster else TEXT_REVEALS)
         ]
+        end_card = None
+        if str(record.get("cta") or "").strip():
+            end_card = render_html_to_jpeg(
+                build_end_card_html(record, brand, artwork),
+                Path(folder) / "end_card.jpg",
+                IMAGE_REEL_SIZE,
+            )
         command = build_ffmpeg_command(
             ffmpeg_executable(),
             background,
@@ -530,6 +550,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 else ()
             ),
             zoom=DESIGNED_ZOOM_AMOUNT if designed else ZOOM_AMOUNT,
+            end_card=end_card,
         )
         try:
             subprocess.run(

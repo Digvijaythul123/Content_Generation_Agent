@@ -1330,7 +1330,10 @@ def test_closing_line_series_and_first_comment(tmp_path, workspace, monkeypatch)
     record = {**IMAGE_REEL, "layout": "poster", "cta": "Save this for a hard day",
               "series_number": 4, "series_length": 30}
     html = build_post_html(record, artwork=art)
-    assert '<div class="cta">Save this for a hard day</div>' in html
+    assert 'class="cta"' not in html  # the closing line has its own end card
+    import media_renderer
+    card = media_renderer.build_end_card_html(record, None, art)
+    assert "Save this for a hard day" in card and 'class="line"' in card
     assert '<div class="kicker">Day 4 of 30</div>' in html
     assert '<div class="kicker"></div>' in build_post_html(IMAGE_REEL, artwork=art)
 
@@ -1425,3 +1428,17 @@ def test_scheduler_publishes_due_feed_posts_and_carousels(workspace, monkeypatch
         assert published == ["post_001"]
     review_ui.update_post_settings("post_001", {"scheduled_at": "2030-01-01T01:00:00+00:00"})
     assert workspace.read()["scheduled_at"].startswith("2030-01-01")
+
+
+def test_end_card_cross_fades_after_the_reel(tmp_path):
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8,
+        tmp_path / "m.mp3", end_card=tmp_path / "card.jpg")
+    filters = command[command.index("-filter_complex") + 1]
+    assert "[main][card]xfade=transition=fade:duration=0.6:offset=7.4[out]" in filters
+    assert "[3:a]" in filters  # music comes after the end card input
+    total = 8 + video_renderer.END_CARD_SECONDS - video_renderer.END_CARD_FADE
+    assert command[command.index("-t", command.index("-color_range")) + 1] == str(total)
+    plain = video_renderer.build_ffmpeg_command(
+        "ffmpeg", tmp_path / "bg.jpg", [(tmp_path / "t.png", 0)], tmp_path / "o.mp4", 8)
+    assert "xfade" not in plain[plain.index("-filter_complex") + 1]

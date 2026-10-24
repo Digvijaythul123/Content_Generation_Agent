@@ -203,6 +203,23 @@ def series_label(record):
     return f"Day {number} of {length}" if length else f"Day {number}"
 
 
+END_CARD_TEMPLATE = TEMPLATE_DIRECTORY / "end_card.html"
+
+
+def build_end_card_html(record, brand, artwork):
+    """The Reel's closing card: near-black, the closing line, the handle."""
+    template = brand.template if brand is not None else BrandTemplate()
+    try:
+        source = END_CARD_TEMPLATE.read_text(encoding="utf-8")
+    except OSError as error:
+        raise MediaRenderError(f"Could not read {END_CARD_TEMPLATE}: {error}") from error
+    return Template(source).substitute(
+        art=_art_html(artwork) if artwork is not None else "",
+        cta=_copy_html(str(record.get("cta") or "")),
+        handle=escape(template.handle or ""),
+    )
+
+
 def is_carousel(record):
     return record.get("format_id") == "carousel"
 
