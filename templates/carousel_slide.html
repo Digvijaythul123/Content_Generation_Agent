@@ -26,12 +26,12 @@
   }
   .shade { position: absolute; inset: 0; }
   body.cover .shade {
-    background: radial-gradient(ellipse 85% 58% at 50% 26%,
+    background: radial-gradient(ellipse 85% 40% at 50% var(--glow-y, 26%),
       $background_rgba_strong 0%, $background_rgba_soft 45%, transparent 80%);
   }
   body.cover.tone-light { color: #2A1A0F; }
   body.cover.tone-light .shade {
-    background: radial-gradient(ellipse 80% 55% at 50% 26%,
+    background: radial-gradient(ellipse 80% 40% at 50% var(--glow-y, 26%),
       rgba(255, 247, 232, .6) 0%, rgba(255, 247, 232, .25) 50%, transparent 78%);
   }
   body.cover.tone-light .hl { color: #8E1B1B; }
@@ -70,7 +70,7 @@
   .counter:empty { display: none; }
 </style>
 </head>
-<body class="$kind tone-$tone">
+<body class="$kind tone-$tone" data-place=".content" data-place-text=".content" data-place-min="70" data-place-max="1180">
 $art
 <div class="shade"></div>
 <div class="counter">$counter</div>
@@ -98,5 +98,6 @@ $art
   }
   document.body.dataset.overflow = String(box.scrollHeight > box.clientHeight);
 </script>
+$placement
 </body>
 </html>

@@ -20,8 +20,8 @@
   }
   /* A soft glow behind the words keeps them readable without a box. */
   .glow {
-    position: absolute; left: 0; right: 0; top: 0; height: 900px;
-    background: radial-gradient(ellipse 75% 60% at 50% 34%,
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 75% 28% at 50% var(--glow-y, 560px),
       $background_rgba_soft 0%, $background_rgba_faint 45%, transparent 75%);
   }
   /* A soft fade under Instagram's caption area (also hides tool watermarks). */
@@ -65,14 +65,14 @@
   body.tone-light { color: #2A1A0F; }
   body.tone-light .quote .hl { color: #8E1B1B; }
   body.tone-light .glow {
-    background: radial-gradient(ellipse 80% 62% at 50% 34%,
+    background: radial-gradient(ellipse 80% 28% at 50% var(--glow-y, 560px),
       rgba(255, 247, 232, .62) 0%, rgba(255, 247, 232, .3) 45%, transparent 76%);
   }
   body.tone-light .quote, body.tone-light .takeaway {
     text-shadow: 0 1px 16px rgba(255, 248, 236, .85), 0 0 3px rgba(255, 248, 236, .6);
   }
   body.tone-mid .glow {
-    background: radial-gradient(ellipse 80% 62% at 50% 34%,
+    background: radial-gradient(ellipse 80% 28% at 50% var(--glow-y, 560px),
       $background_rgba_strong 0%, $background_rgba_soft 45%, transparent 78%);
   }
   body.tone-mid .quote, body.tone-mid .takeaway {
@@ -126,7 +126,7 @@
   body.only-title .column, body.only-title .handle { visibility: hidden; }
 </style>
 </head>
-<body class="layer-$layer tone-$tone look-$look">
+<body class="layer-$layer tone-$tone look-$look" data-place=".column" data-place-text=".copy" data-place-min="200" data-place-max="1440">
 $art
 <div class="look"></div>
 <div class="glow"></div>
@@ -157,5 +157,6 @@ $art
   }
   document.body.dataset.overflow = String(copy.scrollHeight > copy.clientHeight);
 </script>
+$placement
 </body>
 </html>

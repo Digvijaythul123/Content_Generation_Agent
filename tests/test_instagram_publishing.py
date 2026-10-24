@@ -1472,3 +1472,23 @@ def test_first_comment_failure_keeps_the_post_and_explains_permission(workspace,
         review_ui.post_first_comment("post_001", publisher=publisher)
     saved = workspace.read()
     assert saved["status"] == "Published" and "manage_comments" in saved["first_comment_error"]
+
+
+def test_placement_data_comes_with_poster_and_carousel_covers(tmp_path, monkeypatch):
+    import media_renderer
+    art = tmp_path / "art.png"
+    art.write_bytes(b"\x89PNG\r\n\x1a\nfake")
+    monkeypatch.setattr(media_renderer, "_row_profile",
+                        lambda *a: ((0.9,) * 48 + (0.1,) * 48, (200.0,) * 96))
+    html = build_post_html({**IMAGE_REEL, "layout": "poster"}, artwork=art)
+    assert '"busy": [0.9' in html and "window.PLACEMENT" in html and 'data-place=".column"' in html
+    cover = media_renderer.build_carousel_html(
+        {**POST, "format_id": "carousel", "slides": "1. a"}, None, art,
+        media_renderer.carousel_slides({**POST, "slides": "1. a"})[0])
+    assert "window.PLACEMENT" in cover
+    inner = media_renderer.build_carousel_html(
+        {**POST, "format_id": "carousel", "slides": "1. a"}, None, art,
+        media_renderer.carousel_slides({**POST, "slides": "1. a"})[1])
+    assert "window.PLACEMENT" not in inner
+    monkeypatch.setattr(media_renderer, "_row_profile", lambda *a: None)
+    assert "window.PLACEMENT = null" in build_post_html({**IMAGE_REEL, "layout": "poster"}, artwork=art)

@@ -1,4 +1,5 @@
 import base64
+import json
 from html import escape
 import mimetypes
 import re
@@ -172,6 +173,65 @@ def _region_brightness(path, modified, size, region):
     return result.stdout[0]
 
 
+PLACEMENT_SCRIPT = TEMPLATE_DIRECTORY / "placement.js"
+# Rows of the image measured for placement (more rows = finer positions).
+_PLACEMENT_ROWS = 96
+
+
+@lru_cache(maxsize=32)
+def _row_profile(path, modified, size):
+    """Per-row busyness (edge detail across the text width) and brightness of
+    the art as the page shows it; None when the art cannot be read."""
+    width, height = size
+    zoom_w, zoom_h = round(width * 1.11), round(height * 1.11)
+    columns = 64
+    result = subprocess.run(
+        [ffmpeg_executable(), "-loglevel", "error", "-i", path, "-vf",
+         f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+         f"crop={width}:{height}:(iw-{width})/2:ih-{height},"
+         f"scale={zoom_w}:{zoom_h},crop={width}:{height}:(iw-{width})/2:0,"
+         f"scale={columns}:{_PLACEMENT_ROWS}:flags=area,format=gray",
+         "-frames:v", "1", "-f", "rawvideo", "-"],
+        capture_output=True,
+    )
+    pixels = result.stdout
+    if result.returncode or len(pixels) < columns * _PLACEMENT_ROWS:
+        return None
+    grid = [pixels[row * columns:(row + 1) * columns] for row in range(_PLACEMENT_ROWS)]
+    span = range(6, columns - 6)  # the text's width, not the far edges
+    busy, lum = [], []
+    for row in range(_PLACEMENT_ROWS):
+        line = grid[row]
+        below = grid[min(row + 1, _PLACEMENT_ROWS - 1)]
+        across = sum(abs(line[x + 1] - line[x]) for x in span) / len(span)
+        down = sum(abs(below[x] - line[x]) for x in span) / len(span)
+        busy.append(round((across + down) / 255, 4))
+        lum.append(round(sum(line[x] for x in span) / len(span), 1))
+    return tuple(busy), tuple(lum)
+
+
+def placement_script(artwork, record, size):
+    """The inline script that moves the words to the calmest band."""
+    try:
+        code = PLACEMENT_SCRIPT.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    profile = None
+    if artwork is not None:
+        try:
+            profile = _row_profile(str(artwork), artwork.stat().st_mtime, size)
+        except (OSError, MediaRenderError):
+            profile = None
+    data = "null"
+    if profile:
+        data = json.dumps({
+            "busy": profile[0], "lum": profile[1], "height": size[1],
+            "factor": LOOK_BRIGHTNESS.get(weather_look(record), 1.0),
+            "light": TONE_LIGHT, "mid": TONE_MID,
+        })
+    return f"<script>window.PLACEMENT = {data};\n{code}</script>"
+
+
 def text_tone(artwork, record):
     """'light', 'mid', or 'dark' for the art behind a poster's words."""
     if artwork is None:
@@ -282,6 +342,11 @@ def build_carousel_html(record, brand, artwork, slide):
         counter=escape(slide["counter"]),
         hint=escape(slide["hint"]),
         handle=escape(template.handle or ""),
+        placement=(
+            placement_script(artwork, record, INSTAGRAM_FEED_SIZE)
+            if slide["kind"] == "cover"
+            else ""
+        ),
     )
 
 
@@ -395,6 +460,13 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
         ),
         layer=layer,
         look=weather_look(record) or "none",
+        placement=(
+            placement_script(
+                artwork, record, IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE
+            )
+            if template_path in (IMAGE_REEL_POSTER_TEMPLATE, FEED_POSTER_TEMPLATE)
+            else ""
+        ),
         tone=(
             text_tone(artwork, record)
             if template_path in (IMAGE_REEL_POSTER_TEMPLATE, FEED_POSTER_TEMPLATE)
