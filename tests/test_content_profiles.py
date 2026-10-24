@@ -1046,8 +1046,8 @@ def test_hinglish_caption_option_reaches_prompt_and_rejects_unknown():
 
 def _prompt_for(**kwargs):
     request = resolve_generation_request(
-        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
-        **kwargs,
+        **{"profile_id": "rational_thoughts", "format_id": "image_reel",
+           "platform_id": "instagram", **kwargs},
     )
     service = Mock()
     service.generate_reel.return_value = "generated"
@@ -1308,3 +1308,14 @@ def test_scenery_and_weather_rotate_and_reach_the_prompt(tmp_path, monkeypatch):
         ).generate_content()
     prompt = service.generate_reel.call_args.args[0]
     assert "rock-cut cave temple" in prompt and "monsoon rain" in prompt
+
+
+def test_illustrated_modes_keep_the_carousel_sections():
+    prompt = _prompt_for(format_id="carousel", platform_id="instagram_feed",
+                         subtype="numbered_list", thinker_id="buddha")
+    assert "written as a carousel" in prompt and "ONE per line" in prompt
+    assert "finished illustrated design" not in prompt
+    assert "this overrides the format rules above" not in prompt
+    import art_generator
+    assert not art_generator.is_designed(
+        {"format_id": "carousel", "profile_id": "rational_thoughts", "subtype": "numbered_list"})

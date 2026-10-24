@@ -150,7 +150,7 @@ def _uses_setting(request):
     """Art-based posts get a place; illustrated list pages do not."""
     if "design_prompt" not in request.content_format.content_fields:
         return False
-    if not request.subtype:
+    if not request.subtype or request.content_format.id == "carousel":
         return True
     for item in load_profile_subtypes(request.profile.id):
         if item["id"] == request.subtype:

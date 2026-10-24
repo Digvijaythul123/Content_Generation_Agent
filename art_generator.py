@@ -382,7 +382,12 @@ def _setting_lines(record):
 
 
 def is_designed(record):
-    """True for illustrated story modes, where the image tool draws the words."""
+    """True for illustrated story modes, where the image tool draws the words.
+
+    Carousels draw their own slides, so they are never designed images.
+    """
+    if record.get("format_id") == "carousel":
+        return False
     subtype = record.get("subtype") or record.get("qa_subtype")
     profile_id = record.get("profile_id")
     if not subtype or not profile_id:

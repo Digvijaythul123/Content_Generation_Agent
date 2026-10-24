@@ -450,13 +450,16 @@ class ContentAgent:
         ):
             if selected_subtype.get(key):
                 subtype_lines.append(f"{heading}: {selected_subtype[key]}")
-        if selected_subtype.get("designed_image"):
+        if selected_subtype.get("designed_image") and not self._is_carousel():
             subtype_lines.append(DESIGNED_IMAGE_RULES)
         subtype_lines.append(
             f"Focus the content on this {label.lower()} while preserving the "
             "selected format's fields and the profile's accuracy safeguards.\n\n"
         )
         return "\n".join(subtype_lines)
+
+    def _is_carousel(self):
+        return getattr(self.content_format, "id", None) == "carousel"
 
     def _designed_reminder(self):
         """Restate an illustrated story mode's fields after the format rules,
@@ -473,6 +476,19 @@ class ContentAgent:
         )
         if selected is None:
             return ""
+        if self._is_carousel():
+            # In a carousel the app draws the slides: the list goes one item
+            # per slide, not into Main_point, and the art is a wordless cover.
+            return (
+                f"\n\nIMPORTANT: this is a {selected['name']} written as a carousel. "
+                "Keep the carousel's sections. Title is the cover headline; "
+                "Main_point is one short line under it on the cover (at most 12 "
+                "words, not a list); Slides holds the items, ONE per line, in "
+                "order (numbered like \"1. ...\" when it is a list); "
+                "Supporting_copy is the closing slide. Design_prompt is a "
+                "wordless cover scene, not an illustrated page. Shape to follow: "
+                f"{' '.join(selected['structure'].split())}\n"
+            )
         return (
             f"\n\nIMPORTANT, this overrides the format rules above: this is a "
             f"{selected['name']} post. Write Title, Main_point, and "
