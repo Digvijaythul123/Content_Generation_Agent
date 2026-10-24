@@ -311,6 +311,36 @@ Kubernetes, event buses, or distributed systems for this project.
    limited by Facebook at first; the app retries such posts hours later.
 
 
+## Cloud scheduler
+
+Scheduled posts are published by a Cloudflare Worker (`cloud_scheduler/`,
+free plan), so they go out on time while the Mac is asleep.
+
+- **Schedule** in the review UI uploads the post's media to R2 and queues the
+  job in the Worker; editing the caption, first comment, or sharing switches,
+  or re-rendering, re-queues it; **Cancel schedule** removes it.
+- Every minute the Worker publishes due posts step by step: Instagram, the
+  first comment, Facebook (if `FACEBOOK_AUTO_POST=on`), Threads (if set up),
+  then deletes the R2 copies. It refreshes the Instagram and Threads tokens
+  weekly.
+- The Mac collects results each minute while it is awake and marks posts
+  Published. If the Worker cannot be reached 20 minutes after a post is due,
+  the Mac publishes it instead, after checking Instagram for a copy.
+
+Setup (once): `cd cloud_scheduler && npm install && npx wrangler login`,
+`npx wrangler kv namespace create JOBS` (put the id in `wrangler.toml`),
+`npx wrangler deploy`, `npx wrangler secret put SCHEDULER_SECRET`, then put
+`CLOUD_SCHEDULER_URL` and `CLOUD_SCHEDULER_SECRET` in `.env` and run:
+
+```bash
+python3 -m scripts.cloud_scheduler --setup          # send tokens, check health
+python3 -m scripts.cloud_scheduler --status
+python3 -m scripts.cloud_scheduler --test post_035  # dry run, publishes nothing
+```
+
+Run `--setup` again after changing a token in `.env` (for example when
+adding Threads). Watch the Worker live with `cd cloud_scheduler && npx wrangler tail`.
+
 ## Backups
 
 Drafts, art, renders, history, and music are ignored by git, so they are

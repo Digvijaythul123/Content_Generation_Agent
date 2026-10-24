@@ -9,8 +9,8 @@ crons = ["* * * * *"]
 
 [[kv_namespaces]]
 binding = "JOBS"
-id = "REPLACE_WITH_KV_ID"
+id = "23f2df669c5d46ddbd59aa8e16d935f5"
 
 [[r2_buckets]]
 binding = "MEDIA"
-bucket_name = "REPLACE_WITH_BUCKET"
+bucket_name = "dagnostic-reels"
