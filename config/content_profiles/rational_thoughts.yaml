@@ -211,19 +211,25 @@ subtypes:
   - id: parable_card
     default_visual_style: cinematic_photo
     designed_image: true
-    name: Parable Card ("A monk was asked")
-    definition: A short story told in three lines over a warm, cinematic scene, where a monk or the Buddha gives a simple, beautiful answer to a big question.
+    name: Parable Card ("A young monk asked the Buddha")
+    definition: A short story told in three lines over a warm, cinematic scene, where the Buddha gives a simple, beautiful answer to a young monk's big question.
     structure: >-
-      Title is the opener, for example "A monk was asked," (at most 6
+      The words must match who is in the picture. Title is the opener naming
+      both people, for example "A young monk asked the Buddha," (at most 7
       words); Main_point is the question in quotes, at most 6 words, for
-      example "What is anger?" (with the quote marks); Supporting_copy is the answer with its
-      lead-in, at most 20 simple words, for example He smiled and said:
-      "It is a punishment we give ourselves for someone else's mistake."
-      The caption labels the story honestly ("A short story inspired by"
-      the teaching, with its source) and gives one plain way to use it
-      today.
-    background: A warm, cinematic photo of an old monk and a young monk talking by lotus water or in a forest with soft god rays, with a calm, darker area in the lower third for the words; slow flute.
-    example: 'A monk was asked, "What is peace?" He answered: "Wanting nothing from this moment."'
+      example "What is anger?" (with the quote marks); Supporting_copy is the
+      answer with a lead-in that names the speaker, at most 20 simple words,
+      for example The Buddha answered: "It is a punishment we give ourselves
+      for someone else's mistake." Never write "A monk was asked" or "He
+      answered" when the Buddha is the one answering. The answer must come
+      from the Buddha's own teachings in the suttas or Dhammapada; never put a
+      later teacher's words (Shantideva, Zen masters, modern authors) in the
+      Buddha's mouth. The Design_prompt shows
+      exactly these two people: the Buddha and one young monk. The caption
+      labels the story honestly ("A short story inspired by" the teaching,
+      with its source) and gives one plain way to use it today.
+    background: A warm, cinematic photo of the Buddha and a young monk talking by lotus water or in a forest with soft god rays, with a calm, darker area in the lower third for the words; slow flute.
+    example: 'A young monk asked the Buddha, "What is peace?" The Buddha answered: "Wanting nothing from this moment."'
   - id: real_or_fake
     default_visual_style: thinker_statue
     name: Real or Fake? (quote quiz)
