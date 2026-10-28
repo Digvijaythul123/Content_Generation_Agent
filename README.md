@@ -55,8 +55,13 @@ Brief + Brand + Content Profile + Format + Platform
     -> LinkedIn text post: ready-to-publish post copy
 ```
 
-**[CURRENT]** The model client calls an Ollama-compatible endpoint; set
-`MODEL_ENDPOINT` and `MODEL_NAME` in `.env` to change it.
+**[CURRENT]** The model client writes with Google Gemini when
+`TEXT_PROVIDER=gemini`. It uses `GEMINI_API_KEY`: a free-tier key from Google
+AI Studio, with billing off, so only the Flash models are available. The model
+is `GEMINI_TEXT_MODEL`, by default `gemini-3.5-flash`. When Gemini is busy or
+at its daily limit, it falls back to the Ollama-compatible endpoint
+(`MODEL_ENDPOINT`, `MODEL_NAME`); `TEXT_PROVIDER=ollama` uses only Ollama. Each
+new draft records the model that wrote it in `ai_model`.
 Content and text assets are stored locally. The visual preparation pipeline
 creates prompts only; it does not create images, animation, or video. The
 single-page workflow saves records under `generated_posts/` and design prompts

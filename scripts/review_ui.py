@@ -22,6 +22,7 @@ from config_loader import (
     load_profile_visual_styles,
     load_profile_weathers,
 )
+import ai_service
 from content_agent import apply_hook_options, simplify_copy, write_video_script
 from content_models import (
     THREADS_MAX_CHARACTERS,
@@ -2668,6 +2669,8 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
+    if ai_service.last_model_used:
+        data["ai_model"] = ai_service.last_model_used  # which model wrote it
     apply_hook_options(data)
     if video:
         data["video_reel"] = True

@@ -1551,3 +1551,36 @@ def test_video_prompt_generator_reads_legacy_image_prompt_path(
         videos_directory / "reel_002_master_prompt.txt"
     ).read_text(encoding="utf-8")
     assert "Legacy storyboard" in prompt
+
+
+def test_gemini_writes_when_chosen_and_ollama_takes_over_at_the_limit(monkeypatch):
+    import ai_service
+
+    monkeypatch.setenv("TEXT_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "KEY")
+    monkeypatch.setenv("GEMINI_TEXT_MODEL", "gemini-test")
+    answer = Mock(status_code=200)
+    answer.json.return_value = {"candidates": [{"content": {"parts": [
+        {"text": "thinking", "thought": True}, {"text": "Title: Hello"}]}}]}
+    with patch("ai_service.requests.post", return_value=answer) as post:
+        assert AIService().generate_reel("prompt") == "Title: Hello"
+    assert "gemini-test:generateContent" in post.call_args.args[0]
+    assert post.call_args.kwargs["headers"] == {"x-goog-api-key": "KEY"}
+    assert "KEY" not in post.call_args.args[0]
+    assert ai_service.last_model_used == "gemini:gemini-test"
+
+    limited = Mock(status_code=429)
+    limited.json.return_value = {"error": {"message": "Quota exceeded"}}
+    ollama = Mock()
+    ollama.json.return_value = {"response": "from ollama"}
+    monkeypatch.setattr(ai_service, "GEMINI_RETRY_SECONDS", 0)
+    with patch("ai_service.requests.post", side_effect=[limited, limited, ollama]):
+        assert AIService().generate_reel("prompt") == "from ollama"
+    assert ai_service.last_model_used.startswith("ollama:")
+
+    # A rejected request (bad key) is an error, not a silent switch.
+    rejected = Mock(status_code=400)
+    rejected.json.return_value = {"error": {"message": "API key not valid"}}
+    with patch("ai_service.requests.post", return_value=rejected):
+        with pytest.raises(AIServiceError, match="API key not valid"):
+            AIService().generate_reel("prompt")

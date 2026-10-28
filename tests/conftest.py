@@ -10,3 +10,10 @@ def _no_live_hook_calls(monkeypatch):
 
     monkeypatch.setattr(main, "apply_hook_options", lambda record: record)
     monkeypatch.setattr(review_ui, "apply_hook_options", lambda record: record)
+
+
+@pytest.fixture(autouse=True)
+def _text_provider_is_ollama(monkeypatch):
+    """Tests mock the Ollama endpoint; a TEXT_PROVIDER=gemini in .env must
+    not send them to Gemini."""
+    monkeypatch.setenv("TEXT_PROVIDER", "ollama")

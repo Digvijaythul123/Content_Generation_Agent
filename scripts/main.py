@@ -9,6 +9,7 @@ from config_loader import (
     load_profile_subtypes,
     load_focus_thinkers,
 )
+import ai_service
 from content_agent import apply_hook_options
 from content_models import send_line, split_first_comment
 from content_pipeline import generate_content
@@ -75,6 +76,8 @@ def _save_result(result, caption_language="english"):
         targeted = send_line(data.get("caption"))
         if targeted or default_cta:
             data["cta"] = targeted or default_cta
+    if ai_service.last_model_used:
+        data["ai_model"] = ai_service.last_model_used  # which model wrote it
     apply_hook_options(data)
 
     if result.request.content_format.content_kind == "post":
