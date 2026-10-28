@@ -52,8 +52,8 @@ def generate_content(
 ):
     """Resolve configuration, generate a draft, and validate its content.
 
-    ``video`` writes a One-image Reel whose scene is filmed as an 8-second
-    Google Flow clip instead of painted as a still.
+    ``video`` writes a One-image Reel that Google Flow films as a 10-second
+    voiced story instead of a painted still.
 
     ``scenery`` and ``weather`` take an id, "auto" or None to rotate, or
     "none" to leave the place or light to the story.
@@ -97,6 +97,8 @@ def generate_content(
     request = replace(
         request,
         life_scene=life_scene,
+        # Video life stories form the numbered "Life of the Buddha" series.
+        life_part=next_life_part(request) if video else None,
         scenery=chosen_scenery,
         weather=_pick_setting(request, "weathers", weather, avoid=_CLASHES.get(chosen_scenery, ())),
     )
@@ -120,6 +122,8 @@ def generate_content(
         hashtag_count=hashtag_count,
         life_scene=request.life_scene,
         recent_moments=_recent_life_moments(request),
+        life_part=request.life_part,
+        earlier_parts=_life_episodes(request) if request.life_part else None,
         video=video,
     )
     raw_content = agent.generate_content()
@@ -179,6 +183,36 @@ def _pick_life_scene(request, chosen=None):
 
 # How many recent life stories the model is told not to repeat.
 _LIFE_MEMORY = 20
+
+
+def _life_episodes(request):
+    """Earlier parts of the "Life of the Buddha" series, in order, as
+    "Part N: title" lines (rejected drafts left out)."""
+    episodes = []
+    for path in _POSTS_DIRECTORY.glob("post_*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if data.get("life_part") and data.get("status") != "Rejected":
+            title = re.sub(r"\*\*(.+?)\*\*", r"\1", str(data.get("title") or ""))
+            episodes.append((int(data["life_part"]), title))
+    return [f"Part {number}: {title}" for number, title in sorted(episodes)]
+
+
+def next_life_part(request):
+    """The next part number when a life story is a video (the series)."""
+    if request.subtype != LIFE_STORY_MODE:
+        return None
+    numbers = []
+    for path in _POSTS_DIRECTORY.glob("post_*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if data.get("life_part") and data.get("status") != "Rejected":
+            numbers.append(int(data["life_part"]))
+    return max(numbers, default=0) + 1
 
 
 def _recent_life_moments(request):

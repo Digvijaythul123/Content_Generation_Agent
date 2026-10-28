@@ -24,6 +24,8 @@ _GROUPS = (
     ("visual_style", "Visual style"),
     ("thinker", "Thinker"),
     ("hook_formula", "Hook formula"),
+    ("weekly_format", "Weekly format"),
+    ("host", "Host"),
 )
 
 
@@ -128,6 +130,9 @@ def fetch_performance(publisher=None, records=None, facebook=None):
                 "visual_style": record.get("visual_style") or "unspecified",
                 "thinker": record.get("thinker_id") or "unspecified",
                 "hook_formula": _hook_formula(record),
+                # "Life of the Buddha · Pavarana" -> "Life of the Buddha".
+                "weekly_format": str(record.get("plan_label") or "unplanned").split(" · ")[0],
+                "host": "with host" if record.get("host") else "no host",
                 "likes": item.get("like_count", 0),
                 "comments": item.get("comments_count", 0),
                 **{name: values.get(name, 0) for name in _METRICS},

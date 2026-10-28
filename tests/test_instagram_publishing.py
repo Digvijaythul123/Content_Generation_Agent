@@ -1576,13 +1576,16 @@ def test_plan_week_drafts_each_day_with_its_theme_and_planned_time(workspace, mo
         {"post_on": "2026-10-25", "name": "Pavarana", "brief": "For Pavarana."}])
     planned = review_ui.plan_week(start=date(2026, 10, 25), generate=fake_generate)
     assert len(planned) == 7 and all("id" in day for day in planned)
+    # Every day is a voiced Flow story video; Tuesday and Saturday open with the host.
+    assert all(payload["reel_kind"] == "video" and payload["format_id"] == "image_reel"
+               for _, payload in made)
+    assert [payload["host"] for _, payload in made] == [False, False, True, False, False, False, True]
     sunday = made[0][1]
-    assert sunday["format_id"] == "carousel" and sunday["platform_id"] == "instagram_feed"
-    assert sunday["subtype"] == "numbered_list" and sunday["brief"] == "For Pavarana."
+    assert sunday["subtype"] == "life_story" and sunday["brief"] == "For Pavarana."
     monday = made[1][1]
     assert monday["subtype"] == "real_or_fake" and "brief" not in monday
     record = review_ui.load_post("post_001")
-    assert record["plan_label"] == "Sunday Carousel · Pavarana" and record["planned_for"].startswith("2026-10-25")
+    assert record["plan_label"] == "Life of the Buddha · Pavarana" and record["planned_for"].startswith("2026-10-25")
 
 
 def test_best_posting_hours_falls_back_from_audience_data_to_own_posts():
@@ -1777,3 +1780,95 @@ def test_flow_story_prompt_needs_a_script():
 
     with pytest.raises(art_generator.ArtGenerationError, match="story script"):
         art_generator.build_flow_story_prompt({"flow_story": True, "video_script": ""})
+
+
+def test_host_and_series_story_scripts_and_prompts():
+    import art_generator
+    import content_agent
+
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Scene 1: The host scrolls a phone late at night, eyes tired.\n"
+        'Voiceover 1: "Life of the Buddha, part 3. You check again."\n'
+        "Scene 2: The Buddha sits still in a quiet grove.\n"
+        'Voiceover 2: "He sat still."\n'
+        "Scene 3: Dawn light reaches the grove.\n"
+        'Voiceover 3: "Wake up to now."\n')
+    record = {"id": "post_999", "format_id": "image_reel", "video_reel": True, "flow_story": True,
+              "host": True, "life_part": 3, "profile_id": "rational_thoughts",
+              "main_point": "You check again.", "supporting_copy": "Wake up to now.",
+              "caption": "Source: Dhammapada 21."}
+    script = content_agent.write_flow_story(record, ai_service=service)
+    sent = service.generate_reel.call_args.args[0]
+    assert "THE HOST" in sent and '"Life of the Buddha, part 3."' in sent and "32 words" in sent
+    assert "Narrator: the host, in my own voice" in script
+    record["video_script"] = script
+    prompt = art_generator.build_flow_prompt(record)
+    assert "The host (use my avatar) scrolls" in prompt or "the host (use my avatar)" in prompt.lower()
+    assert "Use my voice for the narrator." in prompt and "Shot 1 may be close on the host" in prompt
+
+
+def test_dialogue_story_keeps_two_speakers():
+    import art_generator
+    import content_agent
+
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Scene 1: A young monk sits by a lamp, frowning.\n"
+        'Voiceover 1: Young monk: "Why does anger stay?"\n'
+        "Scene 2: The Buddha smiles gently.\n"
+        'Voiceover 2: The Buddha: "You keep feeding it."\n'
+        "Scene 3: The lamp burns steady.\n"
+        'Voiceover 3: The Buddha: "Let it go hungry."\n')
+    record = {"id": "post_998", "format_id": "image_reel", "video_reel": True, "flow_story": True,
+              "subtype": "dialogue", "profile_id": "rational_thoughts",
+              "main_point": 'Young monk: "Why does anger stay?"', "caption": "Source: SN 7.2"}
+    script = content_agent.write_flow_story(record, ai_service=service)
+    assert 'Young monk: "Why does anger stay?"' in script and 'The buddha: "You keep feeding it."' in script
+    record["video_script"] = script
+    prompt = art_generator.build_flow_prompt(record)
+    assert 'Young monk says: "Why does anger stay?"' in prompt
+    assert 'The Buddha says: "Let it go hungry."' in prompt and "their lips move" in prompt
+
+
+def test_clip_check_compares_narration_and_never_blocks(monkeypatch):
+    import clip_check
+
+    script = ('Scene 1 (0-3 s): A phone. Narrator: "You check your phone again and again."\n'
+              'Scene 2 (3-7 s): A cave. Narrator: "This is heedlessness."\nNarrator: calm.')
+    ok = clip_check.compare(script, "You check your phone again and again. This is heedlessness.", 9.96)
+    assert ok == {"narration": "matches", "heard_share": 1.0, "missing": [], "seconds": 9.96, "length_ok": True}
+    bad = clip_check.compare(script, "You look at your screen. Be mindful.", 12.4)
+    assert bad["narration"] == "differs" and "heedlessness" in bad["missing"] and bad["length_ok"] is False
+
+    record = {"flow_story": True, "video_script": script}
+    monkeypatch.setattr("video_renderer.clip_info", lambda path: (9.9, True))
+    monkeypatch.setattr(clip_check, "_audio_mp3", lambda ffmpeg, clip, folder: b"mp3")
+    monkeypatch.setattr(clip_check, "transcribe_audio",
+                        Mock(side_effect=clip_check.AIServiceError("busy")))
+    assert clip_check.check_clip(record, "clip.mp4") is None  # no answer, no block
+    monkeypatch.setattr(clip_check, "transcribe_audio",
+                        lambda data, mime: "You check your phone again and again. This is heedlessness.")
+    result = clip_check.check_clip(record, "clip.mp4")
+    assert result["narration"] == "matches" and result["transcript"].startswith("You check")
+    assert clip_check.check_clip({"video_script": script}, "clip.mp4") is None  # not a story
+
+
+def test_story_render_keeps_flow_audio_and_adds_a_quiet_tail():
+    import video_renderer
+
+    command = video_renderer.build_ffmpeg_command(
+        "ffmpeg", "clip.mp4", [], "out.mp4", seconds=9.9, music="flute.mp3",
+        motion_clip=True, clip_sound=True, end_card="card.jpg", story_tail=True)
+    graph = command[command.index("-filter_complex") + 1]
+    assert "afade=t=out:st=9.1:d=0.8" in graph and "adelay=9500|9500" in graph
+    assert f"volume={video_renderer.STORY_TAIL_LEVEL}" in graph and "[amb][tail]amix" in graph
+    assert "overlay" not in graph  # no words on top
+
+
+def test_youtube_description_leads_with_the_narration():
+    from youtube_publisher import default_description
+
+    text = default_description({"caption": "Source: Dhammapada 21\n\n#Buddha #Calm",
+                                "clip_transcript": "You check your phone again and again."})
+    assert text.startswith("You check your phone again and again.\n\nSource: Dhammapada 21")

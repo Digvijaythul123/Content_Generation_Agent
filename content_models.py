@@ -435,6 +435,8 @@ class GenerationRequest:
     scenery: Optional[str] = None
     weather: Optional[str] = None
     life_scene: Optional[str] = None
+    # Part number in the "Life of the Buddha" video series.
+    life_part: Optional[int] = None
 
 
     @property

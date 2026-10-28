@@ -66,13 +66,18 @@ def default_title(record):
 
 
 def default_description(record):
-    """The caption without its hashtags, then three channel hashtags."""
+    """The narration (when a story clip was transcribed), the caption
+    without its hashtags, then three channel hashtags."""
     lines = [
         line for line in _plain(record.get("caption")).splitlines()
         if not re.fullmatch(r"\s*(#\S+\s*)+", line)
     ]
     body = "\n".join(lines).strip()
     body = re.sub(r"(?:\s#\w+)+\s*$", "", body).strip()
+    spoken = " ".join(str(record.get("clip_transcript") or "").split())
+    if spoken:
+        # The spoken words help YouTube search find the Short.
+        body = f"{spoken}\n\n{body}" if body else spoken
     text = f"{body}\n\n{DESCRIPTION_HASHTAGS}" if body else DESCRIPTION_HASHTAGS
     return text[:DESCRIPTION_MAX]
 

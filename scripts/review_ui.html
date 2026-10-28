@@ -313,6 +313,8 @@
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
           <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
+          <label id="host-field" title="Scene 1 shows you (your avatar in Flow) and the narrator is your voice.">
+            <span><input id="host" name="host" type="checkbox"> Open with me (my avatar + my voice)</span></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
@@ -428,7 +430,10 @@
       if (imageReel) {
         // Flow makes the whole Reel from one script: scenes, narrator, music.
         const videoOption = new Option("Video Reel (Google Flow story, voiced, ~10 s)", VIDEO_REEL);
-        imageReel.before(videoOption);
+        const others = document.createElement("optgroup");
+        others.label = "Other formats";
+        others.append(...[...formatSelect.options]);
+        formatSelect.replaceChildren(videoOption, others);
         formatSelect.value = VIDEO_REEL;
       }
       const subtypeError = $("subtype-error");
@@ -507,6 +512,7 @@
     }
 
     function updatePlatforms() {
+      $("host-field").hidden = $("format").value !== VIDEO_REEL;
       const format = state.options.formats.find((item) => item.id === realFormat());
       const current = $("platform").value;
       const available = state.options.platforms.filter((item) =>
@@ -1501,7 +1507,55 @@
       const scriptName = document.createElement("div");
       scriptName.className = "field-name";
       scriptName.textContent = "Video script (10-second clip, then the closing card)";
-      details.append(summary, steps, scriptName, script, write, copy, text);
+      const hostLabel = document.createElement("label");
+      const hostBox = document.createElement("input");
+      hostBox.type = "checkbox";
+      hostBox.checked = Boolean(state.record.host);
+      hostBox.addEventListener("change", async () => {
+        message.className = "message";
+        message.textContent = "Rewriting the script…";
+        try {
+          await saveReelSettings({ host: hostBox.checked });
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/video_script`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          await refreshItems(state.selected);
+        } catch (error) {
+          message.className = "message error";
+          message.textContent = error.message;
+        }
+      });
+      hostLabel.append(hostBox, " Open with me (my avatar + my voice)");
+      if (state.record.host) {
+        steps.textContent += " Host Reel: in Flow, add your avatar and your voice as ingredients before generating.";
+      }
+      details.append(summary, steps, hostLabel, scriptName, script, write, copy, text);
+      const check = state.record.clip_check;
+      if (check) {
+        // After upload: did Flow say the script's words, and is it ~10 s?
+        const line = document.createElement("p");
+        const seconds = check.seconds ? ` · ${check.seconds} s${check.length_ok === false ? " (expected about 10 s)" : ""}` : "";
+        if (check.narration === "checking") {
+          line.className = "message";
+          line.textContent = "Checking the clip's narration… (reload in a minute)";
+        } else if (check.narration === "matches") {
+          line.className = "message";
+          line.textContent = `✓ Narration matches the script${seconds}.`;
+        } else if (check.narration === "silent") {
+          line.className = "message error";
+          line.textContent = `⚠ The clip has no sound${seconds}. Generate it again with the voice on.`;
+        } else {
+          line.className = "message error";
+          line.textContent = `⚠ Flow changed the words${seconds}. Missing: ${(check.missing || []).join(", ")}. `
+            + "Watch it: keep it if the meaning is still true to the source, otherwise generate again.";
+        }
+        details.append(line);
+        if (state.record.clip_transcript) {
+          const heard = document.createElement("p");
+          heard.className = "hint";
+          heard.textContent = `Heard: “${state.record.clip_transcript}”`;
+          details.append(heard);
+        }
+      }
       return details;
     }
 
@@ -2871,6 +2925,7 @@
         hashtag_count: $("hashtag-count").value || null,
         format_id: realFormat(),
         reel_kind: $("format").value === VIDEO_REEL ? "video" : "image",
+        host: $("format").value === VIDEO_REEL && $("host").checked,
         platform_id: $("platform").value,
         count: Number($("count").value),
         brief: $("brief").value.trim() || null

@@ -94,6 +94,8 @@ class ContentAgent:
         hashtag_count=None,
         life_scene=None,
         recent_moments=None,
+        life_part=None,
+        earlier_parts=None,
         video=False,
     ):
         self.ai_service = AIService()
@@ -101,6 +103,8 @@ class ContentAgent:
         self.hashtag_count = hashtag_count
         self.life_scene = life_scene
         self.recent_moments = recent_moments or []
+        self.life_part = life_part
+        self.earlier_parts = earlier_parts or []
         self.scenery = scenery
         self.weather = weather
         self.profile = profile or load_profile(profile_id)
@@ -356,7 +360,16 @@ class ContentAgent:
                 "line: Main_point says who and what happens; Supporting_copy "
                 "says what the Buddha did or said and the lesson.",
             ]
-            if self.recent_moments:
+            if self.life_part:
+                thinker_lines += [
+                    f"This is part {self.life_part} of the video series \"Life of "
+                    "the Buddha\", told in the order of his life. Unless the "
+                    "brief names a moment, tell the next event after the last "
+                    "part below (part 1 starts with his birth and early life)."
+                ]
+                if self.earlier_parts:
+                    thinker_lines += ["Earlier parts, in order:", _as_bullets(self.earlier_parts)]
+            elif self.recent_moments:
                 thinker_lines += [
                     "Recently told; pick a different moment:",
                     _as_bullets(self.recent_moments),
@@ -974,6 +987,35 @@ def write_flow_story(record, ai_service=None):
     payoff = _plain(record.get("supporting_copy"))
     profile_id = record.get("profile_id")
     formulas = formulas_for(profile_id)
+    mode = record.get("subtype") or record.get("qa_subtype")
+    part = record.get("life_part")
+    budget = FLOW_STORY_MAX_WORDS + (6 if part else 0)
+    extra = []
+    if record.get("host"):
+        extra.append(
+            "- Scene 1 shows THE HOST: one modern person living this problem "
+            "today (on a phone, angry in traffic, awake with worry), seen up "
+            "close, in today's clothes. Call them \"the host\" (the creator "
+            "adds their own look in Flow). The host is also the narrator. "
+            "Scenes 2-3 move to the Buddha and the teaching."
+        )
+    if part:
+        extra.append(
+            f"- This is part {part} of the series. Voiceover 1 starts with "
+            f"exactly \"Life of the Buddha, part {part}.\" and then the hook."
+        )
+    if mode == "real_or_fake":
+        extra.append(
+            "- A quiz: Voiceover 1 asks whether the Buddha really said the "
+            "popular quote; Voiceover 2 says real or fake; Voiceover 3 gives "
+            "the real teaching and its source in plain words."
+        )
+    if mode == "dialogue":
+        extra.append(
+            "- Two voices: a young monk asks (Voiceover 1, written as Young "
+            "monk: \"...\"), and the Buddha answers (Voiceover 2-3, written as "
+            "The Buddha: \"...\"), using only words the source supports."
+        )
     prompt = (
         "Write the script for a 10-second vertical video Reel that Google Veo "
         "will film in one go: three short scenes with soft cuts, a narrator, "
@@ -991,7 +1033,8 @@ def write_flow_story(record, ai_service=None):
         "- If the teaching has a story (from the Buddha's life or a sutta), "
         "show it as a small arc across the three scenes (before, the turn, "
         "after). Otherwise show one everyday moment that changes.\n"
-        f"- Voiceover: {FLOW_STORY_MAX_WORDS} words at most in all, plain "
+        + "".join(line + "\n" for line in extra)
+        + f"- Voiceover: {budget} words at most in all, plain "
         "English, in short lines. Never invent a quote: put words in the "
         "Buddha's mouth only if they are in the source above; otherwise "
         "narrate in the third person.\n"
@@ -1026,17 +1069,26 @@ def write_flow_story(record, ai_service=None):
             found[label] = value.strip().strip("*").strip()
     if not all(f"Scene {n}" in found and f"Voiceover {n}" in found for n, _ in FLOW_STORY_BEATS):
         raise AIServiceError("The model did not return a usable story script.")
-    spoken = []
+    spoken, speakers = [], []
     for number, _ in FLOW_STORY_BEATS:
-        line = found[f"Voiceover {number}"].strip().strip('"\u201c\u201d').strip()
-        spoken.append(line)
-    if sum(len(line.split()) for line in spoken) > FLOW_STORY_MAX_WORDS + 6:
+        line = found[f"Voiceover {number}"].strip()
+        speaker = re.match(r"^(Young monk|The Buddha)\s*:\s*", line, re.IGNORECASE)
+        if speaker:
+            line = line[speaker.end():]
+        speakers.append(speaker.group(1).capitalize() if speaker else "Narrator")
+        spoken.append(line.strip().strip('"\u201c\u201d').strip())
+    if sum(len(line.split()) for line in spoken) > budget + 6:
         raise AIServiceError("The voiceover is too long for 10 seconds; write it again.")
     lines = [
-        f"Scene {number} ({span}): {found[f'Scene {number}'].rstrip('.')}. Narrator: \"{spoken[index]}\""
+        f"Scene {number} ({span}): {found[f'Scene {number}'].rstrip('.')}. "
+        f"{speakers[index]}: \"{spoken[index]}\""
         for index, (number, span) in enumerate(FLOW_STORY_BEATS)
     ]
-    lines.append(f"Narrator: {FLOW_NARRATOR}.")
+    lines.append(
+        "Narrator: the host, in my own voice (add my voice in Flow)."
+        if record.get("host")
+        else f"Narrator: {FLOW_NARRATOR}."
+    )
     lines.append(f"Music: {found.get('Music') or 'soft bamboo flute and tanpura'}.")
     cta = _plain(record.get("cta"))
     if cta:

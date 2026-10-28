@@ -44,6 +44,38 @@ work:
 
 ## Current workflow
 
+### Daily Flow story Reels (the main routine)
+
+Each Reel is a voiced 10-second Google Flow video. The app writes its script;
+you make the video in Flow.
+
+1. **Plan the week (Sunday).** **Plan my week** drafts 7 video Reels with
+   planned times:
+   - Myth Monday
+   - You & the Buddha (Tuesday and Saturday, opening with **you**, the host)
+   - Life of the Buddha (Wednesday and Sunday, a numbered series told in order)
+   - Dialogue Thursday
+   - Story Friday
+
+   A Buddhist day that week shapes that day's draft.
+2. **Each day,** open the draft and approve it. In the **Flow story Reel**
+   panel:
+   1. Check the script: 3 timed scenes, with the exact, sourced narration.
+   2. **Copy Flow video prompt**. In Flow choose Text to Video, 9:16, 10 s. On
+      host days, add your avatar and your voice as ingredients.
+   3. Download in 1080p and drop the MP4 in. The app transcribes it and shows
+      **Narration matches** or which words Flow changed.
+   4. **Render.** Flow's voice and music stay as made. The Veo mark is
+      cropped, and a closing card with soft music is added. The grid cover is
+      the hook scene with the hook line.
+   5. **Schedule.** The same MP4 goes to YouTube Shorts.
+
+"Open with me" on the Generate form, or in the panel, turns any video Reel
+into a host Reel. The other formats (text-over-image Reels, carousels) remain
+under "Other formats".
+
+### Content records
+
 ```text
 Brief + Brand + Content Profile + Format + Platform
     -> optional subtype guidance for the selected profile

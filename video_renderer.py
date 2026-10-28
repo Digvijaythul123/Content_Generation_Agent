@@ -18,6 +18,7 @@ from media_renderer import (
     is_image_reel,
     render_html_to_jpeg,
     render_html_to_png,
+    render_post_image,
     reveal_style,
 )
 from music_library import MusicError, pick_track
@@ -34,6 +35,8 @@ DESIGNED_ZOOM_AMOUNT = 0.025
 # Video clips (Google Flow / Veo) keep their own sound under the music.
 MUSIC_UNDER_CLIP = 0.7
 CLIP_SOUND_LEVEL = 0.6
+# The soft music under a story Reel's closing card.
+STORY_TAIL_LEVEL = 0.7
 # A clip shorter than the Reel plays once rather than jumping back to its
 # start; clips shorter than this still loop.
 MIN_CLIP_SECONDS = 5
@@ -368,6 +371,7 @@ def build_ffmpeg_command(
     zoom=ZOOM_AMOUNT,
     end_card=None,
     clip_sound=False,
+    story_tail=False,
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -376,6 +380,8 @@ def build_ffmpeg_command(
     from the top by ``clip_zoom`` (hiding a bottom watermark).
     ``text_layers`` is a sequence of (transparent PNG, start second) pairs;
     each layer fades in at its own start time over the moving background.
+    With ``story_tail`` (a voiced Flow story) the clip's own sound leads and
+    ``music`` plays only softly under the closing card.
     """
     width, height = IMAGE_REEL_SIZE
     frames = seconds * FRAME_RATE
@@ -491,7 +497,29 @@ def build_ffmpeg_command(
         if motion_clip and clip_sound
         else ""
     )
-    if music is not None:
+    if story_tail and ambience and music is not None:
+        # Flow's narrator and music stay as made; they fade out at the cut
+        # and a quiet music tail carries the closing card.
+        inputs += ["-stream_loop", "-1", "-i", str(music)]
+        tail_start = max(seconds - 0.4, 0)
+        delay = int(tail_start * 1000)
+        filters.append(
+            f"{ambience.replace(',apad=', f',afade=t=out:st={max(seconds - 0.8, 0)}:d=0.8,apad=')},"
+            "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=44100[amb]"
+        )
+        filters.append(
+            f"[{len(text_layers) + len(effects) + (2 if end_card else 1)}:a]"
+            "silenceremove=start_periods=1:start_threshold=-45dB,"
+            f"atrim=0:{round(total - tail_start, 2)},asetpts=PTS-STARTPTS,aresample=44100,"
+            f"volume={STORY_TAIL_LEVEL},afade=t=in:st=0:d=0.5,"
+            f"adelay={delay}|{delay},apad=whole_dur={total}[tail]"
+        )
+        filters.append(
+            "[amb][tail]amix=inputs=2:duration=first:normalize=0,"
+            f"afade=t=out:st={max(total - 1.0, 0)}:d=1.0[aout]"
+        )
+        audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k", "-ar", "44100"]
+    elif music is not None:
         # Loop short tracks, then fade in and out so the Reel loops cleanly.
         inputs += ["-stream_loop", "-1", "-i", str(music)]
         # Skip a silent intro and even out loudness for phone speakers.
@@ -617,8 +645,8 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
         story = motion_clip and bool(record.get("flow_story"))
         if story:
             # Flow made the whole Reel (scenes, narrator, music): add no words
-            # or music on top, only the closing card.
-            text_layers, music = [], None
+            # on top; our music only carries the closing card.
+            text_layers = []
         clip_sound = False
         if motion_clip:
             length, has_sound = clip_info(background)
@@ -643,6 +671,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             ),
             zoom=DESIGNED_ZOOM_AMOUNT if designed else ZOOM_AMOUNT,
             end_card=end_card,
+            story_tail=story,
         )
         try:
             subprocess.run(
@@ -660,4 +689,10 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
         record["video_path"] = str(output)
     record["video_music"] = music.name if music else None
     save_post(post_id, record)
+    if record.get("flow_story") and is_video_artwork(artwork_path(post_id)):
+        # The grid and Shorts cover: the hook scene with the hook line.
+        try:
+            render_post_image(post_id)
+        except Exception:  # A missing cover must not undo a finished video.
+            pass
     return output

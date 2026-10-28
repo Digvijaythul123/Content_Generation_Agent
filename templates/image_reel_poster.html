@@ -90,6 +90,12 @@
   body.motion .takeaway { font-size: 60px; }
   body.motion .quote, body.motion .takeaway { color: #FFF6E6; }
   body.motion .quote .hl, body.motion .takeaway .hl { color: #F5C542; }
+  /* A Flow story Reel's grid cover: any frame can be bright, so shade the
+     whole top behind the hook. */
+  body.motion.cover .glow {
+    background: linear-gradient(to bottom, rgba(10, 8, 6, .78) 0%,
+      rgba(10, 8, 6, .55) 30%, rgba(10, 8, 6, .2) 48%, transparent 62%);
+  }
   /* The handle sits lower, over the art, so it keeps its own shadow. */
   body.tone-light .handle { color: #FFF8EC; }
 

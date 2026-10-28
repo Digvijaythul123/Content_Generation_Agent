@@ -1484,3 +1484,34 @@ def test_performance_groups_by_hook_formula():
     rows = [{"hook_formula": "the-question", "views": 10, "reach": 5, "saved": 1, "shares": 0,
              "avg_watch_seconds": 3.0}]
     assert analytics.summarize(rows)["Hook formula"][0]["value"] == "the-question"
+
+
+def test_life_of_the_buddha_series_numbers_parts_in_order(monkeypatch, tmp_path):
+    import content_pipeline
+
+    monkeypatch.setattr(content_pipeline, "_POSTS_DIRECTORY", tmp_path)
+    request = resolve_generation_request(
+        profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
+        subtype="life_story", thinker_id="buddha")
+    assert content_pipeline.next_life_part(request) == 1
+    for name, data in {
+        "post_001": {"life_part": 2, "title": "The **four** sights"},
+        "post_002": {"life_part": 1, "title": "Born at Lumbini"},
+        "post_003": {"life_part": 3, "title": "Dropped draft", "status": "Rejected"},
+    }.items():
+        (tmp_path / f"{name}.json").write_text(json.dumps(data), encoding="utf-8")
+    assert content_pipeline.next_life_part(request) == 3
+    assert content_pipeline._life_episodes(request) == ["Part 1: Born at Lumbini", "Part 2: The four sights"]
+
+    service = Mock()
+    service.generate_reel.return_value = "generated"
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id, profile=request.profile.to_mapping(),
+            content_format=request.content_format, platform=request.platform,
+            subtype="life_story", thinker_id="buddha", life_part=3,
+            earlier_parts=["Part 1: Born at Lumbini", "Part 2: The four sights"],
+        ).generate_content()
+    prompt = service.generate_reel.call_args.args[0]
+    assert "This is part 3" in prompt and "next event after the last part" in prompt
+    assert prompt.index("Part 1: Born at Lumbini") < prompt.index("Part 2: The four sights")

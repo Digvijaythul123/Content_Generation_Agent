@@ -750,11 +750,14 @@ engagement:
     length: 30
   # "Plan my week": one themed draft per day, planned for plan_time (local).
   plan_time: "19:30"
+  # Every day is a voiced Flow story video (10 s). host: true opens with
+  # you (your avatar and your voice in Flow). Illustrated modes are made by
+  # hand when wanted.
   weekly_plan:
-    monday: {name: Myth Monday, subtype: real_or_fake, format: image_reel}
-    tuesday: {name: Mirror Tuesday, subtype: mirror, format: image_reel}
-    wednesday: {name: Wisdom Wednesday, subtype: one_liner, format: image_reel}
-    thursday: {name: Dialogue Thursday, subtype: dialogue, format: image_reel}
-    friday: {name: Story Friday, subtype: parable_card, format: image_reel}
-    saturday: {name: Mind Saturday, subtype: mind_states, format: carousel}
-    sunday: {name: Sunday Carousel, subtype: numbered_list, format: carousel}
+    monday: {name: Myth Monday, subtype: real_or_fake, format: image_reel, video: true}
+    tuesday: {name: You & the Buddha, subtype: mirror, format: image_reel, video: true, host: true}
+    wednesday: {name: Life of the Buddha, subtype: life_story, format: image_reel, video: true}
+    thursday: {name: Dialogue Thursday, subtype: dialogue, format: image_reel, video: true}
+    friday: {name: Story Friday, subtype: parable, format: image_reel, video: true}
+    saturday: {name: You & the Buddha, subtype: thought_provoking, format: image_reel, video: true, host: true}
+    sunday: {name: Life of the Buddha, subtype: life_story, format: image_reel, video: true}

@@ -34,18 +34,45 @@ class _GeminiUnavailable(AIServiceError):
     """Gemini is over its limit or unreachable; Ollama may take over."""
 
 
+def _gemini_models():
+    return [
+        name.strip()
+        for name in get_setting("GEMINI_TEXT_MODEL", DEFAULT_GEMINI_TEXT_MODEL).split(",")
+        if name.strip()
+    ]
+
+
+def transcribe_audio(audio_base64, mime_type="audio/mpeg"):
+    """The spoken words in a short audio clip, via Gemini (no Ollama
+    fallback: Ollama cannot listen). Raises AIServiceError if unavailable."""
+    if not get_setting("GEMINI_API_KEY"):
+        raise AIServiceError("Transcribing needs GEMINI_API_KEY.")
+    service = AIService()
+    for model in _gemini_models():
+        try:
+            return service._gemini(
+                "Write down exactly the words spoken in this audio, in order, as "
+                "plain text with no timestamps or labels. If nobody speaks, reply "
+                "with an empty line.",
+                model,
+                media={"mime_type": mime_type, "data": audio_base64},
+            )
+        except _GeminiUnavailable:
+            continue
+        except AIServiceError as error:
+            if "no text" in str(error):
+                return ""
+            raise
+    raise AIServiceError("Gemini is busy or out of free quota; try the check later.")
+
+
 class AIService:
 
     def generate_reel(self, prompt):
         global last_model_used
         if (get_setting("TEXT_PROVIDER", "ollama") or "ollama").lower() == "gemini":
             # GEMINI_TEXT_MODEL may list several models, tried in order.
-            models = [
-                name.strip()
-                for name in get_setting("GEMINI_TEXT_MODEL", DEFAULT_GEMINI_TEXT_MODEL).split(",")
-                if name.strip()
-            ]
-            for model in models:
+            for model in _gemini_models():
                 for wait in (0, *GEMINI_RETRY_SECONDS):
                     # Free-tier "high demand" spikes usually pass in seconds.
                     time.sleep(wait)
@@ -61,7 +88,7 @@ class AIService:
         last_model_used = f"ollama:{get_setting('MODEL_NAME', DEFAULT_MODEL_NAME)}"
         return text
 
-    def _gemini(self, prompt, model):
+    def _gemini(self, prompt, model, media=None):
         key = get_setting("GEMINI_API_KEY")
         if not key:
             raise AIServiceError("TEXT_PROVIDER is gemini but GEMINI_API_KEY is not in .env.")
@@ -70,7 +97,8 @@ class AIService:
                 _GEMINI_URL.format(model=model),
                 # The key goes in a header so it never appears in an error URL.
                 headers={"x-goog-api-key": key},
-                json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
+                json={"contents": [{"role": "user", "parts": (
+                    [{"inline_data": media}] if media else []) + [{"text": prompt}]}]},
                 # A healthy reply takes under a minute; a stall counts as busy.
                 timeout=90,
             )

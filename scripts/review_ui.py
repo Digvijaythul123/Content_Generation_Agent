@@ -60,6 +60,7 @@ from art_generator import (
     is_flow_ready,
     generate_post_artwork,
     is_designed,
+    is_video_artwork,
     save_post_artwork,
 )
 from content_text import strip_highlights
@@ -1011,7 +1012,34 @@ def upload_artwork(content_type, content_id, image_bytes):
         content_type, content_id, "stage_ready",
         stage="artwork", source="upload", output=str(output),
     )
+    if content_type == "post" and record.get("flow_story") and is_video_artwork(output):
+        record = load_post(content_id)
+        record["clip_check"] = {"narration": "checking"}
+        record.pop("clip_transcript", None)
+        save_post(content_id, record)
+        # Transcribing takes a while; the review page shows it when done.
+        threading.Thread(target=_check_story_clip, args=(content_id, output), daemon=True).start()
     return {"stage": "artwork", "status": "ready"}
+
+
+def _check_story_clip(content_id, clip):
+    """Compare the uploaded clip's narration with the script (advice only)."""
+    from clip_check import check_clip
+
+    try:
+        result = check_clip(load_post(content_id), clip)
+    except Exception:  # Never let a check break anything.
+        result = None
+    record = load_post(content_id)
+    if result is None:
+        record.pop("clip_check", None)
+    else:
+        transcript = result.pop("transcript", None)
+        if transcript:
+            record["clip_transcript"] = transcript
+        record["clip_check"] = result
+    save_post(content_id, record)
+    _append_history("post", content_id, "clip_checked", result=record.get("clip_check"))
 
 
 _IMPORTABLE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp", ".mp4", ".mov")
@@ -1136,6 +1164,9 @@ def plan_week(profile_id="rational_thoughts", start=None, generate=None):
             "scenery": "auto",
             "weather": "auto",
         }
+        if slot.get("video"):
+            # A voiced Flow story Reel; host days open with the user.
+            payload.update(reel_kind="video", host=bool(slot.get("host")))
         if observance:
             payload["brief"] = observance["brief"]
         label = slot.get("name", day.strftime("%A")) + (f" · {observance['name']}" if observance else "")
@@ -1327,6 +1358,15 @@ def update_post_settings(content_id, payload):
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("series")
     _update_youtube_fields(record, payload, changed)
+    if "host" in payload:
+        if not isinstance(payload["host"], bool):
+            raise ValueError("host must be true or false.")
+        # The script plans the opening scene, so write it again after this.
+        if payload["host"]:
+            record["host"] = True
+        else:
+            record.pop("host", None)
+        changed.append("host")
     if "share_to_threads" in payload:
         if not isinstance(payload["share_to_threads"], bool):
             raise ValueError("Posting to Threads must be on or off.")
@@ -2675,6 +2715,10 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
+    if result.request.life_part:
+        data["life_part"] = result.request.life_part
+        if data.get("caption"):
+            data["caption"] = f"Life of the Buddha, part {result.request.life_part}.\n\n{data['caption']}"
     if ai_service.last_model_used:
         data["ai_model"] = ai_service.last_model_used  # which model wrote it
     apply_hook_options(data)
@@ -2682,6 +2726,9 @@ def generate_and_save(payload):
         data["video_reel"] = True
         # Flow makes the whole Reel: scenes, narrator, and music.
         data["flow_story"] = True
+        if payload.get("host"):
+            # Opens with the user: their avatar and voice, added in Flow.
+            data["host"] = True
         try:
             data["video_script"] = write_reel_script(data)
         except AIServiceError:

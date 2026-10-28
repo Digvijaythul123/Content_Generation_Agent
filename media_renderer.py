@@ -323,6 +323,7 @@ def placement_script(artwork, record, size):
             "factor": LOOK_BRIGHTNESS.get(weather_look(record), 1.0),
             "light": 10 ** 6 if _is_motion(record) else TONE_LIGHT, "mid": TONE_MID,
             "motion": _is_motion(record),
+            "cover": bool(record.get("flow_story")),
         })
     return f"<script>window.PLACEMENT = {data};\n{code}</script>"
 
@@ -661,6 +662,10 @@ def ffmpeg_executable():
     return imageio_ffmpeg.get_ffmpeg_exe()
 
 
+# The grid cover of a Flow story Reel: a frame from its opening (hook) scene.
+STORY_COVER_SECONDS = 1.0
+
+
 def extract_video_frame(video, output, seconds=VIDEO_STILL_SECONDS):
     """Save one frame of a clip as a PNG (falls back to the first frame)."""
     for at in (seconds, 0):
@@ -707,7 +712,9 @@ def render_post_image(post_id):
         return paths[0]
     with tempfile.TemporaryDirectory() as folder:
         if is_video_artwork(artwork):
-            artwork = extract_video_frame(artwork, Path(folder) / "frame.png")
+            # A story Reel's cover is its hook scene.
+            at = STORY_COVER_SECONDS if record.get("flow_story") else VIDEO_STILL_SECONDS
+            artwork = extract_video_frame(artwork, Path(folder) / "frame.png", at)
         html = build_post_html(record, brand, artwork)
         output_path = render_html_to_jpeg(
             html,

@@ -614,6 +614,9 @@ _FRAMING = (
 def build_flow_prompt(record):
     """A Google Flow (Veo) prompt that brings the post's still art to life
     as one 10-second vertical shot, to use with the art as its first frame."""
+    if record.get("flow_story"):
+        # The story script carries the scenes; no still art is needed.
+        return build_flow_story_prompt(record)
     description = str(record.get("design_prompt") or "").strip()
     if not description:
         raise ArtGenerationError("The post has no design prompt to film from.")
@@ -622,8 +625,6 @@ def build_flow_prompt(record):
             "Video clips are for Reels with words added on top; illustrated "
             "posts carry their words in the art and stay as images."
         )
-    if record.get("flow_story"):
-        return build_flow_story_prompt(record)
     scene = _TEXT_SPACE_PATTERN.sub("", _without_blocked_names(description, record))
     scene = " ".join(_CLOSE_SHOT.sub(" ", scene).split())
     setting = " ".join(_setting_lines(record))
@@ -696,7 +697,9 @@ def build_flow_prompt(record):
     return "\n\n".join(parts)
 
 
-_STORY_SCENE = re.compile(r"^Scene (\d) \(([^)]*)\):\s*(.*?)\s*Narrator:\s*\"(.*)\"\s*$")
+_STORY_SCENE = re.compile(
+    r"^Scene (\d) \(([^)]*)\):\s*(.*?)\s*(Narrator|Young monk|The buddha|The Buddha):\s*\"(.*)\"\s*$"
+)
 
 
 def build_flow_story_prompt(record):
@@ -707,25 +710,43 @@ def build_flow_story_prompt(record):
     for line in script.splitlines():
         match = _STORY_SCENE.match(line.strip())
         if match:
-            scenes.append(match.groups())
+            number, span, visual, speaker, spoken = match.groups()
+            scenes.append((number, span, visual, speaker, spoken))
         elif line.startswith("Narrator:"):
             narrator = line.split(":", 1)[1].strip().rstrip(".")
         elif line.startswith("Music:"):
             music = line.split(":", 1)[1].strip().rstrip(".")
     if not scenes:
         raise ArtGenerationError("Write the story script first (Write video script).")
+    host = bool(record.get("host"))
+    dialogue = any(speaker != "Narrator" for _, _, _, speaker, _ in scenes)
     shots = "\n".join(
-        f"Shot {number} ({span}): {_without_blocked_names(visual, record)} "
-        f"Narrator says: \"{spoken}\""
-        for number, span, visual, spoken in scenes
+        f"Shot {number} ({span}): "
+        + (re.sub(r"\b([Tt]he host)\b", r"\1 (use my avatar)", _without_blocked_names(visual, record), count=1)
+           if host else _without_blocked_names(visual, record))
+        + f" {'The Buddha' if speaker.lower() == 'the buddha' else speaker} says: \"{spoken}\""
+        for number, span, visual, speaker, spoken in scenes
     )
+    if dialogue:
+        voice = (
+            "Voices: the young monk speaks his line in a light, curious voice and "
+            "the Buddha answers in a calm, warm, deep voice; their lips move with "
+            "their own words. Speak exactly the lines above, in English, at a "
+            f"calm pace that fits the {FLOW_CLIP_SECONDS} seconds; no other speech."
+        )
+    else:
+        voice = (
+            f"Voice: {narrator or 'a calm, warm, deep male narrator'}. Speak exactly "
+            "the narrator lines above, in English, at a calm pace that fits the "
+            f"{FLOW_CLIP_SECONDS} seconds; no other speech, and no one in the scene talks."
+        )
+        if host:
+            voice += " Use my voice for the narrator."
     return "\n\n".join([
         f"A {FLOW_CLIP_SECONDS}-second vertical 9:16 cinematic video, photorealistic, "
         "warm natural light, told in three short shots joined by soft cuts.",
         shots,
-        f"Voice: {narrator or 'a calm, warm, deep male narrator'}. Speak exactly the "
-        "narrator lines above, in English, at a calm pace that fits the "
-        f"{FLOW_CLIP_SECONDS} seconds; no other speech, and no one in the scene talks.",
+        voice,
         f"Music and sound: {music or 'soft bamboo flute and tanpura'}, quiet under the "
         "voice, with gentle natural ambience.",
         "The Buddha appears in his traditional form: tightly curled dark hair with "
@@ -733,8 +754,11 @@ def build_flow_story_prompt(record):
         "saffron robe over one shoulder; he is not a shaved-head monk, and his face "
         "stays the same in every shot. Before his awakening he is Prince Siddhartha: "
         "long dark hair in a topknot, fine white clothes. Monks have shaved heads.",
-        "Wide or medium shots with slow, calm camera moves; no fast action, no "
-        "dramatic gestures, no faces changing shape, no extra limbs, no modern objects.",
+        ("Shot 1 may be close on the host; the Buddha's shots are wide or medium. "
+         "Modern things belong only to the host's shot. "
+         if host else "Wide or medium shots, no modern objects. ")
+        + "Slow, calm camera moves; no fast action, no dramatic gestures, no faces "
+        "changing shape, no extra limbs.",
         "No on-screen text, subtitles, captions, titles, logos, or watermarks.",
     ])
 
