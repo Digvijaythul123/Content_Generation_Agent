@@ -13,10 +13,11 @@ from app_settings import (
 # from Google AI Studio) and falls back to Ollama when Gemini's daily limit
 # is reached or it cannot be reached. TEXT_PROVIDER=ollama (the default)
 # uses only Ollama (MODEL_ENDPOINT, MODEL_NAME).
-DEFAULT_GEMINI_TEXT_MODEL = "gemini-3.5-flash"
+DEFAULT_GEMINI_TEXT_MODEL = "gemini-3.5-flash,gemini-3.6-flash,gemini-flash-latest"
 _GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-GEMINI_RETRY_SECONDS = 4
+# Waits before retrying a busy Gemini model, then the next model is tried.
+GEMINI_RETRY_SECONDS = (4, 10)
 
 # The model behind the latest successful call, saved on new drafts so
 # Gemini and Ollama drafts can be compared.
@@ -36,19 +37,24 @@ class AIService:
     def generate_reel(self, prompt):
         global last_model_used
         if (get_setting("TEXT_PROVIDER", "ollama") or "ollama").lower() == "gemini":
-            model = get_setting("GEMINI_TEXT_MODEL", DEFAULT_GEMINI_TEXT_MODEL)
-            try:
-                try:
-                    text = self._gemini(prompt, model)
-                except _GeminiUnavailable:
-                    # "High demand" spikes usually pass within seconds.
-                    time.sleep(GEMINI_RETRY_SECONDS)
-                    text = self._gemini(prompt, model)
-                last_model_used = f"gemini:{model}"
-                return text
-            except _GeminiUnavailable:
-                if (get_setting("GEMINI_FALLBACK", "ollama") or "").lower() != "ollama":
-                    raise
+            # GEMINI_TEXT_MODEL may list several models, tried in order.
+            models = [
+                name.strip()
+                for name in get_setting("GEMINI_TEXT_MODEL", DEFAULT_GEMINI_TEXT_MODEL).split(",")
+                if name.strip()
+            ]
+            for model in models:
+                for wait in (0, *GEMINI_RETRY_SECONDS):
+                    # Free-tier "high demand" spikes usually pass in seconds.
+                    time.sleep(wait)
+                    try:
+                        text = self._gemini(prompt, model)
+                    except _GeminiUnavailable:
+                        continue
+                    last_model_used = f"gemini:{model}"
+                    return text
+            if (get_setting("GEMINI_FALLBACK", "ollama") or "").lower() != "ollama":
+                raise AIServiceError("Gemini is busy or at its daily limit; try again later.")
         text = self._ollama(prompt)
         last_model_used = f"ollama:{get_setting('MODEL_NAME', DEFAULT_MODEL_NAME)}"
         return text
@@ -63,7 +69,8 @@ class AIService:
                 # The key goes in a header so it never appears in an error URL.
                 headers={"x-goog-api-key": key},
                 json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
-                timeout=180,
+                # A healthy reply takes under a minute; a stall counts as busy.
+                timeout=90,
             )
         except requests.RequestException as error:
             raise _GeminiUnavailable(

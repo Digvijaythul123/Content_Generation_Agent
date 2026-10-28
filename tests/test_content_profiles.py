@@ -1462,6 +1462,12 @@ def test_verified_quotes_and_lists_keep_their_hook():
              "main_point": "Hatred never ends by hatred."}
     content_agent.apply_hook_options(quote, ai_service=service)
     assert quote["main_point"] == "Hatred never ends by hatred."
+    for fixed in ({"subtype": "real_or_fake", "main_point": '"Anger is poison."'},
+                  {"subtype": "dialogue", "main_point": 'Young monk: "Why am I angry?"'},
+                  {"subtype": "thoughtful", "main_point": "Not every opinion of you",
+                   "supporting_copy": "needs your **reply**."}):
+        content_agent.apply_hook_options({"profile_id": "rational_thoughts", **fixed}, ai_service=service)
+        assert content_agent.write_hook_options({"profile_id": "rational_thoughts", **fixed}) == []
     listed = {"profile_id": "rational_thoughts", "main_point": "1. One\n2. Two"}
     content_agent.apply_hook_options(listed, ai_service=service)
     assert "hook_options" not in listed

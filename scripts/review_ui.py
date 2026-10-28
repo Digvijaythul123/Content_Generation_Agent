@@ -1470,7 +1470,10 @@ def make_hook_options(content_id):
 
     options = write_hook_options(record)
     if not options:
-        raise ValueError("Verified quotes keep their words, so they have no hook options.")
+        raise ValueError(
+            "This story mode keeps its hook as written (a quote, the young monk's "
+            "line, words in the art, or a line the payoff finishes)."
+        )
     _, scored = choose_hook(record, options)
     record["hook_options"] = [
         {key: item[key] for key in ("text", "verdict", "band", "formula", "formula_name", "fix", "original")}

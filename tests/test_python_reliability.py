@@ -1573,10 +1573,17 @@ def test_gemini_writes_when_chosen_and_ollama_takes_over_at_the_limit(monkeypatc
     limited.json.return_value = {"error": {"message": "Quota exceeded"}}
     ollama = Mock()
     ollama.json.return_value = {"response": "from ollama"}
-    monkeypatch.setattr(ai_service, "GEMINI_RETRY_SECONDS", 0)
-    with patch("ai_service.requests.post", side_effect=[limited, limited, ollama]):
+    monkeypatch.setattr(ai_service, "GEMINI_RETRY_SECONDS", (0, 0))
+    with patch("ai_service.requests.post", side_effect=[limited] * 3 + [ollama]):
         assert AIService().generate_reel("prompt") == "from ollama"
     assert ai_service.last_model_used.startswith("ollama:")
+
+    # A busy first model hands over to the next one in the list.
+    monkeypatch.setenv("GEMINI_TEXT_MODEL", "busy-model, spare-model")
+    with patch("ai_service.requests.post", side_effect=[limited] * 3 + [answer]) as post:
+        assert AIService().generate_reel("prompt") == "Title: Hello"
+    assert "spare-model:generateContent" in post.call_args.args[0]
+    assert ai_service.last_model_used == "gemini:spare-model"
 
     # A rejected request (bad key) is an error, not a silent switch.
     rejected = Mock(status_code=400)

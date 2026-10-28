@@ -830,6 +830,20 @@ def write_video_script(record, ai_service=None):
 # points) one must be to replace the generated hook.
 HOOK_OPTION_COUNT = 5
 HOOK_SWAP_MARGIN = 8
+# Story modes whose hook cannot be swapped: the quote under test, the exact
+# quote, the young monk's line, words painted into the art, and two-part
+# lines whose payoff finishes the hook's sentence.
+FIXED_HOOK_MODES = {
+    "real_or_fake", "verified_quote", "dialogue", "mirror", "one_liner",
+    "mind_states", "numbered_list", "illustrated_metaphor", "parable_card",
+}
+
+
+def _hook_is_fixed(record):
+    mode = record.get("subtype") or record.get("qa_subtype")
+    payoff = _plain(record.get("supporting_copy"))
+    # A payoff starting in lower case finishes the hook's sentence.
+    return mode in FIXED_HOOK_MODES or bool(payoff[:1].islower())
 
 
 def write_hook_options(record, ai_service=None, count=HOOK_OPTION_COUNT):
@@ -840,7 +854,7 @@ def write_hook_options(record, ai_service=None, count=HOOK_OPTION_COUNT):
     """
     from hook_score import formula_example, formulas_for, hook_rules
 
-    if (record.get("subtype") or record.get("qa_subtype")) == "verified_quote":
+    if _hook_is_fixed(record):
         return []
     profile_id = record.get("profile_id")
     formulas = formulas_for(profile_id)
@@ -875,6 +889,8 @@ def write_hook_options(record, ai_service=None, count=HOOK_OPTION_COUNT):
             continue
         formula_id, text = (part.strip().strip("*-").strip() for part in line.split("|", 1))
         text = text.strip().strip('"').strip()
+        if text.count("**") % 2:
+            text = text.replace("**", "")  # an unclosed highlight would show
         if text and formula_id.lower() in known and len(_plain(text).split()) <= 18:
             options.append((formula_id.lower(), text))
     if not options:
@@ -920,7 +936,7 @@ def apply_hook_options(record, ai_service=None):
     and verified quotes are left alone.
     """
     hook = str(record.get("main_point") or "")
-    if not hook.strip() or "\n" in hook.strip():
+    if not hook.strip() or "\n" in hook.strip() or _hook_is_fixed(record):
         return record
     try:
         options = write_hook_options(record, ai_service=ai_service)
