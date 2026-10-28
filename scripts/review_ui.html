@@ -1840,6 +1840,30 @@
       });
       effectLabel.append(effect);
       box.append(effectLabel);
+      if (state.record.design_prompt && state.record.subtype
+          && (state.options.reveal_styles || []).length
+          && ["mind_states", "numbered_list", "illustrated_metaphor", "parable_card"].includes(state.record.subtype)) {
+        // Illustrated Reels: how the answer drawn in the art stays hidden
+        // for the first seconds.
+        const revealLabel = document.createElement("label");
+        revealLabel.textContent = "Reveal ";
+        revealLabel.title = "How the closing line drawn in the art is hidden for the first 3.5 seconds, then uncovered.";
+        const reveal = document.createElement("select");
+        state.options.reveal_styles.forEach(([value, name]) => reveal.append(new Option(name, value)));
+        // Lists show everything from the start unless a style is chosen.
+        reveal.value = state.record.reveal
+          || ((state.options.list_subtypes || []).includes(state.record.subtype) ? "none" : state.options.default_reveal);
+        reveal.addEventListener("change", async () => {
+          try {
+            await saveReelSettings({ reveal: reveal.value },
+              "Reveal changed. Render the Reel video again to see it.");
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+        revealLabel.append(reveal);
+        box.append(revealLabel);
+      }
       const note = document.createElement("span");
       note.className = "message";
       const used = state.record.video_music;

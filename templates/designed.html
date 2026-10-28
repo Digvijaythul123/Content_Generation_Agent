@@ -30,14 +30,30 @@
   .payoff:has(.payoff-text:empty) { display: none; }
   .payoff .hl { color: #F5C542; font-weight: 700; }
   body.layer-background .payoff { display: none; }
-  /* Veil: hides the answer already drawn in the art until it is revealed. */
-  /* Soft top edge, so the veil reads as mist rather than a box. */
+  /* Veil: hides the answer already drawn in the art until it is revealed.
+     It covers only the answer's band, with soft edges so it reads as part
+     of the picture rather than a box. */
   .veil {
     display: none; position: absolute; overflow: hidden;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
-    mask-image: linear-gradient(180deg, transparent 0%, #000 28%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
   }
-  .veil .art { position: absolute; object-fit: fill; filter: blur(28px) brightness(.55); }
+  .veil .art { position: absolute; object-fit: fill; }
+  /* Mist: the line blurred away in the picture's own colours. */
+  .reveal-mist .veil .art { filter: blur(32px) brightness(.92) saturate(.9); }
+  /* Wipe: a strip of the page's own paper, slid off to uncover the line;
+     its leading edge is soft too. */
+  .reveal-wipe .veil {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%),
+      linear-gradient(90deg, transparent 0%, #000 6%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(180deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%),
+      linear-gradient(90deg, transparent 0%, #000 6%);
+    mask-composite: intersect;
+  }
+  .reveal-wipe .veil .art { filter: blur(60px) brightness(1.02) saturate(.85); transform: scaleX(1.3); }
+  /* Shadow: a dark band that lifts away. */
+  .reveal-shadow .veil .art { filter: blur(28px) brightness(.4); }
   body.layer-veil { background: transparent; }
   body.layer-veil .fill, body.layer-veil .main, body.layer-veil .payoff { display: none; }
   body.layer-veil .veil { display: block; }
@@ -45,7 +61,7 @@
   body.layer-text .fill, body.layer-text .main { display: none; }
 </style>
 </head>
-<body class="layer-$layer">
+<body class="layer-$layer reveal-$reveal">
 <div class="fill">$art</div>
 <div class="main">$art</div>
 <div class="veil">$art</div>
@@ -68,7 +84,7 @@
     const scale = Math.min(innerWidth / veilArt.naturalWidth, innerHeight / veilArt.naturalHeight);
     const w = veilArt.naturalWidth * scale, h = veilArt.naturalHeight * scale;
     const left = (innerWidth - w) / 2, top = (innerHeight - h) / 2;
-    const from = 0.58, to = 0.95;  // share of the art's height to cover
+    const from = $veil_from, to = $veil_to;  // share of the art's height to cover
     Object.assign(veil.style, { left: `$${left}px`, top: `$${top + h * from}px`,
       width: `$${w}px`, height: `$${h * (to - from)}px` });
     Object.assign(veilArt.style, { left: "0px", top: `$${-h * from}px`,

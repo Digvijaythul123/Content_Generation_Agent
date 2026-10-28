@@ -211,6 +211,99 @@ def _row_profile(path, modified, size):
     return tuple(busy), tuple(lum)
 
 
+# How a designed Reel hides the answer drawn in its art until it is revealed.
+REVEAL_STYLES = {
+    "mist": "Soft blur that clears",
+    "wipe": "Paper strip that slides away",
+    "shadow": "Dark band that fades",
+    "none": "No hiding (all text at once)",
+}
+DEFAULT_REVEAL = "wipe"
+# The answer the image tool drew low in the picture; used when no lettering
+# can be found there.
+_FALLBACK_BAND = (0.58, 0.95)
+
+
+# Lists show all their points from the start: hiding the last one cuts
+# through the pictures around it.
+_UNVEILED_SUBTYPES = {"numbered_list", "mind_states"}
+
+
+def reveal_style(record):
+    style = record.get("reveal")
+    if style in REVEAL_STYLES:
+        return style
+    if (record.get("subtype") or record.get("qa_subtype")) in _UNVEILED_SUBTYPES:
+        return "none"
+    return DEFAULT_REVEAL
+
+
+@lru_cache(maxsize=32)
+def _text_bands(path, modified):
+    """Bands of lettering in the art, top to bottom, as (from, to) shares of
+    its height. Lettering shows as rows with many sharp light-dark changes
+    across the width; painted detail has far fewer."""
+    width = 360
+    result = subprocess.run(
+        [ffmpeg_executable(), "-loglevel", "error", "-i", path, "-vf",
+         f"scale={width}:-2:flags=area,format=gray",
+         "-frames:v", "1", "-f", "rawvideo", "-"],
+        capture_output=True,
+    )
+    pixels = result.stdout
+    height = len(pixels) // width
+    if result.returncode or height < 50:
+        return ()
+    density = []
+    for row in range(height):
+        line = pixels[row * width:(row + 1) * width]
+        sharp = sum(abs(line[x + 1] - line[x]) > 40 for x in range(width - 1))
+        density.append(sharp / width)
+    # A short line ("Just right.") has fewer changes than a full one, so a
+    # row joins a band at a lower density once the band has a clear row.
+    lettered = [value > 0.09 for value in density]
+    bands, start, end, gap = [], None, 0, 0
+    for row, is_text in enumerate(lettered + [False] * height):
+        if row >= height and start is None:
+            break
+        if is_text:
+            if start is None:
+                start = row
+            end, gap = row, 0
+        elif start is not None:
+            gap += 1
+            if gap > height * 0.012:
+                if max(density[start:end + 1]) > 0.17:
+                    bands.append((start / height, (end + 1) / height))
+                start = None
+    # Thin bands (the small handle, stray texture) are not lines of text.
+    return tuple(band for band in bands if band[1] - band[0] > 0.012)
+
+
+def payoff_band(artwork):
+    """Where the answer sits in the art, as (from, to) shares of its height:
+    the lowest lines of lettering in the lower part, with any lines just
+    above them that belong to the same block (a several-line answer)."""
+    if artwork is None:
+        return _FALLBACK_BAND
+    try:
+        bands = _text_bands(str(artwork), artwork.stat().st_mtime)
+    except OSError:
+        bands = ()
+    # The prompt puts the answer between 60% and 85% of the height; the very
+    # bottom holds only the handle and busy foreground.
+    low = [band for band in bands if band[0] >= 0.45 and band[1] <= 0.93]
+    if not low:
+        return _FALLBACK_BAND
+    top, bottom = low[-1]
+    for band in reversed(low[:-1]):
+        if top - band[1] > 0.03:  # a clear gap: a separate line, keep it
+            break
+        top = band[0]
+    pad = 0.035  # room for the soft edges and the slow push-in
+    return (round(max(0.0, top - pad), 4), round(min(1.0, bottom + pad), 4))
+
+
 def placement_script(artwork, record, size):
     """The inline script that moves the words to the calmest band."""
     try:
@@ -460,6 +553,9 @@ def build_post_html(record, brand=None, artwork=None, layer="full"):
             else ""
         ),
         layer=layer,
+        reveal=reveal_style(record),
+        veil_from=(payoff_band(artwork) if layout == "designed" else _FALLBACK_BAND)[0],
+        veil_to=(payoff_band(artwork) if layout == "designed" else _FALLBACK_BAND)[1],
         look=weather_look(record) or "none",
         payoff="",
         placement=(

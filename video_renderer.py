@@ -17,6 +17,7 @@ from media_renderer import (
     is_image_reel,
     render_html_to_jpeg,
     render_html_to_png,
+    reveal_style,
 )
 from music_library import MusicError, pick_track
 from post_storage import load_post, save_post
@@ -29,6 +30,8 @@ FRAME_RATE = 30
 ZOOM_AMOUNT = 0.05
 # Illustrated designs carry words near their edges, so push in gently.
 DESIGNED_ZOOM_AMOUNT = 0.025
+# How long the "wipe" reveal takes to slide its strip away.
+WIPE_SECONDS = 1.1
 TEXT_FADE_SECONDS = 0.5
 # Subtle cinematic motion on the background (brightness swing, seconds per
 # breath, grain strength). Kept low so the text layers stay calm and crisp.
@@ -412,11 +415,19 @@ def build_ffmpeg_command(
             if start > 0
             else ""
         )
-        if hide:
+        position = "0:0"
+        if hide and len(hide) > 1 and hide[1] == "wipe":
+            # A strip that slides off to the right, uncovering the line from
+            # its first word to its last.
+            at = hide[0]
+            position = (
+                f"x='if(lt(t,{at}),0,min({width},({width}+60)*(t-{at})/{WIPE_SECONDS}))':y=0"
+            )
+        elif hide:
             # A veil that clears to reveal what is beneath it.
             fade += f",fade=t=out:st={hide[0]}:d={TEXT_FADE_SECONDS}:alpha=1"
         filters.append(f"[{index}:v]format=rgba{fade}[t{index}]")
-        filters.append(f"[v{index - 1}][t{index}]overlay=0:0[v{index}]")
+        filters.append(f"[v{index - 1}][t{index}]overlay={position}[v{index}]")
     total = seconds + (END_CARD_SECONDS - END_CARD_FADE if end_card else 0)
     filters.append(
         f"[v{len(text_layers)}]scale=out_range=tv,format=yuv420p"
@@ -461,6 +472,10 @@ def build_ffmpeg_command(
         *inputs,
         "-filter_complex", ";".join(filters), "-map", "[out]", *audio,
         "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+        # 4:2:0 High profile plays everywhere; the end-card crossfade would
+        # otherwise switch the encoder to 4:4:4, which Safari and many phones
+        # cannot play.
+        "-pix_fmt", "yuv420p", "-profile:v", "high",
         # Cap the bitrate: grain on busy clips can otherwise bloat the file.
         "-maxrate", "12M", "-bufsize", "24M",
         "-color_range", "tv", "-r", str(FRAME_RATE), "-t", str(total),
@@ -519,7 +534,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 IMAGE_REEL_SIZE,
             )
         designed_layers = []
-        if designed and designed_payoff(record):
+        if designed and designed_payoff(record) and reveal_style(record) != "none":
             # The answer is drawn in the picture: veil it, then clear the veil.
             designed_layers = [(
                 render_html_to_png(
@@ -529,6 +544,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 ),
                 0,
                 POSTER_REVEALS[1][1],
+                reveal_style(record),
             )]
 
         text_layers = designed_layers if designed else chrome + [

@@ -54,7 +54,10 @@ from art_generator import (
 )
 from content_text import strip_highlights
 from media_renderer import (
+    _UNVEILED_SUBTYPES,
+    DEFAULT_REVEAL,
     MAX_CAROUSEL_SLIDES,
+    REVEAL_STYLES,
     MediaRenderError,
     carousel_slide_path,
     is_carousel,
@@ -1295,6 +1298,19 @@ def update_post_settings(content_id, payload):
         # The rendered video carries the old effect, so render it again.
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("sparks")
+    if "reveal" in payload:
+        reveal = payload["reveal"] or None
+        if reveal is not None and reveal not in REVEAL_STYLES:
+            raise ValueError(
+                "Reveal must be one of: " + ", ".join(REVEAL_STYLES) + "."
+            )
+        if reveal is None:
+            record.pop("reveal", None)
+        else:
+            record["reveal"] = reveal
+        # The rendered video hides the answer the old way, so render it again.
+        reel_video_path(content_id).unlink(missing_ok=True)
+        changed.append("reveal")
     if "effect" in payload:
         effect = payload["effect"] or None
         if effect is not None and effect not in VIDEO_EFFECTS:
@@ -2274,6 +2290,9 @@ def get_generation_options():
         "qa_engineering_ai": options["qa_subtypes"],
     }
     options["music_tracks"] = [path.name for path in list_tracks()]
+    options["reveal_styles"] = [[key, name] for key, name in REVEAL_STYLES.items()]
+    options["default_reveal"] = DEFAULT_REVEAL
+    options["list_subtypes"] = sorted(_UNVEILED_SUBTYPES)
     options["profile_thinkers"] = {}
     options["profile_visual_styles"] = {}
     options["profile_engagement"] = {}

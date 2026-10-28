@@ -1516,7 +1516,7 @@ def test_illustrated_reels_draw_the_answer_low_and_veil_it(tmp_path):
     cover = build_post_html(record, artwork=art)
     assert 'class="payoff-text"></div>' in cover  # nothing added on top
     veil = build_post_html(record, artwork=art, layer="veil")
-    assert 'class="layer-veil"' in veil and 'class="veil"' in veil
+    assert 'class="layer-veil reveal-wipe"' in veil and 'class="veil"' in veil
 
 
 def test_veil_layer_fades_out_when_the_answer_is_revealed(tmp_path):
@@ -1603,3 +1603,25 @@ def test_best_posting_hours_falls_back_from_audience_data_to_own_posts():
     result = analytics.best_posting_hours(report=report, publisher=publisher)
     assert result["source"].startswith("Your posts so far") and "avg 200 views" in result["hours"][0]["detail"]
     assert analytics.best_posting_hours(report={"posts": []}, publisher=publisher)["source"].startswith("Suggested")
+
+
+def test_list_reels_show_everything_and_others_wipe_the_answer():
+    from media_renderer import reveal_style
+
+    assert reveal_style({"subtype": "numbered_list"}) == "none"
+    assert reveal_style({"subtype": "mind_states"}) == "none"
+    assert reveal_style({"subtype": "parable_card"}) == "wipe"
+    assert reveal_style({"subtype": "numbered_list", "reveal": "mist"}) == "mist"
+    assert reveal_style({"subtype": "parable_card", "reveal": "bogus"}) == "wipe"
+
+
+def test_wipe_reveal_slides_the_strip_away():
+    from video_renderer import build_ffmpeg_command
+
+    command = build_ffmpeg_command(
+        "ffmpeg", "bg.jpg", [("veil.png", 0, 3.5, "wipe")], "out.mp4"
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "overlay=x='if(lt(t,3.5),0," in graph
+    assert "fade=t=out" not in graph
+    assert command[command.index("-pix_fmt") + 1] == "yuv420p"
