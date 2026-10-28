@@ -87,9 +87,7 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                         {"prompt": ui.get_art_prompt(content_type, content_id)}
                     )
                 elif resource == "flow_prompt":
-                    self._send_json(
-                        {"prompt": ui.get_flow_prompt(content_type, content_id)}
-                    )
+                    self._send_json(ui.get_flow_prompt(content_type, content_id))
                 elif resource == "assets":
                     self._send_json({"items": ui.list_assets(content_type, content_id)})
                 else:
@@ -171,6 +169,14 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             and path_parts[4] == "artwork"
         ):
             self._handle_artwork_upload(path_parts[2], path_parts[3])
+            return
+        if (
+            len(path_parts) == 6
+            and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "shot"
+            and path_parts[5].isdigit()
+        ):
+            self._handle_artwork_upload("post", path_parts[3], shot=int(path_parts[5]))
             return
         if self.headers.get_content_type() != "application/json":
             self._send_json({"error": "Content-Type must be application/json."}, 415)
@@ -478,7 +484,7 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         self.send_error(404, "Not found")
 
 
-    def _handle_artwork_upload(self, content_type, content_id):
+    def _handle_artwork_upload(self, content_type, content_id, shot=None):
         media_type = self.headers.get_content_type()
         if media_type not in (
             "image/png", "image/jpeg", "image/webp", "video/mp4", "video/quicktime"
@@ -501,8 +507,11 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
             )
             return
         try:
-            result = ui.upload_artwork(
-                content_type, content_id, self.rfile.read(content_length)
+            data = self.rfile.read(content_length)
+            result = (
+                ui.save_story_shot(content_id, shot, data)
+                if shot is not None
+                else ui.upload_artwork(content_type, content_id, data)
             )
             self._send_json(result)
         except (KeyError, FileNotFoundError) as error:

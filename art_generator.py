@@ -576,6 +576,82 @@ _AMBIENCE = (
 )
 
 FLOW_CLIP_SECONDS = 8
+BUDDHA_LOOK = (
+    "a serene man of about forty from ancient India, with tightly curled dark "
+    "hair and the rounded crown (ushnisha), long earlobes, a calm gentle face, "
+    "and a simple saffron robe over one shoulder, barefoot"
+)
+BUDDHA_FORM = (
+    f"The Buddha appears in his traditional form: {BUDDHA_LOOK}; he is not a "
+    "shaved-head monk. Monks with him have shaved heads."
+)
+_STORY_LOOK = (
+    "Photorealistic, cinematic, natural soft light, the warm earthy colours of "
+    "ancient India about 2,500 years ago (clay houses, cotton cloth, oil lamps, "
+    "forests); no modern objects."
+)
+_NO_WORDS = (
+    "The video must contain no text, letters, captions, subtitles, signs, "
+    "logos, or watermarks drawn into the scene. No speech, no voice-over, no "
+    "music, no singing."
+)
+
+
+def reference_prompts(record):
+    """Prompts for one character reference sheet per person in a story
+    (the Buddha first), made once in Gemini and attached to every shot in
+    Flow as an ingredient so faces and clothes stay the same."""
+    people = [{"name": "The Buddha", "look": BUDDHA_LOOK}]
+    people += list(record.get("story_cast") or [])
+    return [
+        {
+            "name": person["name"],
+            "prompt": (
+                f"Character reference sheet for a film set in ancient India: "
+                f"{person['name']}, {person['look'].rstrip('.')}. Show the same person three "
+                "times side by side, full body: front view, three-quarter view, "
+                "and side view, standing naturally, on a plain light grey "
+                "background with soft even light. Photorealistic, consistent "
+                "face, hair, and clothes in all three views. No text, labels, "
+                "or watermarks."
+            ),
+        }
+        for person in people
+    ]
+
+
+def build_shot_prompt(record, number):
+    """The Google Flow prompt for one 8-second shot of a story video."""
+    shots = record.get("story_shots") or []
+    if not 1 <= number <= len(shots):
+        raise ArtGenerationError(f"This story has no shot {number}.")
+    shot = shots[number - 1]
+    names = ["The Buddha"] + [person["name"] for person in record.get("story_cast") or []]
+    action = shot["action"]
+    shown = [name for name in names if name.lower().replace("the ", "") in action.lower()]
+    setting = " ".join(_setting_lines(record))
+    parts = [
+        f"Shot {number} of {len(shots)} of one short film. One continuous "
+        f"{FLOW_CLIP_SECONDS}-second vertical 9:16 shot. {_STORY_LOOK}",
+        "Ingredients: attach the reference image of "
+        + (", ".join(shown) if shown else "each person in this shot")
+        + " and keep their faces, hair, and clothes exactly the same.",
+        f"Action (slow, calm, natural): {action}",
+        f"Camera: {(shot.get('camera') or 'one slow, steady push-in').rstrip('.')}. "
+        "No cuts, no shaking, no fast moves; keep the people in frame.",
+        f"Sound: natural ambience only: {(shot.get('sound') or 'soft wind and distant birds').rstrip('.')}.",
+        "Keep the middle and lower-middle of the frame readable for a "
+        "caption added later. " + _NO_WORDS,
+    ]
+    if "buddha" in action.lower():
+        parts.insert(2, BUDDHA_FORM)
+    if setting:
+        parts.append(setting)
+    parts.append(
+        "Avoid: faces or bodies changing between shots, extra limbs or "
+        "fingers, violence shown on screen, modern objects."
+    )
+    return "\n\n".join(parts)
 
 
 def _script_lines(script):
@@ -652,12 +728,7 @@ def build_flow_prompt(record):
         )
     if "buddha" in words:
         # Video tools often draw "the Buddha" as a shaved-head monk.
-        opening += (
-            " The Buddha appears in his traditional form: tightly curled dark hair "
-            "with the rounded crown (ushnisha), long earlobes, a serene face, and "
-            "a simple saffron robe over one shoulder; he is not a shaved-head monk. "
-            "Monks with him have shaved heads."
-        )
+        opening += " " + BUDDHA_FORM
     parts = [
         opening + look,
         motion,

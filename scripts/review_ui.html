@@ -313,6 +313,7 @@
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
           <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
+          <label id="life-scene-field" hidden>Story from the Buddha's life<select id="life-scene" name="life_scene"><option value="">Choose for me (not used recently)</option></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
@@ -404,9 +405,10 @@
     }
 
     const VIDEO_REEL = "video_reel";
-    // The format sent to the server: a video Reel is a One-image Reel.
+    const STORY_VIDEO = "story_video";
+    // The format sent to the server: video and story Reels are One-image Reels.
     function realFormat() {
-      return $("format").value === VIDEO_REEL ? "image_reel" : $("format").value;
+      return [VIDEO_REEL, STORY_VIDEO].includes($("format").value) ? "image_reel" : $("format").value;
     }
 
     function loadSelects() {
@@ -423,9 +425,17 @@
       options.brands.forEach((option) => addOption(brandSelect, option, "default"));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
       options.formats.forEach((option) => addOption(formatSelect, option, "image_reel"));
+      if ($("life-scene").options.length === 1) {
+        (options.life_scenes || []).forEach(([id, episode]) =>
+          $("life-scene").append(new Option(episode.length > 70 ? episode.slice(0, 67) + "…" : episode, id)));
+      }
       // A video Reel is a One-image Reel filmed in Google Flow instead of painted.
       const imageReel = [...formatSelect.options].find((option) => option.value === "image_reel");
-      if (imageReel) imageReel.after(new Option("Video Reel (Google Flow, ~10 s)", VIDEO_REEL));
+      if (imageReel) {
+        imageReel.after(new Option("Video Reel (Google Flow, ~10 s)", VIDEO_REEL));
+        // A Buddha story told in four Flow shots.
+        imageReel.nextSibling.after(new Option("Buddha Story video (Google Flow, ~30 s, 4 shots)", STORY_VIDEO));
+      }
       const subtypeError = $("subtype-error");
       subtypeError.textContent = options.subtype_error || "";
       subtypeError.hidden = !options.subtype_error;
@@ -503,6 +513,7 @@
 
     function updatePlatforms() {
       const format = state.options.formats.find((item) => item.id === realFormat());
+      $("life-scene-field").hidden = $("format").value !== STORY_VIDEO;
       const current = $("platform").value;
       const available = state.options.platforms.filter((item) =>
         !item.supported_format_ids.length || item.supported_format_ids.includes(format.id)
@@ -1417,7 +1428,115 @@
     const DESIGNED_SUBTYPES = ["mind_states", "numbered_list", "illustrated_metaphor", "parable_card"];
 
     // Google Flow: turn the post's still art into an 8-second video clip.
+    // Buddha story video: reference images, then four Flow shots to upload.
+    function storyVideoControls(message) {
+      const details = document.createElement("details");
+      details.open = true;
+      const summary = document.createElement("summary");
+      summary.textContent = "Buddha story video: 4 shots in Google Flow (~30 s)";
+      details.append(summary);
+      const intro = document.createElement("p");
+      intro.className = "message";
+      intro.textContent = "1. Make each character's reference image once in Gemini (save them; reuse the Buddha's for every story). "
+        + "2. For each shot: in Flow choose Ingredients to Video, Veo, 9:16, attach the reference images named in the prompt, paste the shot prompt, generate 8 seconds. "
+        + "3. Download each MP4 and drop it on its shot below. 4. When all 4 shots are in, render the Reel video: captions, music, and the closing card are added here.";
+      details.append(intro);
+      const body = document.createElement("div");
+      details.append(body);
+      const copyText = async (text, done) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          message.className = "message";
+          message.textContent = done;
+        } catch (error) {
+          message.className = "message";
+          message.textContent = "Copy failed; select the prompt text and press Cmd+C.";
+        }
+      };
+      const write = makeAction(state.record.story_shots ? "Rewrite story script" : "Write story script", async () => {
+        message.className = "message";
+        message.textContent = "Writing the 4-shot story… (about a minute)";
+        try {
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/video_script`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+          });
+          await refreshItems(state.selected);
+        } catch (error) {
+          message.className = "message error";
+          message.textContent = error.message;
+        }
+      }, "secondary");
+      details.append(write);
+      if (!state.record.story_shots) return details;
+      requestJson(contentUrl(state.selected, "flow_prompt")).then((result) => {
+        const refs = document.createElement("div");
+        refs.className = "field-name";
+        refs.textContent = "Character reference images (make once in Gemini)";
+        body.append(refs);
+        const refActions = document.createElement("div");
+        refActions.className = "inline-actions";
+        result.references.forEach((ref) => refActions.append(makeAction(`Copy: ${ref.name}`,
+          () => copyText(ref.prompt, `Copied the reference prompt for ${ref.name}. Paste it into Gemini.`), "secondary")));
+        body.append(refActions);
+        const approved = state.record.status === "Approved";
+        result.shots.forEach((prompt, index) => {
+          const number = index + 1;
+          const shot = state.record.story_shots[index];
+          const card = document.createElement("div");
+          card.className = "field";
+          const name = document.createElement("div");
+          name.className = "field-name";
+          const ready = (result.shots_ready || []).includes(number);
+          name.textContent = `Shot ${number}${ready ? " ✓ uploaded" : ""}`;
+          const what = document.createElement("div");
+          what.className = "field-value";
+          what.textContent = `${shot.action}\nCaption: "${shot.caption}"`;
+          const actions = document.createElement("div");
+          actions.className = "inline-actions";
+          actions.append(makeAction(`Copy shot ${number} prompt`,
+            () => copyText(prompt, `Copied shot ${number}. Paste it into Flow (Ingredients to Video, 9:16).`), "secondary"));
+          const zone = document.createElement("label");
+          zone.className = "drop-zone";
+          const zoneText = document.createElement("span");
+          zoneText.textContent = approved
+            ? (ready ? `Replace shot ${number}: drop an MP4 or choose a file` : `Drop shot ${number} MP4 here or choose a file`)
+            : "Approve this content before adding shots.";
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "video/mp4,video/quicktime,.mp4,.mov";
+          input.disabled = !approved;
+          zone.append(zoneText, input);
+          const send = async (file) => {
+            if (!file || !approved) return;
+            const type = file.type || (file.name.toLowerCase().endsWith(".mov") ? "video/quicktime" : "video/mp4");
+            message.className = "message";
+            message.textContent = `Uploading shot ${number}…`;
+            try {
+              await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/shot/${number}`, {
+                method: "POST", headers: { "Content-Type": type }, body: file
+              });
+              await refreshItems(state.selected);
+            } catch (error) {
+              message.className = "message error";
+              message.textContent = `Shot ${number} upload failed: ${error.message}`;
+            }
+          };
+          input.addEventListener("change", () => send(input.files[0]));
+          ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (event) => { event.preventDefault(); zone.classList.add("dragging"); }));
+          ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (event) => { event.preventDefault(); zone.classList.remove("dragging"); }));
+          zone.addEventListener("drop", (event) => send(event.dataTransfer.files[0]));
+          card.append(name, what, actions, zone);
+          body.append(card);
+        });
+      }).catch((error) => {
+        message.className = "message error";
+        message.textContent = `Could not load the shot prompts: ${error.message}`;
+      });
+      return details;
+    }
+
     function flowVideoControls(message) {
+      if (state.record.story_video) return storyVideoControls(message);
       if (state.record.format_id !== "image_reel" || !state.record.design_prompt
           || DESIGNED_SUBTYPES.includes(state.record.subtype)) return null;
       const details = document.createElement("details");
@@ -2660,7 +2779,8 @@
         caption_language: $("caption-language").value,
         hashtag_count: $("hashtag-count").value || null,
         format_id: realFormat(),
-        reel_kind: $("format").value === VIDEO_REEL ? "video" : "image",
+        reel_kind: { [VIDEO_REEL]: "video", [STORY_VIDEO]: "story" }[$("format").value] || "image",
+        life_scene: $("format").value === STORY_VIDEO ? ($("life-scene").value || null) : null,
         platform_id: $("platform").value,
         count: Number($("count").value),
         brief: $("brief").value.trim() || null

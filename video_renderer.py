@@ -534,6 +534,13 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
     record = load_post(post_id)
     if not is_image_reel(record):
         raise MediaRenderError("Only one-image Reels can be rendered as video.")
+    if record.get("story_video"):
+        # Several Flow shots joined into one story (story_video.py).
+        from story_video import render_story_video
+
+        output = reel_video_path(post_id)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return render_story_video(post_id, output)
     artwork = artwork_path(post_id)
     if artwork is None:
         raise MediaRenderError("Generate or add the artwork before the video.")

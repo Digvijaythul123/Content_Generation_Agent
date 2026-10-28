@@ -48,6 +48,7 @@ def generate_content(
     weather=None,
     hashtag_count=None,
     video=False,
+    life_scene=None,
 ):
     """Resolve configuration, generate a draft, and validate its content.
 
@@ -86,7 +87,7 @@ def generate_content(
             thinker_id=thinker_id,
             visual_style=visual_style,
         )
-    life_scene = _pick_life_scene(request)
+    life_scene = _pick_life_scene(request, life_scene)
     chosen_scenery = _pick_setting(request, "sceneries", scenery)
     # A full moon post needs the moon in the sky.
     if (weather in (None, "auto")) and brief and "full moon" in brief.lower():
@@ -158,9 +159,9 @@ def generate_content(
 LIFE_STORY_MODE = "life_story"
 
 
-def _pick_life_scene(request):
-    """A moment from the thinker's life for the Life story mode, one the
-    recent posts have not used."""
+def _pick_life_scene(request, chosen=None):
+    """A moment from the thinker's life for the Life story mode: the chosen
+    one, or one the recent posts have not used."""
     if request.subtype != LIFE_STORY_MODE or not request.thinker_id:
         return None
     from config_loader import load_profile_thinkers
@@ -172,6 +173,8 @@ def _pick_life_scene(request):
     scenes = [scene["id"] for scene in (thinker or {}).get("life_scenes", [])]
     if not scenes:
         return None
+    if chosen in scenes:
+        return chosen
     recent = []
     paths = sorted(_POSTS_DIRECTORY.glob("post_*.json"), key=lambda path: path.stat().st_mtime)
     for path in reversed(paths):
