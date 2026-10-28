@@ -1744,7 +1744,7 @@ def test_flow_story_script_has_exact_sourced_voiceover_and_feeds_one_prompt(monk
               "design_prompt": "A forest path, a bandit running, the Buddha walking calmly."}
     service = Mock()
     service.generate_reel.return_value = (
-        "Scene 1: A fierce bandit runs down a forest path, sword raised.\n"
+        "Scene 1: A fierce bandit runs down a forest path, sword raised, 0-3 s\n"
         'Voiceover 1: "A bandit chased the Buddha."\n'
         "Scene 2: The Buddha walks calmly ahead; the bandit cannot catch him.\n"
         'Voiceover 2: "He ran hard, but could not catch him."\n'

@@ -1021,7 +1021,9 @@ def write_flow_story(record, ai_service=None):
     for label in ("Scene 1", "Voiceover 1", "Scene 2", "Voiceover 2", "Scene 3", "Voiceover 3", "Music"):
         match = re.search(rf"^\W*{label}\W*[:\-]\s*(.+)$", reply, re.IGNORECASE | re.MULTILINE)
         if match:
-            found[label] = match.group(1).strip().strip("*").strip()
+            # Drop a repeated timing the model may add ("..., 0-3 s").
+            value = re.sub(r"[,;\s]*\(?\d+\s*-\s*\d+\s*s\)?\.?\s*$", "", match.group(1))
+            found[label] = value.strip().strip("*").strip()
     if not all(f"Scene {n}" in found and f"Voiceover {n}" in found for n, _ in FLOW_STORY_BEATS):
         raise AIServiceError("The model did not return a usable story script.")
     spoken = []
@@ -1031,7 +1033,7 @@ def write_flow_story(record, ai_service=None):
     if sum(len(line.split()) for line in spoken) > FLOW_STORY_MAX_WORDS + 6:
         raise AIServiceError("The voiceover is too long for 10 seconds; write it again.")
     lines = [
-        f"Scene {number} ({span}): {found[f'Scene {number}']} Narrator: \"{spoken[index]}\""
+        f"Scene {number} ({span}): {found[f'Scene {number}'].rstrip('.')}. Narrator: \"{spoken[index]}\""
         for index, (number, span) in enumerate(FLOW_STORY_BEATS)
     ]
     lines.append(f"Narrator: {FLOW_NARRATOR}.")

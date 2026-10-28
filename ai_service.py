@@ -13,7 +13,9 @@ from app_settings import (
 # from Google AI Studio) and falls back to Ollama when Gemini's daily limit
 # is reached or it cannot be reached. TEXT_PROVIDER=ollama (the default)
 # uses only Ollama (MODEL_ENDPOINT, MODEL_NAME).
-DEFAULT_GEMINI_TEXT_MODEL = "gemini-3.5-flash,gemini-3.6-flash,gemini-flash-latest"
+DEFAULT_GEMINI_TEXT_MODEL = (
+    "gemini-3.5-flash,gemini-3.6-flash,gemini-flash-latest,gemini-3.1-flash-lite"
+)
 _GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # Waits before retrying a busy Gemini model, then the next model is tried.
