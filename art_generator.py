@@ -596,6 +596,21 @@ def is_flow_ready(record):
     return art_aspect_ratio(record) == "9:16" and not is_designed(record)
 
 
+# Scene sentences asking for a close-up or a push toward a face: the clip
+# then ends with the head filling the frame, under the words on top.
+_CLOSE_SHOT = re.compile(
+    r"[^.]*\b(close-?up|push(?:es|ing)? (?:in )?(?:toward|towards|into|in on) (?:his|her|the) face|"
+    r"zoom(?:s|ing)? (?:in|into|toward)|extreme close)[^.]*\.\s*",
+    re.IGNORECASE,
+)
+_FRAMING = (
+    "Framing for the whole 10 seconds: keep it a wide or medium shot; the main "
+    "figure's head stays below the middle of the frame and the upper third "
+    "stays open sky or mist (the words sit there). Never zoom in to a close-up "
+    "of a face."
+)
+
+
 def build_flow_prompt(record):
     """A Google Flow (Veo) prompt that brings the post's still art to life
     as one 10-second vertical shot, to use with the art as its first frame."""
@@ -608,6 +623,7 @@ def build_flow_prompt(record):
             "posts carry their words in the art and stay as images."
         )
     scene = _TEXT_SPACE_PATTERN.sub("", _without_blocked_names(description, record))
+    scene = " ".join(_CLOSE_SHOT.sub(" ", scene).split())
     setting = " ".join(_setting_lines(record))
     words = f"{scene} {setting}".lower()
     sounds = [sound for keys, sound in _AMBIENCE if any(key in words for key in keys)]
@@ -633,7 +649,8 @@ def build_flow_prompt(record):
             if script.get(label)
         )
         motion = f"Action, beat by beat (slow, calm, natural): {beats}"
-        camera = f"Camera: {script.get('Camera') or 'one slow, steady push-in.'} No cuts, no shaking, no fast moves."
+        move = _CLOSE_SHOT.sub("", script.get("Camera") or "").strip() or "A slow, gentle sideways drift."
+        camera = f"Camera: {move} No cuts, no shaking, no fast moves. {_FRAMING}"
         sound = f"Sound: natural ambience only: {(script.get('Sound') or sound).rstrip('.')}. No speech, no voice-over, no music, no singing."
     else:
         motion = (
@@ -643,8 +660,8 @@ def build_flow_prompt(record):
             "smoke, and light move softly; weather in the image keeps moving."
         )
         camera = (
-            "Camera: one slow, steady push-in toward the main figure. No cuts, no "
-            "shaking, no fast moves, no zooming out."
+            "Camera: a very slight, slow push-in or a gentle sideways drift. No "
+            f"cuts, no shaking, no fast moves, no zooming out. {_FRAMING}"
         )
         sound = (
             f"Sound: natural ambience only: {sound}. No speech, no voice-over, no "

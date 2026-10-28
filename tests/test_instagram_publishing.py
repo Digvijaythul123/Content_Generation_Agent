@@ -1689,6 +1689,23 @@ def test_flow_prompt_without_still_art_is_text_to_video(monkeypatch):
     assert "attached image" not in prompt and "cinematic shot" in prompt
 
 
+def test_flow_prompt_drops_face_close_ups_and_keeps_the_text_space(monkeypatch):
+    import art_generator
+
+    monkeypatch.setattr(art_generator, "visual_style_for", lambda record: None)
+    monkeypatch.setattr(art_generator, "artwork_path", lambda post_id: None)
+    prompt = art_generator.build_flow_prompt({
+        "id": "post_999", "format_id": "image_reel", "video_reel": True,
+        "design_prompt": "Subject: The Buddha meditating. Shot: A slow camera push toward "
+                         "his face, close-up. Lighting: soft morning light.",
+        "video_script": "Camera: A slow zoom in to his face.",
+    })
+    scene = prompt.split("Scene, for reference: ")[1]
+    assert scene.startswith("Subject: The Buddha meditating. Lighting: soft morning light.")
+    assert "zoom in to his face" not in prompt and "sideways drift" in prompt
+    assert "head stays below the middle of the frame" in prompt
+
+
 def test_video_script_is_timed_and_feeds_the_flow_prompt(monkeypatch):
     import art_generator
     from content_agent import write_video_script

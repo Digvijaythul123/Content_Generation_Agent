@@ -690,8 +690,10 @@ class ContentAgent:
             "walking slowly, pouring water, offering food, lighting a lamp, "
             "breathing in meditation, leaves falling, rain on a pond, mist "
             "drifting. Name what moves. Keep the Buddha calm and still in "
-            "body; no running, fighting, crowds, or sudden action. No words, "
-            "letters, or signs anywhere in the scene.\n"
+            "body; no running, fighting, crowds, or sudden action. Frame it as a "
+            "wide or medium shot with the figure in the lower half; never a "
+            "close-up or a push toward a face (the words sit in the upper "
+            "third). No words, letters, or signs anywhere in the scene.\n"
         )
 
     def _life_scene_reminder(self):
@@ -799,9 +801,10 @@ def write_video_script(record, ai_service=None):
         "Opening: what we see and what moves, 0-3 s (one sentence)\n"
         "Middle: what changes, 3-7 s (one sentence)\n"
         "Ending: a calm ending that could loop back, 7-10 s (one sentence)\n"
-        "Camera: one slow camera move that keeps the whole figure in frame, "
-        "for example a gentle push-in or a slow drift sideways; never a close "
-        "zoom on a face (one short sentence)\n"
+        "Camera: one slow camera move that keeps the whole figure in frame "
+        "and the head below the middle of the frame, for example a slow "
+        "sideways drift or a very slight push; never a close-up or a zoom "
+        "toward a face (one short sentence)\n"
         "Sound: two or three natural sounds, no speech or music\n"
     )
     reply = (ai_service or AIService()).generate_reel(prompt)
