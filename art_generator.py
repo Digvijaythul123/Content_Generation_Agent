@@ -562,6 +562,73 @@ def build_art_prompt(record, art_style=None):
     return "\n\n".join(parts)
 
 
+# Natural sounds for a Flow (Veo) clip, picked from words in its scene.
+_AMBIENCE = (
+    (("rain", "monsoon", "storm"), "steady soft rain"),
+    (("snow",), "hushed winter quiet with a faint wind"),
+    (("river", "stream", "waterfall", "lake", "sea", "ocean", "shore", "waves"), "gentle flowing water"),
+    (("forest", "grove", "jungle", "bamboo", "tree"), "leaves rustling and distant birds"),
+    (("temple", "monastery", "stupa", "shrine", "bell"), "a distant temple bell"),
+    (("night", "moon", "stars", "dusk"), "crickets and a calm night breeze"),
+    (("village", "market", "city", "road"), "quiet distant village sounds"),
+    (("cave",), "soft echo and dripping water"),
+    (("fire", "lamp", "candle"), "a softly crackling flame"),
+)
+
+FLOW_CLIP_SECONDS = 8
+
+
+def is_flow_ready(record):
+    """True for Reels whose art can become a Flow video: the words are added
+    on top later, so the clip itself must stay wordless. Illustrated posts
+    carry their words in the art, which video tools would warp."""
+    return art_aspect_ratio(record) == "9:16" and not is_designed(record)
+
+
+def build_flow_prompt(record):
+    """A Google Flow (Veo) prompt that brings the post's still art to life
+    as one 8-second vertical shot, to use with the art as its first frame."""
+    description = str(record.get("design_prompt") or "").strip()
+    if not description:
+        raise ArtGenerationError("The post has no design prompt to film from.")
+    if not is_flow_ready(record):
+        raise ArtGenerationError(
+            "Video clips are for Reels with words added on top; illustrated "
+            "posts carry their words in the art and stay as images."
+        )
+    scene = _TEXT_SPACE_PATTERN.sub("", _without_blocked_names(description, record))
+    setting = " ".join(_setting_lines(record))
+    words = f"{scene} {setting}".lower()
+    sounds = [sound for keys, sound in _AMBIENCE if any(key in words for key in keys)]
+    sound = ", ".join(sounds[:2]) or "a soft breeze and distant birds"
+    style = visual_style_for(record)
+    look = f" Keep the look: {' '.join(style['recipe'].split())}" if style else ""
+    parts = [
+        f"One continuous {FLOW_CLIP_SECONDS}-second vertical 9:16 shot that starts exactly "
+        "on the attached image (use it as the first frame). Keep every person, face, "
+        "robe, colour, and the light the same as in the image." + look,
+        "Motion: slow, calm, and natural. The main figure stays in place and keeps "
+        "doing what the image shows (breathing, a slight turn of the head, a hand "
+        "moving gently if they are giving or teaching). Robes, leaves, water, "
+        "smoke, and light move softly; weather in the image keeps moving.",
+        "Camera: one slow, steady push-in toward the main figure. No cuts, no "
+        "shaking, no fast moves, no zooming out.",
+        f"Sound: natural ambience only: {sound}. No speech, no voice-over, no "
+        "music, no singing.",
+        "Keep the open sky and empty areas of the image calm and uncluttered "
+        "(words are added there later). The video must contain no text, "
+        "letters, captions, subtitles, "
+        "signs, logos, or watermarks drawn into the scene.",
+        "Avoid: new people appearing, faces or bodies changing shape, extra "
+        "limbs or fingers, the Buddha laughing or making dramatic gestures, "
+        "modern objects.",
+        f"Scene, for reference: {scene}",
+    ]
+    if setting:
+        parts.append(setting)
+    return "\n\n".join(parts)
+
+
 def detect_video_type(data):
     """Recognise MP4 and QuickTime clips by their 'ftyp' box."""
     if data[4:8] != b"ftyp":

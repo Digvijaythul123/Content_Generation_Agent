@@ -48,6 +48,8 @@ from art_generator import (
     artwork_path,
     art_service_problem,
     build_art_prompt,
+    build_flow_prompt,
+    is_flow_ready,
     generate_post_artwork,
     is_designed,
     save_post_artwork,
@@ -974,6 +976,13 @@ def get_art_prompt(content_type, content_id):
     record = _artwork_record(content_type, content_id)
     brand = _post_brand(record)
     return build_art_prompt(record, brand.template.art_style if brand else None)
+
+
+def get_flow_prompt(content_type, content_id):
+    """Return the Google Flow prompt that turns the post's art into an
+    8-second video clip (paste it with the art as the first frame)."""
+    record = _artwork_record(content_type, content_id)
+    return build_flow_prompt(record)
 
 
 def upload_artwork(content_type, content_id, image_bytes):

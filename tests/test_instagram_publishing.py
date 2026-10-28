@@ -1625,3 +1625,36 @@ def test_wipe_reveal_slides_the_strip_away():
     assert "overlay=x='if(lt(t,3.5),0," in graph
     assert "fade=t=out" not in graph
     assert command[command.index("-pix_fmt") + 1] == "yuv420p"
+
+
+def test_flow_prompt_films_the_art_without_words(monkeypatch):
+    import art_generator
+
+    monkeypatch.setattr(art_generator, "visual_style_for", lambda record: None)
+    record = {
+        "format_id": "image_reel",
+        "design_prompt": "Subject: a monk by a river in the rain at dusk.",
+    }
+    prompt = art_generator.build_flow_prompt(record)
+    assert "8-second vertical 9:16" in prompt and "first frame" in prompt
+    assert "steady soft rain" in prompt and "gentle flowing water" in prompt
+    assert "No speech" in prompt and "no text" in prompt
+    monkeypatch.setattr(art_generator, "is_designed", lambda record: True)
+    with pytest.raises(art_generator.ArtGenerationError):
+        art_generator.build_flow_prompt(record)
+
+
+def test_video_clip_keeps_its_sound_under_the_music():
+    from video_renderer import build_ffmpeg_command
+
+    command = build_ffmpeg_command(
+        "ffmpeg", "clip.mp4", [], "out.mp4", seconds=8, music="calm.mp3",
+        motion_clip=True, clip_sound=True,
+    )
+    graph = command[command.index("-filter_complex") + 1]
+    assert "[0:a]atrim=0:8" in graph and "amix=inputs=2" in graph
+    silent = build_ffmpeg_command(
+        "ffmpeg", "clip.mp4", [], "out.mp4", seconds=8, music="calm.mp3",
+        motion_clip=True,
+    )
+    assert "[0:a]" not in silent[silent.index("-filter_complex") + 1]

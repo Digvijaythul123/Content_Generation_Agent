@@ -1404,6 +1404,58 @@
       return box;
     }
 
+    // Story modes whose art carries its own words (illustrated designs).
+    const DESIGNED_SUBTYPES = ["mind_states", "numbered_list", "illustrated_metaphor", "parable_card"];
+
+    // Google Flow: turn the post's still art into an 8-second video clip.
+    function flowVideoControls(message) {
+      if (state.record.format_id !== "image_reel" || !state.record.design_prompt
+          || DESIGNED_SUBTYPES.includes(state.record.subtype)) return null;
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Make it a video Reel (Google Flow, free daily credits)";
+      const steps = document.createElement("p");
+      steps.className = "message";
+      steps.textContent = "1. Make and add the still art first (above). "
+        + "2. In Google Flow choose Frames to Video, Veo, 9:16 portrait, and add the still art as the first frame. "
+        + "3. Paste this prompt and generate an 8-second clip. "
+        + "4. Download the MP4 and drop it below in place of the image. "
+        + "Then render the Reel video: the words, music (with the clip's own sound under it), and closing card are added here, about 10 seconds in all.";
+      const text = document.createElement("textarea");
+      text.readOnly = true;
+      text.rows = 7;
+      text.className = "art-prompt";
+      text.value = "Loading…";
+      const load = async () => {
+        const result = await requestJson(contentUrl(state.selected, "flow_prompt"));
+        text.value = result.prompt;
+        text.dataset.loaded = "true";
+        return result.prompt;
+      };
+      details.addEventListener("toggle", async () => {
+        if (!details.open || text.dataset.loaded) return;
+        try {
+          await load();
+        } catch (error) {
+          text.value = `Could not load the prompt: ${error.message}`;
+        }
+      });
+      const copy = makeAction("Copy Flow video prompt", async () => {
+        details.open = true;
+        try {
+          await navigator.clipboard.writeText(await load());
+          message.className = "message";
+          message.textContent = "Copied. In Flow use Frames to Video with the still art as the first frame, then drop the MP4 below.";
+        } catch (error) {
+          text.select();
+          message.className = "message";
+          message.textContent = "Select the Flow prompt and press Cmd+C to copy it.";
+        }
+      }, "secondary");
+      details.append(summary, steps, copy, text);
+      return details;
+    }
+
     function manualArtworkControls() {
       const box = document.createElement("div");
       box.className = "manual-art";
@@ -1445,6 +1497,7 @@
         }
       }, "secondary");
       promptDetails.append(summary, promptText);
+      const flow = flowVideoControls(message);
 
       const approved = state.record.status === "Approved";
       const zone = document.createElement("label");
@@ -1564,7 +1617,7 @@
       const actions = document.createElement("div");
       actions.className = "inline-actions";
       actions.append(copy);
-      box.append(actions, promptDetails, picker, zone, message);
+      box.append(actions, promptDetails, ...(flow ? [flow] : []), picker, zone, message);
       return box;
     }
 
@@ -1842,7 +1895,7 @@
       box.append(effectLabel);
       if (state.record.design_prompt && state.record.subtype
           && (state.options.reveal_styles || []).length
-          && ["mind_states", "numbered_list", "illustrated_metaphor", "parable_card"].includes(state.record.subtype)) {
+          && DESIGNED_SUBTYPES.includes(state.record.subtype)) {
         // Illustrated Reels: how the answer drawn in the art stays hidden
         // for the first seconds.
         const revealLabel = document.createElement("label");

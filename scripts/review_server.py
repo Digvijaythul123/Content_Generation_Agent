@@ -72,7 +72,7 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[0:2] == ["api", "content"]
-            and path_parts[4] in ("pipeline", "assets", "history", "art_prompt")
+            and path_parts[4] in ("pipeline", "assets", "history", "art_prompt", "flow_prompt")
         ):
             content_type, content_id, resource = (
                 path_parts[2],
@@ -85,6 +85,10 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
                 elif resource == "art_prompt":
                     self._send_json(
                         {"prompt": ui.get_art_prompt(content_type, content_id)}
+                    )
+                elif resource == "flow_prompt":
+                    self._send_json(
+                        {"prompt": ui.get_flow_prompt(content_type, content_id)}
                     )
                 elif resource == "assets":
                     self._send_json({"items": ui.list_assets(content_type, content_id)})

@@ -1,3 +1,4 @@
+import re
 import random
 import subprocess
 import tempfile
@@ -30,6 +31,28 @@ FRAME_RATE = 30
 ZOOM_AMOUNT = 0.05
 # Illustrated designs carry words near their edges, so push in gently.
 DESIGNED_ZOOM_AMOUNT = 0.025
+# Video clips (Google Flow / Veo) keep their own sound under the music.
+MUSIC_UNDER_CLIP = 0.7
+CLIP_SOUND_LEVEL = 0.6
+# A clip shorter than the Reel plays once rather than jumping back to its
+# start; clips shorter than this still loop.
+MIN_CLIP_SECONDS = 5
+
+
+def clip_info(path):
+    """(duration in seconds or None, has sound) for a video clip."""
+    result = subprocess.run(
+        [ffmpeg_executable(), "-hide_banner", "-i", str(path)],
+        capture_output=True, text=True,
+    )
+    found = re.search(r"Duration: (\d+):(\d+):([\d.]+)", result.stderr)
+    duration = None
+    if found:
+        hours, minutes, secs = found.groups()
+        duration = int(hours) * 3600 + int(minutes) * 60 + float(secs)
+    return duration, bool(re.search(r"Stream #\S+.*: Audio:", result.stderr))
+
+
 # How long the "wipe" reveal takes to slide its strip away.
 WIPE_SECONDS = 1.1
 TEXT_FADE_SECONDS = 0.5
@@ -342,6 +365,7 @@ def build_ffmpeg_command(
     effects=(),
     zoom=ZOOM_AMOUNT,
     end_card=None,
+    clip_sound=False,
 ):
     """Return the ffmpeg arguments for a Reel.
 
@@ -453,19 +477,40 @@ def build_ffmpeg_command(
             f"offset={round(seconds - END_CARD_FADE, 2)}[out]"
         )
     audio = ["-an"]
+    fades = (
+        "afade=t=in:st=0:d=0.5,"
+        f"afade=t=out:st={max(total - 1.5, 0)}:d=1.5"
+    )
+    # The clip's own sound (wind, bells, water from a video tool), padded
+    # with silence under the end card.
+    ambience = (
+        f"[0:a]atrim=0:{seconds},asetpts=PTS-STARTPTS,"
+        f"aresample=44100,apad=whole_dur={total}"
+        if motion_clip and clip_sound
+        else ""
+    )
     if music is not None:
         # Loop short tracks, then fade in and out so the Reel loops cleanly.
         inputs += ["-stream_loop", "-1", "-i", str(music)]
-        # Skip a silent intro, even out loudness for phone speakers, then
-        # fade in and out so the Reel loops cleanly.
-        filters.append(
+        # Skip a silent intro and even out loudness for phone speakers.
+        track = (
             f"[{len(text_layers) + len(effects) + (2 if end_card else 1)}:a]"
             "silenceremove=start_periods=1:start_threshold=-45dB,"
             f"atrim=0:{total},asetpts=PTS-STARTPTS,"
-            "loudnorm=I=-16:TP=-1.5:LRA=11,"
-            "afade=t=in:st=0:d=0.5,"
-            f"afade=t=out:st={max(total - 1.5, 0)}:d=1.5[aout]"
+            "loudnorm=I=-16:TP=-1.5:LRA=11"
         )
+        if ambience:
+            # The music leads; the clip's sound sits just under it.
+            filters.append(f"{track},aresample=44100,volume={MUSIC_UNDER_CLIP}[mus]")
+            filters.append(f"{ambience},volume={CLIP_SOUND_LEVEL}[amb]")
+            filters.append(
+                f"[mus][amb]amix=inputs=2:duration=first:normalize=0,{fades}[aout]"
+            )
+        else:
+            filters.append(f"{track},{fades}[aout]")
+        audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k", "-ar", "44100"]
+    elif ambience:
+        filters.append(f"{ambience},loudnorm=I=-16:TP=-1.5:LRA=11,{fades}[aout]")
         audio = ["-map", "[aout]", "-c:a", "aac", "-b:a", "192k", "-ar", "44100"]
     return [
         ffmpeg, "-y", "-loglevel", "error",
@@ -567,6 +612,12 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 Path(folder) / "end_card.jpg",
                 IMAGE_REEL_SIZE,
             )
+        clip_sound = False
+        if motion_clip:
+            length, has_sound = clip_info(background)
+            clip_sound = has_sound and record.get("clip_sound", True)
+            if length and MIN_CLIP_SECONDS <= length < seconds:
+                seconds = round(length - 0.05, 2)
         command = build_ffmpeg_command(
             ffmpeg_executable(),
             background,
@@ -575,6 +626,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             seconds,
             music,
             motion_clip=motion_clip,
+            clip_sound=clip_sound,
             # Crop the bottom strip where tools put watermarks.
             clip_zoom=1.06,
             effects=(
