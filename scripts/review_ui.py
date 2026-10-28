@@ -22,7 +22,7 @@ from config_loader import (
     load_profile_visual_styles,
     load_profile_weathers,
 )
-from content_agent import simplify_copy
+from content_agent import simplify_copy, write_video_script
 from content_models import (
     THREADS_MAX_CHARACTERS,
     ContentValidationError,
@@ -1377,6 +1377,23 @@ def simplify_post_text(content_id, fresh=False):
     return suggestion
 
 
+def make_video_script(content_id):
+    """Write (or rewrite) the beat-by-beat Google Flow script for a Reel and
+    mark it as a video Reel."""
+    record = load_post(content_id)
+    if record.get("status") == "Published":
+        raise ValueError("This post is published; its video plan cannot be changed.")
+    if not is_flow_ready(record):
+        raise ValueError(
+            "Only One-image Reels with words added on top can be video Reels."
+        )
+    record["video_script"] = write_video_script(record)
+    record["video_reel"] = True
+    save_post(content_id, record)
+    _append_history("post", content_id, "video_script_written")
+    return record
+
+
 _SERIES_LINE = re.compile(r"^Day \d+ of \d+ · [^\n]*\n+")
 
 
@@ -2451,6 +2468,10 @@ def generate_and_save(payload):
         data["life_scene"] = result.request.life_scene
     if video:
         data["video_reel"] = True
+        try:
+            data["video_script"] = write_video_script(data)
+        except AIServiceError:
+            pass  # the Flow prompt falls back to calm, general motion
     if result.request.scenery:
         data["scenery"] = result.request.scenery
     if result.request.weather:

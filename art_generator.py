@@ -578,6 +578,17 @@ _AMBIENCE = (
 FLOW_CLIP_SECONDS = 8
 
 
+def _script_lines(script):
+    """{'Opening': ..., 'Camera': ...} from a saved video script; the
+    on-screen text notes are dropped (words are added after filming)."""
+    lines = {}
+    for line in str(script or "").splitlines():
+        match = re.match(r"\s*(Opening|Middle|Ending|Camera|Sound)\b[^:]*:\s*(.+)", line)
+        if match:
+            lines[match.group(1)] = re.split(r"\s+On screen", match.group(2))[0].strip()
+    return lines
+
+
 def is_flow_ready(record):
     """True for Reels whose art can become a Flow video: the words are added
     on top later, so the clip itself must stay wordless. Illustrated posts
@@ -614,17 +625,37 @@ def build_flow_prompt(record):
         "the scene below, photorealistic, softly lit, with the main figure large and "
         "clear in the lower half of the frame."
     )
+    script = _script_lines(record.get("video_script"))
+    if script:
+        beats = " ".join(
+            f"{span}: {script[label]}" for label, span in
+            (("Opening", "0-3 s"), ("Middle", "3-6 s"), ("Ending", "6-8 s"))
+            if script.get(label)
+        )
+        motion = f"Action, beat by beat (slow, calm, natural): {beats}"
+        camera = f"Camera: {script.get('Camera') or 'one slow, steady push-in.'} No cuts, no shaking, no fast moves."
+        sound = f"Sound: natural ambience only: {(script.get('Sound') or sound).rstrip('.')}. No speech, no voice-over, no music, no singing."
+    else:
+        motion = (
+            "Motion: slow, calm, and natural. The main figure stays in place and keeps "
+            "doing what the image shows (breathing, a slight turn of the head, a hand "
+            "moving gently if they are giving or teaching). Robes, leaves, water, "
+            "smoke, and light move softly; weather in the image keeps moving."
+        )
+        camera = (
+            "Camera: one slow, steady push-in toward the main figure. No cuts, no "
+            "shaking, no fast moves, no zooming out."
+        )
+        sound = (
+            f"Sound: natural ambience only: {sound}. No speech, no voice-over, no "
+            "music, no singing."
+        )
     parts = [
         opening + look,
-        "Motion: slow, calm, and natural. The main figure stays in place and keeps "
-        "doing what the image shows (breathing, a slight turn of the head, a hand "
-        "moving gently if they are giving or teaching). Robes, leaves, water, "
-        "smoke, and light move softly; weather in the image keeps moving.",
-        "Camera: one slow, steady push-in toward the main figure. No cuts, no "
-        "shaking, no fast moves, no zooming out.",
-        f"Sound: natural ambience only: {sound}. No speech, no voice-over, no "
-        "music, no singing.",
-        "Keep the open sky and empty areas of the image calm and uncluttered "
+        motion,
+        camera,
+        sound,
+        "Keep the open sky and empty areas of the frame calm and uncluttered "
         "(words are added there later). The video must contain no text, "
         "letters, captions, subtitles, "
         "signs, logos, or watermarks drawn into the scene.",

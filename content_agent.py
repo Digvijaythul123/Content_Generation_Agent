@@ -1,4 +1,4 @@
-from ai_service import AIService
+from ai_service import AIService, AIServiceError
 from config_loader import (
     load_comedy_config,
     load_focus_thinkers,
@@ -737,6 +737,70 @@ class ContentAgent:
             "caption.\n\n" + caption
         )
         return self.ai_service.generate_reel(prompt).strip()
+
+
+VIDEO_SCRIPT_BEATS = (
+    ("Opening", "0-3 s"),
+    ("Middle", "3-6 s"),
+    ("Ending", "6-8 s"),
+)
+
+
+def _plain(text):
+    return re.sub(r"\*\*(.+?)\*\*", r"\1", str(text or "")).strip()
+
+
+def write_video_script(record, ai_service=None):
+    """Plan an 8-second Google Flow clip for a video Reel, beat by beat.
+
+    Returns the script as labelled lines (shown on the Content tab and used
+    for the Flow prompt). The words on screen are timed by the renderer, so
+    the model plans only what is seen and heard.
+    """
+    hook, payoff = _plain(record.get("main_point")), _plain(record.get("supporting_copy"))
+    prompt = (
+        "Plan one continuous 8-second vertical video shot for an Instagram "
+        "Reel about a Buddhist teaching. It will be made with Google Veo, "
+        "so describe only what the camera sees and hears.\n\n"
+        f"Hook line on screen from 0 s: {hook}\n"
+        f"Payoff line on screen from 3.5 s: {payoff}\n"
+        f"Scene: {record.get('design_prompt', '')}\n\n"
+        "Rules: one shot, no cuts. Gentle, natural movement only, and say "
+        "exactly what moves (a hand, a lamp flame, robes, water, leaves, "
+        "mist, slow footsteps). The Buddha, if present, stays calm and "
+        "dignified: no big gestures, no laughing. The movement should echo "
+        "the lines (for example, the payoff moment arrives as a lamp is lit "
+        "or a hand opens). No words, letters, or signs in the scene. No "
+        "speech or music.\n\n"
+        "Reply with exactly these five lines and nothing else:\n"
+        "Opening: what we see and what moves, 0-3 s (one sentence)\n"
+        "Middle: what changes, 3-6 s (one sentence)\n"
+        "Ending: a calm ending that could loop back, 6-8 s (one sentence)\n"
+        "Camera: one slow camera move that keeps the whole figure in frame, "
+        "for example a gentle push-in or a slow drift sideways; never a close "
+        "zoom on a face (one short sentence)\n"
+        "Sound: two or three natural sounds, no speech or music\n"
+    )
+    reply = (ai_service or AIService()).generate_reel(prompt)
+    found = {}
+    for label in ("Opening", "Middle", "Ending", "Camera", "Sound"):
+        match = re.search(rf"^\W*{label}\W*[:\-]\s*(.+)$", reply, re.IGNORECASE | re.MULTILINE)
+        if match:
+            found[label] = match.group(1).strip().strip("*").strip()
+    if not all(label in found for label, _ in VIDEO_SCRIPT_BEATS):
+        raise AIServiceError("The model did not return a usable video script.")
+    cta = _plain(record.get("cta"))
+    lines = [
+        f"{label} ({span}): {found[label]}"
+        + (f" On screen: \"{hook}\"" if label == "Opening" and hook else "")
+        + (f" On screen from 3.5 s: \"{payoff}\"" if label == "Middle" and payoff else "")
+        for label, span in VIDEO_SCRIPT_BEATS
+    ]
+    if cta:
+        lines.append(f"Closing card (8-10 s): \"{cta}\"")
+    lines.append(f"Camera: {found.get('Camera') or 'One slow, steady push-in.'}")
+    lines.append(f"Sound: {found.get('Sound') or 'Soft natural ambience.'}")
+    return "\n".join(lines)
 
 
 def _short_name(thinker):

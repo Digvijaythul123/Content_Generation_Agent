@@ -313,7 +313,6 @@
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
           <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
-          <label id="reel-kind-field" title="Video: the app writes a Google Flow prompt instead of an art prompt; the 8-second clip gets the words, music, and closing card here (about 10 seconds).">Reel type<select id="reel-kind" name="reel_kind"><option value="image">Image Reel (still art)</option><option value="video">Video Reel (Google Flow, ~10 s)</option></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
@@ -404,6 +403,12 @@
       select.append(element);
     }
 
+    const VIDEO_REEL = "video_reel";
+    // The format sent to the server: a video Reel is a One-image Reel.
+    function realFormat() {
+      return $("format").value === VIDEO_REEL ? "image_reel" : $("format").value;
+    }
+
     function loadSelects() {
       const options = state.options;
       const brandSelect = $("brand");
@@ -418,6 +423,9 @@
       options.brands.forEach((option) => addOption(brandSelect, option, "default"));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
       options.formats.forEach((option) => addOption(formatSelect, option, "image_reel"));
+      // A video Reel is a One-image Reel filmed in Google Flow instead of painted.
+      const imageReel = [...formatSelect.options].find((option) => option.value === "image_reel");
+      if (imageReel) imageReel.after(new Option("Video Reel (Google Flow, ~10 s)", VIDEO_REEL));
       const subtypeError = $("subtype-error");
       subtypeError.textContent = options.subtype_error || "";
       subtypeError.hidden = !options.subtype_error;
@@ -486,7 +494,7 @@
       $("profile").value = hasPrevious
         ? previous
         : (brand?.default_profile_id || state.options.profiles[0]?.id || "");
-      const format = state.options.formats.find((item) => item.id === $("format").value);
+      const format = state.options.formats.find((item) => item.id === realFormat());
       if (brand && format && format.id === brand.default_format_id && !hasPrevious) {
         $("profile").value = brand.default_profile_id;
       }
@@ -494,8 +502,7 @@
     }
 
     function updatePlatforms() {
-      const format = state.options.formats.find((item) => item.id === $("format").value);
-      $("reel-kind-field").hidden = $("format").value !== "image_reel";
+      const format = state.options.formats.find((item) => item.id === realFormat());
       const current = $("platform").value;
       const available = state.options.platforms.filter((item) =>
         !item.supported_format_ids.length || item.supported_format_ids.includes(format.id)
@@ -1460,7 +1467,29 @@
           message.textContent = "Select the Flow prompt and press Cmd+C to copy it.";
         }
       }, "secondary");
-      details.append(summary, steps, copy, text);
+      const script = document.createElement("div");
+      script.className = "field-value";
+      script.textContent = state.record.video_script
+        || "No video script yet. Write one to plan what moves in each second of the clip.";
+      const write = makeAction(state.record.video_script ? "Rewrite video script" : "Write video script", async () => {
+        message.className = "message";
+        message.textContent = "Writing the video script…";
+        try {
+          await requestJson(`/api/content/post/${encodeURIComponent(state.selected.id)}/video_script`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}"
+          });
+          await refreshItems(state.selected);
+        } catch (error) {
+          message.className = "message error";
+          message.textContent = error.message;
+        }
+      }, "secondary");
+      const scriptName = document.createElement("div");
+      scriptName.className = "field-name";
+      scriptName.textContent = "Video script (8-second clip, then the closing card)";
+      details.append(summary, steps, scriptName, script, write, copy, text);
       return details;
     }
 
@@ -2630,8 +2659,8 @@
         weather: $("weather").value || "auto",
         caption_language: $("caption-language").value,
         hashtag_count: $("hashtag-count").value || null,
-        format_id: $("format").value,
-        reel_kind: $("format").value === "image_reel" ? $("reel-kind").value : "image",
+        format_id: realFormat(),
+        reel_kind: $("format").value === VIDEO_REEL ? "video" : "image",
         platform_id: $("platform").value,
         count: Number($("count").value),
         brief: $("brief").value.trim() || null

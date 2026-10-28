@@ -1687,3 +1687,29 @@ def test_flow_prompt_without_still_art_is_text_to_video(monkeypatch):
         "design_prompt": "Subject: a monk lighting a lamp in a temple.",
     })
     assert "attached image" not in prompt and "cinematic shot" in prompt
+
+
+def test_video_script_is_timed_and_feeds_the_flow_prompt(monkeypatch):
+    import art_generator
+    from content_agent import write_video_script
+
+    class Model:
+        def generate_reel(self, prompt):
+            assert "Payoff line on screen from 3.5 s: If not, let it go." in prompt
+            return ("Opening: A lamp glows.\nMiddle: A hand opens.\n"
+                    "Ending: The flame settles.\nCamera: Slow push-in.\n"
+                    "Sound: River, wind.")
+
+    record = {
+        "id": "post_999", "format_id": "image_reel", "design_prompt": "A monk.",
+        "main_point": "Is it **true**?", "supporting_copy": "If not, **let it go**.",
+        "cta": "Send this to a friend.",
+    }
+    script = write_video_script(record, Model())
+    assert 'Opening (0-3 s): A lamp glows. On screen: "Is it true?"' in script
+    assert 'Closing card (8-10 s): "Send this to a friend."' in script
+    monkeypatch.setattr(art_generator, "visual_style_for", lambda record: None)
+    monkeypatch.setattr(art_generator, "artwork_path", lambda post_id: None)
+    prompt = art_generator.build_flow_prompt({**record, "video_script": script})
+    assert "3-6 s: A hand opens." in prompt and "On screen" not in prompt
+    assert "Camera: Slow push-in." in prompt and "River, wind. No speech" in prompt
