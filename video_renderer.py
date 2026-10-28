@@ -37,6 +37,8 @@ CLIP_SOUND_LEVEL = 0.6
 # A clip shorter than the Reel plays once rather than jumping back to its
 # start; clips shorter than this still loop.
 MIN_CLIP_SECONDS = 5
+# Google Flow makes clips of up to 10 seconds; a video Reel plays all of it.
+MAX_CLIP_SECONDS = 10
 
 
 def clip_info(path):
@@ -534,13 +536,6 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
     record = load_post(post_id)
     if not is_image_reel(record):
         raise MediaRenderError("Only one-image Reels can be rendered as video.")
-    if record.get("story_video"):
-        # Several Flow shots joined into one story (story_video.py).
-        from story_video import render_story_video
-
-        output = reel_video_path(post_id)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        return render_story_video(post_id, output)
     artwork = artwork_path(post_id)
     if artwork is None:
         raise MediaRenderError("Generate or add the artwork before the video.")
@@ -623,8 +618,8 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
         if motion_clip:
             length, has_sound = clip_info(background)
             clip_sound = has_sound and record.get("clip_sound", True)
-            if length and MIN_CLIP_SECONDS <= length < seconds:
-                seconds = round(length - 0.05, 2)
+            if length and length >= MIN_CLIP_SECONDS:
+                seconds = round(min(length - 0.05, MAX_CLIP_SECONDS), 2)
         command = build_ffmpeg_command(
             ffmpeg_executable(),
             background,

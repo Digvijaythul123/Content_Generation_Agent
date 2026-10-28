@@ -656,12 +656,12 @@ class ContentAgent:
         return PLAIN_ENGLISH_RULES
 
     def _video_reminder(self):
-        """A video Reel's scene is filmed as one 8-second shot, so it needs a
+        """A video Reel's scene is filmed as one 10-second shot, so it needs a
         moment with gentle movement rather than a frozen pose."""
         if not self.video:
             return ""
         return (
-            "\n\nIMPORTANT: this Reel is an 8-second video clip, not a still. "
+            "\n\nIMPORTANT: this Reel is a 10-second video clip, not a still. "
             "The Design_prompt describes one continuous moment with gentle, "
             "natural movement that a single slow shot can show: someone "
             "walking slowly, pouring water, offering food, lighting a lamp, "
@@ -741,8 +741,8 @@ class ContentAgent:
 
 VIDEO_SCRIPT_BEATS = (
     ("Opening", "0-3 s"),
-    ("Middle", "3-6 s"),
-    ("Ending", "6-8 s"),
+    ("Middle", "3-7 s"),
+    ("Ending", "7-10 s"),
 )
 
 
@@ -751,7 +751,7 @@ def _plain(text):
 
 
 def write_video_script(record, ai_service=None):
-    """Plan an 8-second Google Flow clip for a video Reel, beat by beat.
+    """Plan a 10-second Google Flow clip for a video Reel, beat by beat.
 
     Returns the script as labelled lines (shown on the Content tab and used
     for the Flow prompt). The words on screen are timed by the renderer, so
@@ -759,7 +759,7 @@ def write_video_script(record, ai_service=None):
     """
     hook, payoff = _plain(record.get("main_point")), _plain(record.get("supporting_copy"))
     prompt = (
-        "Plan one continuous 8-second vertical video shot for an Instagram "
+        "Plan one continuous 10-second vertical video shot for an Instagram "
         "Reel about a Buddhist teaching. It will be made with Google Veo, "
         "so describe only what the camera sees and hears.\n\n"
         f"Hook line on screen from 0 s: {hook}\n"
@@ -774,8 +774,8 @@ def write_video_script(record, ai_service=None):
         "speech or music.\n\n"
         "Reply with exactly these five lines and nothing else:\n"
         "Opening: what we see and what moves, 0-3 s (one sentence)\n"
-        "Middle: what changes, 3-6 s (one sentence)\n"
-        "Ending: a calm ending that could loop back, 6-8 s (one sentence)\n"
+        "Middle: what changes, 3-7 s (one sentence)\n"
+        "Ending: a calm ending that could loop back, 7-10 s (one sentence)\n"
         "Camera: one slow camera move that keeps the whole figure in frame, "
         "for example a gentle push-in or a slow drift sideways; never a close "
         "zoom on a face (one short sentence)\n"
@@ -797,106 +797,9 @@ def write_video_script(record, ai_service=None):
         for label, span in VIDEO_SCRIPT_BEATS
     ]
     if cta:
-        lines.append(f"Closing card (8-10 s): \"{cta}\"")
+        lines.append(f"Closing card (10-12 s): \"{cta}\"")
     lines.append(f"Camera: {found.get('Camera') or 'One slow, steady push-in.'}")
     lines.append(f"Sound: {found.get('Sound') or 'Soft natural ambience.'}")
-    return "\n".join(lines)
-
-
-STORY_SHOTS = 4
-_STORY_SHOT_FIELDS = ("action", "camera", "sound", "caption")
-
-
-def write_story_shots(record, scene=None, ai_service=None):
-    """Plan a ~30-second story video: four 8-second Google Flow shots.
-
-    ``scene`` is the life-scene entry (episode, source, scene, teaching).
-    Returns (cast, shots): cast is [{"name", "look"}] for the people other
-    than the Buddha (each gets a reference image so they look the same in
-    every shot); shots are [{"action", "camera", "sound", "caption"}].
-    """
-    episode = (scene or {}).get("episode") or _plain(record.get("main_point"))
-    source = (scene or {}).get("source") or ""
-    teaching = (scene or {}).get("teaching") or _plain(record.get("supporting_copy"))
-    prompt = (
-        "Plan a 30-second vertical video that tells one true story from the "
-        "Buddha's life, for Instagram. It is made of exactly 4 shots of 8 "
-        "seconds each, filmed separately with Google Veo and joined.\n\n"
-        f"Story: {episode}\n"
-        f"Source: {source}\n"
-        f"Lesson: {teaching}\n"
-        f"Setting notes: {(scene or {}).get('scene') or record.get('design_prompt', '')}\n\n"
-        "Shape: tell the events in the same order as they happen in the "
-        "source. Shot 1 sets up the situation and pulls the viewer in; "
-        "shots 2 and 3 carry the story forward (the Buddha's words or deed "
-        "come wherever they fall in the source); shot 4 is the outcome and "
-        "the lesson. Before writing, list the source's events in order in "
-        "your head and give each shot the next event.\n"
-        "Rules:\n"
-        "- Stay close to the source; paraphrase, never invent new events.\n"
-        "- Each shot is one continuous moment with gentle, natural movement; "
-        "say exactly who does what. No cuts inside a shot, no fast action, "
-        "no violence shown (suggest danger instead).\n"
-        "- The Buddha is calm and dignified: no big gestures, no laughing.\n"
-        "- Ancient India, about 2,500 years ago: simple cotton cloth, clay "
-        "houses, oil lamps, forests; no modern objects.\n"
-        "- No speech, no words, letters, or signs anywhere in the video; the "
-        "story is told by on-screen captions added later.\n"
-        "- Caption: what the viewer reads during that shot, plain English, "
-        "at most 12 words, present tense. Shot 1's caption is the hook; "
-        "shot 4's caption is the lesson.\n"
-        "- Camera: one slow move that keeps the people in frame; never a "
-        "close zoom on a face.\n"
-        "- Cast: the people other than the Buddha who appear (at most 3), "
-        "each with a short look for a reference image (age, build, hair, "
-        "clothes, colours). Monks have shaved heads and saffron robes.\n\n"
-        "Reply with exactly these lines and nothing else:\n"
-        "Cast 1: Name - look\n"
-        "(more Cast lines if needed)\n"
-        + "".join(
-            f"Shot {number} {field}: ...\n"
-            for number in range(1, STORY_SHOTS + 1)
-            for field in _STORY_SHOT_FIELDS
-        )
-    )
-    reply = (ai_service or AIService()).generate_reel(prompt)
-    cast = []
-    for match in re.finditer(r"^\W*Cast\s*\d+\W*:\s*(.+)$", reply, re.IGNORECASE | re.MULTILINE):
-        name, _, look = match.group(1).partition(" - ")
-        name = name.strip().strip("*").strip()
-        if name and "buddha" not in name.lower():
-            cast.append({"name": name, "look": look.strip() or name})
-    shots = []
-    for number in range(1, STORY_SHOTS + 1):
-        shot = {}
-        for field in _STORY_SHOT_FIELDS:
-            found = re.search(
-                rf"^\W*Shot\s*{number}\s*{field}\W*:\s*(.+)$", reply, re.IGNORECASE | re.MULTILINE
-            )
-            if found:
-                shot[field] = found.group(1).strip().strip("*").strip()
-        if not shot.get("action") or not shot.get("caption"):
-            raise AIServiceError("The model did not return a usable 4-shot story.")
-        shot["caption"] = shot["caption"].strip('"')
-        shots.append(shot)
-    return cast[:3], shots
-
-
-def story_script_text(record):
-    """The story plan as readable lines for the Content tab."""
-    lines = []
-    for person in record.get("story_cast") or []:
-        lines.append(f"Cast: {person['name']}: {person['look']}")
-    for number, shot in enumerate(record.get("story_shots") or [], start=1):
-        start = (number - 1) * 7.4
-        lines.append(
-            f"Shot {number} ({start:.0f}-{start + 8:.0f} s): {shot['action']} "
-            f"Caption: \"{shot['caption']}\" Camera: {shot.get('camera', '')} "
-            f"Sound: {shot.get('sound', '')}"
-        )
-    cta = _plain(record.get("cta"))
-    if cta:
-        lines.append(f"Closing card: \"{cta}\"")
     return "\n".join(lines)
 
 

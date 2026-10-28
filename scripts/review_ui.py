@@ -22,8 +22,7 @@ from config_loader import (
     load_profile_visual_styles,
     load_profile_weathers,
 )
-from story_video import save_shot, shots_ready
-from content_agent import simplify_copy, story_script_text, write_story_shots, write_video_script
+from content_agent import simplify_copy, write_video_script
 from content_models import (
     THREADS_MAX_CHARACTERS,
     ContentValidationError,
@@ -50,8 +49,6 @@ from art_generator import (
     art_service_problem,
     build_art_prompt,
     build_flow_prompt,
-    build_shot_prompt,
-    reference_prompts,
     is_flow_ready,
     generate_post_artwork,
     is_designed,
@@ -985,20 +982,18 @@ def get_art_prompt(content_type, content_id):
 _DESIGNED_SUBTYPE_IDS = {"mind_states", "numbered_list", "illustrated_metaphor", "parable_card"}
 
 
+def _safe_thinkers(profile_id):
+    try:
+        return load_profile_thinkers(profile_id)
+    except ConfigurationError:
+        return []
+
+
 def get_flow_prompt(content_type, content_id):
     """Return the Google Flow prompt that turns the post's art into an
-    8-second video clip (paste it with the art as the first frame). For a
-    story video: one prompt per shot plus character reference prompts."""
+    10-second video clip (paste it with the art as the first frame)."""
     record = _artwork_record(content_type, content_id)
-    if record.get("story_video"):
-        shots = record.get("story_shots") or []
-        return {
-            "prompt": "",
-            "shots": [build_shot_prompt(record, number) for number in range(1, len(shots) + 1)],
-            "references": reference_prompts(record),
-            "shots_ready": shots_ready(content_id, len(shots) or 4),
-        }
-    return {"prompt": build_flow_prompt(record)}
+    return build_flow_prompt(record)
 
 
 def upload_artwork(content_type, content_id, image_bytes):
@@ -1389,59 +1384,12 @@ def simplify_post_text(content_id, fresh=False):
     return suggestion
 
 
-def _safe_thinkers(profile_id):
-    try:
-        return load_profile_thinkers(profile_id)
-    except ConfigurationError:
-        return []
-
-
-def _life_scene_entry(record):
-    scene_id = record.get("life_scene")
-    if not scene_id:
-        return None
-    try:
-        thinkers = load_profile_thinkers(record.get("profile_id") or "")
-    except ConfigurationError:
-        return None
-    for thinker in thinkers:
-        for scene in thinker.get("life_scenes") or []:
-            if scene["id"] == scene_id:
-                return scene
-    return None
-
-
-def _write_story(record):
-    """Plan the four shots, cast, and readable script of a story video."""
-    cast, shots = write_story_shots(record, _life_scene_entry(record))
-    record["story_cast"] = cast
-    record["story_shots"] = shots
-    record["video_script"] = story_script_text(record)
-
-
-def save_story_shot(content_id, number, data):
-    """Store one uploaded Flow shot of a story video."""
-    record = load_post(content_id)
-    if record.get("status") != "Approved":
-        raise ValueError("Approve this content before adding shots.")
-    output = save_shot(content_id, number, data)
-    post_image_path(content_id).unlink(missing_ok=True)
-    reel_video_path(content_id).unlink(missing_ok=True)
-    _append_history("post", content_id, "shot_uploaded", shot=number, output=str(output))
-    return {"shot": number, "shots_ready": shots_ready(content_id, len(record.get("story_shots") or []) or 4)}
-
-
 def make_video_script(content_id):
     """Write (or rewrite) the beat-by-beat Google Flow script for a Reel and
-    mark it as a video Reel (a story video gets its four shots again)."""
+    mark it as a video Reel."""
     record = load_post(content_id)
     if record.get("status") == "Published":
         raise ValueError("This post is published; its video plan cannot be changed.")
-    if record.get("story_video"):
-        _write_story(record)
-        save_post(content_id, record)
-        _append_history("post", content_id, "story_script_written")
-        return record
     if not is_flow_ready(record):
         raise ValueError(
             "Only One-image Reels with words added on top can be video Reels."
@@ -2479,12 +2427,11 @@ def generate_and_save(payload):
         else:
             raise ValueError("Content subtypes require a content profile.")
 
-    story = payload.get("reel_kind") == "story"
-    if story:
-        # A Buddha story video: one life scene told in four Flow shots.
+    video = payload.get("reel_kind") == "video"
+    if video and payload.get("life_scene"):
+        # A moment from the Buddha's life, told in one 10-second clip.
         subtype = "life_story"
         payload = {**payload, "thinker_id": payload.get("thinker_id") or "buddha"}
-    video = payload.get("reel_kind") in ("video", "story")
     if video:
         if payload.get("format_id") != "image_reel":
             raise ValueError("Video Reels are One-image Reels: choose that content type.")
@@ -2537,14 +2484,7 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
-    if story:
-        data["video_reel"] = True
-        data["story_video"] = True
-        try:
-            _write_story(data)
-        except AIServiceError:
-            pass  # "Write story script" on the Instagram tab tries again
-    elif video:
+    if video:
         data["video_reel"] = True
         try:
             data["video_script"] = write_video_script(data)

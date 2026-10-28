@@ -1636,7 +1636,7 @@ def test_flow_prompt_films_the_art_without_words(monkeypatch):
         "design_prompt": "Subject: a monk by a river in the rain at dusk.",
     }
     prompt = art_generator.build_flow_prompt(record)
-    assert "8-second vertical 9:16" in prompt
+    assert "10-second vertical 9:16" in prompt
     assert "steady soft rain" in prompt and "gentle flowing water" in prompt
     assert "No speech" in prompt and "no text" in prompt
     monkeypatch.setattr(art_generator, "is_designed", lambda record: True)
@@ -1666,7 +1666,7 @@ def test_video_reels_ask_for_a_moving_moment_and_skip_illustrated_modes(monkeypa
 
     agent = content_agent.ContentAgent.__new__(content_agent.ContentAgent)
     agent.video = True
-    assert "8-second video clip" in agent._video_reminder()
+    assert "10-second video clip" in agent._video_reminder()
     agent.video = False
     assert agent._video_reminder() == ""
     with pytest.raises(ValueError, match="stay as image Reels"):
@@ -1707,63 +1707,9 @@ def test_video_script_is_timed_and_feeds_the_flow_prompt(monkeypatch):
     }
     script = write_video_script(record, Model())
     assert 'Opening (0-3 s): A lamp glows. On screen: "Is it true?"' in script
-    assert 'Closing card (8-10 s): "Send this to a friend."' in script
+    assert 'Closing card (10-12 s): "Send this to a friend."' in script
     monkeypatch.setattr(art_generator, "visual_style_for", lambda record: None)
     monkeypatch.setattr(art_generator, "artwork_path", lambda post_id: None)
     prompt = art_generator.build_flow_prompt({**record, "video_script": script})
-    assert "3-6 s: A hand opens." in prompt and "On screen" not in prompt
+    assert "3-7 s: A hand opens." in prompt and "On screen" not in prompt
     assert "Camera: Slow push-in." in prompt and "River, wind. No speech" in prompt
-
-
-def test_story_video_plans_four_shots_with_cast():
-    from content_agent import story_script_text, write_story_shots
-
-    class Model:
-        def generate_reel(self, prompt):
-            assert "same order as they happen in the source" in prompt
-            lines = ["Cast 1: Kisa Gotami - young mother in a pale sari",
-                     "Cast 2: The Buddha - should be dropped"]
-            for n in range(1, 5):
-                lines += [f"Shot {n} action: event {n}", f"Shot {n} camera: slow push-in",
-                          f"Shot {n} sound: wind", f'Shot {n} caption: "line {n}"']
-            return "\n".join(lines)
-
-    record = {"title": "The mustard seed", "cta": "Share this.", "main_point": "", "supporting_copy": ""}
-    cast, shots = write_story_shots(record, {"episode": "Kisa Gotami", "source": "Thig"}, Model())
-    assert cast == [{"name": "Kisa Gotami", "look": "young mother in a pale sari"}]
-    assert [shot["caption"] for shot in shots] == ["line 1", "line 2", "line 3", "line 4"]
-    text = story_script_text({**record, "story_cast": cast, "story_shots": shots})
-    assert 'Shot 4 (22-30 s): event 4 Caption: "line 4"' in text
-
-
-def test_story_shot_prompts_name_ingredients_and_keep_buddha_form():
-    from art_generator import build_shot_prompt, reference_prompts
-
-    record = {
-        "story_cast": [{"name": "Kisa Gotami", "look": "young mother."}],
-        "story_shots": [{"action": "Kisa Gotami kneels before the Buddha.", "caption": "x"}],
-    }
-    prompt = build_shot_prompt(record, 1)
-    assert "Ingredients: attach the reference image of The Buddha, Kisa Gotami" in prompt
-    assert "ushnisha" in prompt and "no text" in prompt
-    refs = reference_prompts(record)
-    assert [ref["name"] for ref in refs] == ["The Buddha", "Kisa Gotami"]
-    assert "young mother. Show" in refs[1]["prompt"]
-
-
-def test_story_video_joins_shots_with_captions_and_sound():
-    from story_video import build_story_command, shot_timeline
-
-    starts, length = shot_timeline([8, 8, 8, 8])
-    assert starts == [0.0, 7.4, 14.8, 22.2] and length == 30.2
-    command = build_story_command(
-        "ffmpeg",
-        [("1.mp4", 8, True), ("2.mp4", 8, False), ("3.mp4", 8, True), ("4.mp4", 8, True)],
-        [("cap.png", 0.5, 7.7)], "out.mp4", music="m.mp3", end_card="card.jpg",
-    )
-    graph = command[command.index("-filter_complex") + 1]
-    assert graph.count("xfade=transition=fade") == 4  # three joins and the end card
-    assert "anullsrc" in graph and graph.count("acrossfade") == 3
-    assert "amix=inputs=2" in graph
-    last_t = len(command) - 1 - command[::-1].index("-t")
-    assert command[last_t + 1] == "31.8"  # 30.2 s of story + the end card
