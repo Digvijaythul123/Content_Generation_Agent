@@ -48,6 +48,10 @@ def _save_result(result, caption_language="english"):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
+    if result.request.life_part:
+        data["life_part"] = result.request.life_part
+        if data.get("caption"):
+            data["caption"] = f"Life of the Buddha, part {result.request.life_part}.\n\n{data['caption']}"
     if result.request.scenery:
         data["scenery"] = result.request.scenery
     if result.request.weather:
