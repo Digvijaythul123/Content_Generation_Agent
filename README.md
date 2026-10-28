@@ -341,6 +341,57 @@ python3 -m scripts.cloud_scheduler --test post_035  # dry run, publishes nothing
 Run `--setup` again after changing a token in `.env` (for example when
 adding Threads). Watch the Worker live with `cd cloud_scheduler && npx wrangler tail`.
 
+## YouTube Shorts
+
+Every rendered Reel (9:16, about 12 seconds) is also a YouTube Short. Each
+Reel's review page has a **YouTube Shorts** box. It holds:
+- a title (the hook, ending in `#Shorts`)
+- a description (the caption with its source, then `#Buddha #Buddhism #Dhamma`)
+- tags
+- **Download MP4**
+
+New Reels are ticked for YouTube. Older ones are never uploaded unless you
+tick them.
+
+**Without setup:** download the MP4 and upload it in the YouTube app or
+Studio with the copied title and description. Then paste the link under
+**Mark as on YouTube**.
+
+**Automatic upload:** this uses the free YouTube Data API with your own
+sign-in. The app never sees your password. Once connected, a ticked Reel
+uploads:
+- right after it is published to Instagram from this Mac, or
+- on the Mac scheduler's next run, if the cloud published it while the Mac
+  was asleep. Up to 2 uploads per run; the free quota allows about 6 a day.
+
+**Upload now** uploads straight away. A failed upload retries on its own and
+never affects the Instagram post.
+
+Setup (once, free):
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a
+   project and enable **YouTube Data API v3**.
+2. Set up the **OAuth consent screen**:
+   - choose External
+   - add your Google account as a test user
+   - then **Publish app**, so the sign-in does not expire after 7 days. It
+     is fine to keep it unverified for your own channel.
+3. Create credentials of type **OAuth client ID**, application type **Desktop
+   app**. Put the ID and secret in `.env` as `YOUTUBE_CLIENT_ID=` and
+   `YOUTUBE_CLIENT_SECRET=`.
+4. Run `python3 -m scripts.youtube_auth`. Sign in with the account that owns
+   the channel; the refresh token is written to `.env` only. Restart the
+   review page.
+5. Google keeps videos uploaded by a new API project **private** until the
+   project passes its free **YouTube API Services audit**. Apply through the
+   YouTube API Services audit and quota extension form. Until it passes,
+   either:
+   - make each upload Public in YouTube Studio, or
+   - keep using the manual upload.
+
+Before the first Short, check that the music in `music/` is cleared for
+YouTube, because Content ID flags unlicensed tracks. Tracks from the YouTube
+Audio Library are the safest.
+
 ## Backups
 
 Drafts, art, renders, history, and music are ignored by git, so they are

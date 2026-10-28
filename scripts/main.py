@@ -65,6 +65,7 @@ def _save_result(result, caption_language="english"):
         data["layout"] = "poster"
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
+        data["share_to_youtube"] = True  # also a YouTube Short
         try:
             default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
         except ConfigurationError:

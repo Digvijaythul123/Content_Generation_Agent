@@ -198,3 +198,114 @@ def test_facebook_auto_posting_can_be_paused(monkeypatch):
     assert facebook_publisher.facebook_auto_enabled() is False
     monkeypatch.setattr(facebook_publisher, "get_setting", lambda name, default=None: default)
     assert facebook_publisher.facebook_auto_enabled() is True
+
+
+def test_youtube_client_signs_in_then_uploads_a_short(tmp_path):
+    from youtube_publisher import YouTubePublishError, YouTubePublisher
+
+    video = tmp_path / "reel.mp4"
+    video.write_bytes(b"mp4data")
+    session = Mock()
+    start = _response({})
+    start.headers = {"Location": "https://upload.example/session1"}
+    session.post.side_effect = [_response({"access_token": "AT"}), start]
+    session.put.return_value = _response({"id": "Y1", "status": {"privacyStatus": "public"}})
+    client = YouTubePublisher("CID", "SECRET", "RT", session=session)
+    result = client.upload_short(video, "Why does worry return? #Shorts", "Teaching\n\n#Buddha", ["Buddha"])
+    assert result == {"video_id": "Y1", "url": "https://www.youtube.com/shorts/Y1", "privacy": "public"}
+    token_call, start_call = session.post.call_args_list
+    assert token_call.kwargs["data"]["grant_type"] == "refresh_token"
+    assert token_call.kwargs["data"]["refresh_token"] == "RT"
+    body = start_call.kwargs["json"]
+    assert start_call.kwargs["params"] == {"uploadType": "resumable", "part": "snippet,status"}
+    assert body["snippet"]["title"] == "Why does worry return? #Shorts" and body["snippet"]["categoryId"] == "27"
+    assert body["status"] == {"privacyStatus": "public", "selfDeclaredMadeForKids": False,
+                              "containsSyntheticMedia": True}
+    assert start_call.kwargs["headers"]["X-Upload-Content-Length"] == "7"
+    assert session.put.call_args.args[0] == "https://upload.example/session1"
+
+    # A scheduled upload stays private until YouTube publishes it.
+    session.post.side_effect = [_response({"access_token": "AT"}), start]
+    when = datetime(2026, 11, 1, 14, 0, tzinfo=timezone.utc)
+    client.upload_short(video, "Title #Shorts", "Text", [], publish_at=when)
+    status = session.post.call_args_list[-1].kwargs["json"]["status"]
+    assert status["privacyStatus"] == "private" and status["publishAt"] == "2026-11-01T14:00:00Z"
+
+    # Quota errors are retried later; a bad title is refused before any call.
+    session.post.side_effect = [_response({"access_token": "AT"}),
+                                _response({"error": {"message": "quota", "errors": [{"reason": "quotaExceeded"}]}}, 403)]
+    with pytest.raises(YouTubePublishError) as error:
+        client.upload_short(video, "Title", "Text", [])
+    assert error.value.rate_limited and error.value.transient
+    with pytest.raises(ValueError):
+        client.upload_short(video, "x" * 101, "Text", [])
+
+
+def test_youtube_metadata_defaults_come_from_the_post():
+    from youtube_publisher import youtube_metadata
+
+    record = {"main_point": "Why does the same **worry** come back every night?",
+              "caption": "Worry feeds on itself.\nSource: AN 4.11\n\n#Buddha #Calm #Mind"}
+    meta = youtube_metadata(record)
+    assert meta["title"] == "Why does the same worry come back every night? #Shorts"
+    assert meta["description"] == "Worry feeds on itself.\nSource: AN 4.11\n\n#Buddha #Buddhism #Dhamma"
+    assert "Buddhism" in meta["tags"]
+    long_title = youtube_metadata({"main_point": "word " * 40})["title"]
+    assert len(long_title) <= 100 and long_title.endswith("#Shorts")
+    assert youtube_metadata({**record, "youtube_title": "Mine #Shorts"})["title"] == "Mine #Shorts"
+
+
+def test_reels_go_to_youtube_after_instagram_only_when_ticked(reel, monkeypatch):
+    from youtube_publisher import YouTubePublishError
+
+    monkeypatch.setattr(review_ui, "youtube_configured", lambda: True)
+    youtube = Mock()
+    youtube.upload_short.return_value = {"video_id": "Y9", "url": "https://www.youtube.com/shorts/Y9",
+                                         "privacy": "public"}
+    # Older posts (never ticked) are not uploaded by the catch-up step.
+    assert review_ui.sync_youtube_posts(publisher=youtube) == []
+    reel["post_001"]["share_to_youtube"] = True
+    assert review_ui.sync_youtube_posts(publisher=youtube) == [
+        ("post_001", "youtube published", "https://www.youtube.com/shorts/Y9")]
+    args = youtube.upload_short.call_args.args
+    assert args[1] == "Hook line #Shorts" and args[2].endswith("#Buddha #Buddhism #Dhamma")
+    assert reel["post_001"]["youtube_video_id"] == "Y9"
+    assert review_ui.sync_youtube_posts(publisher=youtube) == []  # not twice
+    with pytest.raises(ValueError, match="already on YouTube"):
+        review_ui.post_to_youtube("post_001", publisher=youtube)
+
+    # A network failure schedules a retry; Instagram stays untouched.
+    for key in ("youtube_video_id", "youtube_url"):
+        reel["post_001"].pop(key)
+    youtube.upload_short.side_effect = YouTubePublishError("Could not reach YouTube.", transient=True)
+    now = datetime(2026, 10, 28, 5, 0, tzinfo=timezone.utc)
+    review_ui.sync_youtube_posts(now=now, publisher=youtube)
+    assert reel["post_001"]["youtube_retry_at"] == (now + timedelta(minutes=5)).isoformat()
+    assert reel["post_001"]["status"] == "Published"
+    assert review_ui.sync_youtube_posts(now=now, publisher=youtube) == []  # not due yet
+
+
+def test_youtube_text_and_manual_link_can_be_saved_after_publishing(reel):
+    review_ui.update_post_settings("post_001", {"youtube_title": "Mine #Shorts",
+                                                "youtube_tags": "Buddha, Dhamma", "share_to_youtube": True})
+    saved = reel["post_001"]
+    assert saved["youtube_title"] == "Mine #Shorts" and saved["youtube_tags"] == ["Buddha", "Dhamma"]
+    with pytest.raises(ValueError, match="YouTube link"):
+        review_ui.update_post_settings("post_001", {"youtube_url": "https://example.com/x"})
+    review_ui.update_post_settings("post_001", {"youtube_url": "https://www.youtube.com/shorts/abc"})
+    assert reel["post_001"]["youtube_url"] == "https://www.youtube.com/shorts/abc"
+    with pytest.raises(ValueError, match="already published"):
+        review_ui.update_post_settings("post_001", {"caption": "New"})
+
+
+def test_youtube_sign_in_saves_only_the_refresh_token_line(tmp_path):
+    from scripts.youtube_auth import save_env_value
+
+    env = tmp_path / ".env"
+    env.write_text("A=1\nYOUTUBE_REFRESH_TOKEN=old\nB=2\n")
+    save_env_value(env, "YOUTUBE_REFRESH_TOKEN", "new")
+    assert env.read_text() == "A=1\nYOUTUBE_REFRESH_TOKEN=new\nB=2\n"
+    other = tmp_path / ".env2"
+    other.write_text("A=1")
+    save_env_value(other, "YOUTUBE_REFRESH_TOKEN", "tok")
+    assert other.read_text() == "A=1\nYOUTUBE_REFRESH_TOKEN=tok\n"

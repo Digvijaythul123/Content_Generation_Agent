@@ -38,6 +38,13 @@ from facebook_publisher import (
 )
 from instagram_publisher import InstagramPublishError, InstagramPublisher
 from threads_publisher import ThreadsPublishError, ThreadsPublisher, threads_configured
+from youtube_publisher import (
+    YouTubePublishError,
+    YouTubePublisher,
+    validate_metadata,
+    youtube_configured,
+    youtube_metadata,
+)
 from cloud_scheduler import CloudScheduler, CloudSchedulerError, cloud_configured
 from media_host import MediaHostError, R2MediaHost
 from art_generator import (
@@ -744,6 +751,7 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
                 "error": record.get("threads_error"),
                 "retry_at": record.get("threads_retry_at"),
             },
+            "youtube": _youtube_info(record),
         }
     if content_type != "post" or not _is_instagram_post(record):
         return {
@@ -804,6 +812,7 @@ def _publishing_stage(content_type, content_id, record, files, last_stage_events
             "error": record.get("threads_error"),
             "retry_at": record.get("threads_retry_at"),
         },
+        "youtube": _youtube_info(record),
     }
 
 
@@ -1158,6 +1167,7 @@ def publishing_connection():
         "facebook": facebook_configured(),
         "facebook_auto": facebook_auto_enabled(),
         "threads": threads_configured(),
+        "youtube": youtube_configured(),
         "media_host": all(
             get_setting(name)
             for name in (
@@ -1185,6 +1195,54 @@ def _parse_schedule(value):
 ON_IMAGE_TEXT_FIELDS = ("title", "main_point", "supporting_copy", "slides")
 
 
+_YOUTUBE_FIELDS = {"youtube_title", "youtube_description", "youtube_tags", "share_to_youtube", "youtube_url"}
+
+
+def _youtube_info(record):
+    if not _is_image_reel(record):
+        return None
+    return {
+        "share": bool(record.get("share_to_youtube")),
+        "permalink": record.get("youtube_url"),
+        "privacy": record.get("youtube_privacy"),
+        "error": record.get("youtube_error"),
+        "retry_at": record.get("youtube_retry_at"),
+        **youtube_metadata(record),
+    }
+
+
+def _update_youtube_fields(record, payload, changed):
+    if "share_to_youtube" in payload:
+        if not isinstance(payload["share_to_youtube"], bool):
+            raise ValueError("share_to_youtube must be true or false.")
+        record["share_to_youtube"] = payload["share_to_youtube"]
+        changed.append("share_to_youtube")
+    if {"youtube_title", "youtube_description", "youtube_tags"} & set(payload):
+        current = youtube_metadata(record)
+        title = payload.get("youtube_title", current["title"])
+        description = payload.get("youtube_description", current["description"])
+        tags = payload.get("youtube_tags", current["tags"])
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",")]
+        if not (isinstance(title, str) and isinstance(description, str) and isinstance(tags, list)):
+            raise ValueError("The YouTube title, description, and tags must be text.")
+        tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+        validate_metadata(title.strip(), description.strip(), tags)
+        record.update(youtube_title=title.strip(), youtube_description=description.strip(),
+                      youtube_tags=tags)
+        changed.append("youtube_text")
+    if "youtube_url" in payload:
+        url = (payload["youtube_url"] or "").strip()
+        if url and not re.match(r"^https://(www\.|m\.)?(youtube\.com|youtu\.be)/", url):
+            raise ValueError("Paste a YouTube link (https://www.youtube.com/shorts/...).")
+        if url:
+            record["youtube_url"] = url
+            record.pop("youtube_retry_at", None)
+        else:
+            record.pop("youtube_url", None)
+        changed.append("youtube_url")
+
+
 def update_post_settings(content_id, payload):
     """Save review-screen changes: caption, music track, and schedule."""
     record = load_post(content_id)
@@ -1198,9 +1256,12 @@ def update_post_settings(content_id, payload):
             raise ValueError(
                 "Only the layout, caption, and on-image text can be changed for feed posts."
             )
-    if record.get("status") == "Published" and set(payload) - {"first_comment"}:
-        # Only the first comment (posted by hand) can change after publishing.
+    if record.get("status") == "Published" and set(payload) - {"first_comment"} - _YOUTUBE_FIELDS:
+        # Only the first comment (posted by hand) and the YouTube copy (it
+        # may go up later) can change after publishing.
         raise ValueError("This post is already published.")
+    if set(payload) & _YOUTUBE_FIELDS and not _is_image_reel(record):
+        raise ValueError("Only Reels can go to YouTube Shorts.")
     changed = []
     if "caption" in payload:
         caption = payload["caption"]
@@ -1264,6 +1325,7 @@ def update_post_settings(content_id, payload):
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
         changed.append("series")
+    _update_youtube_fields(record, payload, changed)
     if "share_to_threads" in payload:
         if not isinstance(payload["share_to_threads"], bool):
             raise ValueError("Posting to Threads must be on or off.")
@@ -1978,6 +2040,13 @@ def publish_content(
                 threads = {"error": str(error)}
         else:
             threads = None
+        youtube = None
+        if is_reel and youtube_configured() and record.get("share_to_youtube") is True:
+            # Same rule as Threads: a YouTube problem never undoes Instagram.
+            try:
+                youtube = post_to_youtube(content_id)
+            except (YouTubePublishError, ValueError, OSError) as error:
+                youtube = {"error": str(error)}
         if facebook_auto_enabled() and record.get("share_to_facebook", True):
             # Instagram is done; a Facebook problem is recorded and retried
             # on its own, never undoing or repeating the Instagram post.
@@ -1985,7 +2054,8 @@ def publish_content(
                 facebook = post_to_facebook(content_id)
             except FacebookPublishError as error:
                 facebook = {"error": str(error)}
-        return {"dry_run": False, **result, "facebook": facebook, "threads": threads}
+        return {"dry_run": False, **result, "facebook": facebook, "threads": threads,
+                "youtube": youtube}
     except _STAGE_ACTION_ERRORS as error:
         _append_history(
             content_type, content_id, "stage_failed",
@@ -2188,6 +2258,97 @@ def post_to_threads(content_id, publisher=None, host=None, now=None):
     save_post(content_id, record)
     _append_history("post", content_id, "threads_published", permalink=result.get("permalink"))
     return result
+
+
+YOUTUBE_RETRY_MINUTES = (5, 15, 30, 60)
+YOUTUBE_RATE_LIMIT_MINUTES = (240, 720, 1440)
+# A new upload costs 1,600 of the 10,000 free daily API units.
+YOUTUBE_UPLOADS_PER_RUN = 2
+
+
+def post_to_youtube(content_id, publisher=None, now=None):
+    """Upload a rendered Reel to YouTube as a Short (from this Mac)."""
+    record = load_post(content_id)
+    if not _is_image_reel(record):
+        raise ValueError("Only Reels can go to YouTube Shorts.")
+    if record.get("youtube_video_id") or record.get("youtube_url"):
+        raise ValueError("This Reel is already on YouTube.")
+    video = reel_video_path(content_id)
+    if not video.is_file():
+        raise ValueError("Render the Reel video first.")
+    metadata = youtube_metadata(record)
+    try:
+        publisher = publisher or YouTubePublisher()
+        result = publisher.upload_short(video, metadata["title"], metadata["description"],
+                                        metadata["tags"])
+    except YouTubePublishError as error:
+        record = load_post(content_id)
+        attempts = int(record.get("youtube_attempts") or 0)
+        record["youtube_error"] = str(error)
+        waits = YOUTUBE_RATE_LIMIT_MINUTES if error.rate_limited else YOUTUBE_RETRY_MINUTES
+        if error.transient and attempts < len(waits):
+            record["youtube_attempts"] = attempts + 1
+            record["youtube_retry_at"] = (
+                (now or datetime.now(timezone.utc)) + timedelta(minutes=waits[attempts])
+            ).isoformat()
+        else:
+            record.pop("youtube_retry_at", None)
+            record["youtube_gave_up"] = True
+        save_post(content_id, record)
+        _append_history("post", content_id, "youtube_failed", error=str(error))
+        raise
+    record = load_post(content_id)
+    record.update(
+        youtube_video_id=result["video_id"],
+        youtube_url=result["url"],
+        youtube_privacy=result.get("privacy"),
+        youtube_published_at=datetime.now(timezone.utc).isoformat(),
+    )
+    for key in ("youtube_error", "youtube_attempts", "youtube_retry_at", "youtube_gave_up"):
+        record.pop(key, None)
+    save_post(content_id, record)
+    _append_history("post", content_id, "youtube_published", permalink=result["url"])
+    return result
+
+
+def _youtube_due(record, now):
+    """A Reel on Instagram, ticked for YouTube, not yet there, and due."""
+    if (
+        record.get("status") != "Published"
+        or record.get("share_to_youtube") is not True
+        or record.get("youtube_video_id")
+        or record.get("youtube_url")
+        or record.get("youtube_gave_up")
+        or not _is_image_reel(record)
+    ):
+        return False
+    retry_at = record.get("youtube_retry_at")
+    return not retry_at or _parse_schedule(retry_at) <= now
+
+
+def sync_youtube_posts(now=None, publisher=None):
+    """Upload Reels that reached Instagram (here or from the cloud) but not
+    YouTube yet, and retry failed uploads. Only Reels ticked for YouTube."""
+    if not youtube_configured():
+        return []
+    now = now or datetime.now(timezone.utc)
+    results = []
+    for path in sorted(_CONTENT_DIRECTORIES["post"].glob("post_*.json")):
+        if len(results) >= YOUTUBE_UPLOADS_PER_RUN:
+            break
+        content_id = path.stem
+        try:
+            record = load_post(content_id)
+        except (PostStorageError, FileNotFoundError):
+            continue
+        if not _youtube_due(record, now):
+            continue
+        try:
+            result = post_to_youtube(content_id, publisher=publisher, now=now)
+            results.append((content_id, "youtube published", result["url"]))
+        except (YouTubePublishError, ValueError, OSError) as error:
+            results.append((content_id, "youtube failed", str(error)))
+    return results
 
 
 def retry_threads_posts(now=None, publisher=None, host=None):
@@ -2532,6 +2693,8 @@ def generate_and_save(payload):
         data["layout"] = "poster"
     if result.request.content_format.id == "image_reel":
         data["layout"] = "poster"
+        # New Reels also go to YouTube Shorts (untick on the review page).
+        data["share_to_youtube"] = True
         try:
             default_cta = load_profile_engagement(data["profile_id"]).get("default_cta")
         except ConfigurationError:

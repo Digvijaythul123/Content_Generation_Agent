@@ -2317,6 +2317,136 @@
     function facebookControls(publishing) {
       const box = document.createElement("div");
       box.append(shareControls(publishing, "facebook"), shareControls(publishing, "threads"));
+      if (publishing.youtube) box.append(youtubeControls(publishing));
+      return box;
+    }
+
+    // YouTube Shorts: the same Reel MP4 with its own title and description.
+    function youtubeControls(publishing) {
+      const info = publishing.youtube;
+      const connected = (publishing.connection || {}).youtube;
+      const box = document.createElement("details");
+      box.className = "youtube-box";
+      box.open = Boolean(info.share || info.permalink || info.error);
+      const summary = document.createElement("summary");
+      summary.textContent = info.permalink ? "YouTube Shorts (posted)" : "YouTube Shorts";
+      box.append(summary);
+      const id = encodeURIComponent(state.selected.id);
+      if (info.permalink) {
+        const line = document.createElement("p");
+        const link = document.createElement("a");
+        link.href = info.permalink;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "View on YouTube";
+        line.append(link);
+        if (info.privacy === "private") {
+          line.append(" (private: Google keeps API uploads private until your API project passes its audit; "
+            + "make it Public in YouTube Studio)");
+        }
+        box.append(line);
+        return box;
+      }
+      const field = (name, value, rows) => {
+        const label = document.createElement("label");
+        label.style.display = "block";
+        label.textContent = name;
+        const input = document.createElement("textarea");
+        input.rows = rows;
+        input.style.width = "100%";
+        input.value = value;
+        label.append(input);
+        box.append(label);
+        return input;
+      };
+      const title = field("Title (the hook; up to 100 characters)", info.title, 2);
+      const description = field("Description", info.description, 6);
+      const tags = field("Tags (comma separated)", (info.tags || []).join(", "), 1);
+      const copy = (label, input) => makeAction(label, async () => {
+        try {
+          await navigator.clipboard.writeText(input.value);
+        } catch (error) {
+          input.select();
+          document.execCommand("copy");
+        }
+      }, "secondary");
+      const actions = document.createElement("div");
+      actions.className = "inline-actions";
+      actions.append(
+        makeAction("Save YouTube text", async () => {
+          try {
+            await saveReelSettings({ youtube_title: title.value, youtube_description: description.value,
+              youtube_tags: tags.value }, "YouTube text saved.");
+          } catch (error) {
+            window.alert(error.message);
+          }
+        }),
+        copy("Copy title", title), copy("Copy description", description));
+      const download = document.createElement("a");
+      download.href = `/api/assets/post/${id}/reel_video`;
+      download.download = `${state.selected.id}_short.mp4`;
+      download.textContent = "Download MP4";
+      actions.append(download);
+      box.append(actions);
+      const share = document.createElement("label");
+      const tick = document.createElement("input");
+      tick.type = "checkbox";
+      tick.checked = Boolean(info.share);
+      tick.addEventListener("change", async () => {
+        try {
+          await saveReelSettings({ share_to_youtube: tick.checked });
+        } catch (error) {
+          window.alert(error.message);
+        }
+      });
+      share.append(tick, connected
+        ? " Also upload to YouTube Shorts when this goes to Instagram"
+        : " Send to YouTube Shorts (uploads automatically once YouTube is connected)");
+      box.append(share);
+      if (info.error) {
+        const error = document.createElement("p");
+        error.className = "message error";
+        error.textContent = `YouTube: ${info.error}`
+          + (info.retry_at ? ` Trying again at ${new Date(info.retry_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "");
+        box.append(error);
+      }
+      if (connected) {
+        const upload = makeAction("Upload to YouTube now", async () => {
+          upload.disabled = true;
+          upload.textContent = "Uploading… (a minute or two)";
+          try {
+            if (title.value !== info.title || description.value !== info.description) {
+              await saveReelSettings({ youtube_title: title.value, youtube_description: description.value,
+                youtube_tags: tags.value });
+            }
+            await requestJson(`/api/content/post/${id}/youtube`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          } catch (error) {
+            window.alert(error.message);
+          }
+          await refreshItems(state.selected);
+        }, "secondary");
+        box.append(upload);
+      } else {
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = "YouTube is not connected (see README: YouTube Shorts). Until then, download the MP4 "
+          + "and upload it in the YouTube app or Studio with this title and description, then paste the link below.";
+        box.append(hint);
+      }
+      const manual = document.createElement("div");
+      manual.className = "inline-actions";
+      const url = document.createElement("input");
+      url.type = "url";
+      url.placeholder = "YouTube link, if you uploaded it yourself";
+      manual.append(url, makeAction("Mark as on YouTube", async () => {
+        try {
+          await saveReelSettings({ youtube_url: url.value }, "Saved the YouTube link.");
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }, "secondary"));
+      box.append(manual);
       return box;
     }
 

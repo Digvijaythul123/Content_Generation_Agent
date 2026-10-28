@@ -28,6 +28,7 @@ from scripts.review_ui import (
     retry_facebook_posts,
     retry_threads_posts,
     sync_cloud_jobs,
+    sync_youtube_posts,
 )
 from cloud_scheduler import CloudSchedulerError
 
@@ -130,6 +131,9 @@ def run_once():
         for content_id, outcome, detail in retry_facebook_posts():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
         for content_id, outcome, detail in retry_threads_posts():
+            print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
+        # Reels posted to Instagram (here or by the cloud) also go to YouTube.
+        for content_id, outcome, detail in sync_youtube_posts():
             print(f"{stamp} {content_id} {outcome}: {detail or ''}", flush=True)
         refreshed = refresh_token_if_due(
             state_path=THREADS_TOKEN_STATE_PATH,

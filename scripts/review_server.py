@@ -310,6 +310,22 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if (
             len(path_parts) == 5
             and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "youtube"
+        ):
+            try:
+                self._send_json({"item": ui.post_to_youtube(path_parts[3])})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except ui.YouTubePublishError as error:
+                self._send_json({"error": str(error)}, 502)
+            except (ui.PostStorageError, ui.ReviewUIError, OSError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
             and path_parts[4] == "hook_options"
         ):
             try:
