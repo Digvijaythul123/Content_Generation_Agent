@@ -71,7 +71,9 @@ def generate_content(
         thinker_id=thinker_id,
         visual_style=visual_style,
     )
-    if request.thinker_id is None and not brief and request.category_id != "comedy":
+    if request.thinker_id is None and request.subtype == LIFE_STORY_MODE:
+        thinker_id = "buddha"  # the mode is the Buddha's own life
+    elif request.thinker_id is None and not brief and request.category_id != "comedy":
         thinker_id = _pick_thinker(request.profile.id, request.subtype)
     if thinker_id is not None and thinker_id != request.thinker_id:
         # Resolve again so the rotated thinker is validated and saved.
@@ -117,6 +119,7 @@ def generate_content(
         weather=request.weather,
         hashtag_count=hashtag_count,
         life_scene=request.life_scene,
+        recent_moments=_recent_life_moments(request),
         video=video,
     )
     raw_content = agent.generate_content()
@@ -160,9 +163,9 @@ LIFE_STORY_MODE = "life_story"
 
 
 def _pick_life_scene(request, chosen=None):
-    """A moment from the thinker's life for the Life story mode: the chosen
-    one, or one the recent posts have not used."""
-    if request.subtype != LIFE_STORY_MODE or not request.thinker_id:
+    """A named moment, only when one is asked for; otherwise the model
+    chooses any moment from the Buddha's life (see _recent_life_moments)."""
+    if request.subtype != LIFE_STORY_MODE or not request.thinker_id or not chosen:
         return None
     from config_loader import load_profile_thinkers
 
@@ -171,23 +174,29 @@ def _pick_life_scene(request, chosen=None):
         None,
     )
     scenes = [scene["id"] for scene in (thinker or {}).get("life_scenes", [])]
-    if not scenes:
-        return None
-    if chosen in scenes:
-        return chosen
-    recent = []
+    return chosen if chosen in scenes else None
+
+
+# How many recent life stories the model is told not to repeat.
+_LIFE_MEMORY = 20
+
+
+def _recent_life_moments(request):
+    """Titles of the latest life stories, so the next one tells a new moment."""
+    if request.subtype != LIFE_STORY_MODE:
+        return []
+    moments = []
     paths = sorted(_POSTS_DIRECTORY.glob("post_*.json"), key=lambda path: path.stat().st_mtime)
     for path in reversed(paths):
         try:
-            value = json.loads(path.read_text(encoding="utf-8")).get("life_scene")
+            data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        if value:
-            recent.append(value)
-        if len(recent) >= max(1, len(scenes) - 3):
+        if data.get("subtype") == LIFE_STORY_MODE and data.get("title"):
+            moments.append(data["title"])
+        if len(moments) >= _LIFE_MEMORY:
             break
-    fresh = [scene for scene in scenes if scene not in recent]
-    return random.choice(fresh or scenes)
+    return moments
 
 
 # How many recent posts to look back on so a place or weather is not repeated.

@@ -313,7 +313,6 @@
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
           <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
-          <label id="life-scene-field" hidden title="Optional: tell one moment from the Buddha's life in the 10-second clip.">Story from the Buddha's life<select id="life-scene" name="life_scene"><option value="">None (use the story mode above)</option></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
@@ -424,10 +423,6 @@
       options.brands.forEach((option) => addOption(brandSelect, option, "default"));
       options.profiles.forEach((option) => addOption(profileSelect, option, "rational_thoughts"));
       options.formats.forEach((option) => addOption(formatSelect, option, "image_reel"));
-      if ($("life-scene").options.length === 1) {
-        (options.life_scenes || []).forEach(([id, episode]) =>
-          $("life-scene").append(new Option(episode.length > 70 ? episode.slice(0, 67) + "…" : episode, id)));
-      }
       // A video Reel is a One-image Reel filmed in Google Flow instead of painted.
       const imageReel = [...formatSelect.options].find((option) => option.value === "image_reel");
       if (imageReel) imageReel.after(new Option("Video Reel (Google Flow, ~10 s)", VIDEO_REEL));
@@ -508,7 +503,6 @@
 
     function updatePlatforms() {
       const format = state.options.formats.find((item) => item.id === realFormat());
-      $("life-scene-field").hidden = $("format").value !== VIDEO_REEL;
       const current = $("platform").value;
       const available = state.options.platforms.filter((item) =>
         !item.supported_format_ids.length || item.supported_format_ids.includes(format.id)
@@ -2667,7 +2661,6 @@
         hashtag_count: $("hashtag-count").value || null,
         format_id: realFormat(),
         reel_kind: $("format").value === VIDEO_REEL ? "video" : "image",
-        life_scene: $("format").value === VIDEO_REEL ? ($("life-scene").value || null) : null,
         platform_id: $("platform").value,
         count: Number($("count").value),
         brief: $("brief").value.trim() || null

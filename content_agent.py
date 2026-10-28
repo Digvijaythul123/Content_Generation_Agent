@@ -93,12 +93,14 @@ class ContentAgent:
         weather=None,
         hashtag_count=None,
         life_scene=None,
+        recent_moments=None,
         video=False,
     ):
         self.ai_service = AIService()
         self.video = video
         self.hashtag_count = hashtag_count
         self.life_scene = life_scene
+        self.recent_moments = recent_moments or []
         self.scenery = scenery
         self.weather = weather
         self.profile = profile or load_profile(profile_id)
@@ -338,6 +340,27 @@ class ContentAgent:
                 "the Buddha did or said and the lesson. The caption can then "
                 "speak to the viewer.",
             ]
+        elif self.subtype == "life_story":
+            thinker_lines += [
+                "Choose one true moment from anywhere in his life, not only "
+                "the famous ones: his birth at Lumbini, the four sights, "
+                "leaving the palace, the years of hard practice, the "
+                "awakening, his teachings and the people he met, his family, "
+                "the monks and nuns, kings and outcasts, animals, and his "
+                "last days and passing at Kusinara.",
+                "Name the source in the caption. If the moment comes from "
+                "later biographies or legend (for example the seven steps "
+                "at birth) rather than the early suttas, say \"tradition "
+                "says\" instead of presenting it as history.",
+                "On screen, tell the moment itself, not a general \"you\" "
+                "line: Main_point says who and what happens; Supporting_copy "
+                "says what the Buddha did or said and the lesson.",
+            ]
+            if self.recent_moments:
+                thinker_lines += [
+                    "Recently told; pick a different moment:",
+                    _as_bullets(self.recent_moments),
+                ]
         elif scenes:
             # Show him among people, not always alone or with one monk.
             thinker_lines.append(

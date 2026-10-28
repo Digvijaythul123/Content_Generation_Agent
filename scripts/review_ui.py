@@ -982,13 +982,6 @@ def get_art_prompt(content_type, content_id):
 _DESIGNED_SUBTYPE_IDS = {"mind_states", "numbered_list", "illustrated_metaphor", "parable_card"}
 
 
-def _safe_thinkers(profile_id):
-    try:
-        return load_profile_thinkers(profile_id)
-    except ConfigurationError:
-        return []
-
-
 def get_flow_prompt(content_type, content_id):
     """Return the Google Flow prompt that turns the post's art into an
     10-second video clip (paste it with the art as the first frame)."""
@@ -2327,12 +2320,6 @@ def get_generation_options():
         "qa_engineering_ai": options["qa_subtypes"],
     }
     options["music_tracks"] = [path.name for path in list_tracks()]
-    options["life_scenes"] = [
-        [scene["id"], scene["episode"]]
-        for thinker in _safe_thinkers("rational_thoughts")
-        if thinker["id"] == "buddha"
-        for scene in thinker.get("life_scenes") or []
-    ]
     options["reveal_styles"] = [[key, name] for key, name in REVEAL_STYLES.items()]
     options["default_reveal"] = DEFAULT_REVEAL
     options["list_subtypes"] = sorted(_UNVEILED_SUBTYPES)
@@ -2428,10 +2415,6 @@ def generate_and_save(payload):
             raise ValueError("Content subtypes require a content profile.")
 
     video = payload.get("reel_kind") == "video"
-    if video and payload.get("life_scene"):
-        # A moment from the Buddha's life, told in one 10-second clip.
-        subtype = "life_story"
-        payload = {**payload, "thinker_id": payload.get("thinker_id") or "buddha"}
     if video:
         if payload.get("format_id") != "image_reel":
             raise ValueError("Video Reels are One-image Reels: choose that content type.")
@@ -2459,7 +2442,6 @@ def generate_and_save(payload):
         scenery=payload.get("scenery") or "auto",
         weather=payload.get("weather") or "auto",
         video=video,
-        life_scene=payload.get("life_scene") or None,
     )
     data = {
         "brand_id": (

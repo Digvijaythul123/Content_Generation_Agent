@@ -1361,10 +1361,13 @@ def test_life_of_the_buddha_tells_one_episode_with_its_people(monkeypatch, tmp_p
     request = resolve_generation_request(
         profile_id="rational_thoughts", format_id="image_reel", platform_id="instagram",
         subtype="life_story", thinker_id="buddha")
-    scene = content_pipeline._pick_life_scene(request)
-    assert scene in {"mucalinda", "angulimala", "kisa_gotami", "sujata", "first_teaching", "nalagiri",
-                     "mara", "sick_monk", "sunita", "alms_round", "rahula", "parileyyaka",
-                     "kalamas", "patacara", "last_words"}
+    # No fixed list: the model picks any moment, avoiding the recent ones.
+    assert content_pipeline._pick_life_scene(request) is None
+    (tmp_path / "post_001.json").write_text(
+        '{"subtype": "life_story", "title": "The bandit who stopped"}', encoding="utf-8")
+    (tmp_path / "post_002.json").write_text(
+        '{"subtype": "mirror", "title": "Not a life story"}', encoding="utf-8")
+    assert content_pipeline._recent_life_moments(request) == ["The bandit who stopped"]
     assert not content_pipeline._uses_setting(request)  # the episode sets the place
 
     service = Mock()
@@ -1378,6 +1381,17 @@ def test_life_of_the_buddha_tells_one_episode_with_its_people(monkeypatch, tmp_p
     prompt = service.generate_reel.call_args.args[0]
     assert "Mucalinda the serpent king" in prompt and "giant serpent coiled beneath him" in prompt
     assert "Udana 2.1" in prompt
+
+    with patch("content_agent.AIService", return_value=service):
+        content_agent.ContentAgent(
+            profile_id=request.profile.id, profile=request.profile.to_mapping(),
+            content_format=request.content_format, platform=request.platform,
+            subtype="life_story", thinker_id="buddha",
+            recent_moments=["The bandit who stopped"],
+        ).generate_content()
+    prompt = service.generate_reel.call_args.args[0]
+    assert "his birth at Lumbini" in prompt and "tradition says" in prompt
+    assert "pick a different moment" in prompt and "The bandit who stopped" in prompt
 
     other = _prompt_for(subtype="mirror", thinker_id="buddha")
     assert "show him with other people rather than alone" in other
