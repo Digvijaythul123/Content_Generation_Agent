@@ -425,7 +425,12 @@
       options.formats.forEach((option) => addOption(formatSelect, option, "image_reel"));
       // A video Reel is a One-image Reel filmed in Google Flow instead of painted.
       const imageReel = [...formatSelect.options].find((option) => option.value === "image_reel");
-      if (imageReel) imageReel.after(new Option("Video Reel (Google Flow, ~10 s)", VIDEO_REEL));
+      if (imageReel) {
+        // Flow makes the whole Reel from one script: scenes, narrator, music.
+        const videoOption = new Option("Video Reel (Google Flow story, voiced, ~10 s)", VIDEO_REEL);
+        imageReel.before(videoOption);
+        formatSelect.value = VIDEO_REEL;
+      }
       const subtypeError = $("subtype-error");
       subtypeError.textContent = options.subtype_error || "";
       subtypeError.hidden = !options.subtype_error;
@@ -1424,18 +1429,23 @@
       const video = Boolean(state.record.video_reel);
       details.open = video;
       const summary = document.createElement("summary");
+      const story = Boolean(state.record.flow_story);
       summary.textContent = video
-        ? "Video Reel: make the clip in Google Flow"
-        : "Make it a video Reel (Google Flow, free daily credits)";
+        ? (story ? "Flow story Reel: make the video in Google Flow" : "Video Reel: make the clip in Google Flow")
+        : "Make it a voiced Flow story Reel (Google Flow)";
       const steps = document.createElement("p");
       steps.className = "message";
-      steps.textContent = (video
-        ? "1. In Google Flow choose Text to Video (or Frames to Video if you added a still below first), Veo, 9:16 portrait. "
-        : "1. Make and add the still art first (above). "
-          + "In Google Flow choose Frames to Video, Veo, 9:16 portrait, and add the still art as the first frame. ")
-        + "2. Paste this prompt and generate a 10-second clip. "
-        + "3. Download the MP4 and drop it below. "
-        + "4. Render the Reel video: the words, music (with the clip's own sound under it), and closing card are added here, about 10 seconds in all.";
+      steps.textContent = story || !video
+        ? "1. Write the story script below (or check it), then Copy Flow video prompt. "
+          + "2. In Google Flow choose Text to Video, Veo, 9:16 portrait, 10 seconds, and paste the prompt. "
+          + "3. Watch it: the narrator must say the script's words, and the Buddha must look right. Generate again if not. "
+          + "4. Download in 1080p and drop the MP4 below. "
+          + "5. Render: the Veo mark is cropped and the closing card added; Flow's voice and music stay as they are. "
+          + "When posting by hand, turn on Instagram's auto captions for people watching without sound."
+        : "1. In Google Flow choose Text to Video (or Frames to Video with the still art as the first frame), Veo, 9:16 portrait. "
+          + "2. Paste this prompt and generate a 10-second clip. "
+          + "3. Download the MP4 and drop it below. "
+          + "4. Render the Reel video: the words, music (with the clip's own sound under it), and closing card are added here.";
       const text = document.createElement("textarea");
       text.readOnly = true;
       text.rows = 7;
@@ -1460,7 +1470,9 @@
         try {
           await navigator.clipboard.writeText(await load());
           message.className = "message";
-          message.textContent = "Copied. In Flow use Frames to Video with the still art as the first frame, then drop the MP4 below.";
+          message.textContent = story || !video
+            ? "Copied. In Flow use Text to Video, 9:16, 10 seconds; download in 1080p and drop the MP4 below."
+            : "Copied. In Flow use Frames to Video with the still art as the first frame, then drop the MP4 below.";
         } catch (error) {
           text.select();
           message.className = "message";

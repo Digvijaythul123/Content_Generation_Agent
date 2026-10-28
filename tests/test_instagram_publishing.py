@@ -1730,3 +1730,50 @@ def test_video_script_is_timed_and_feeds_the_flow_prompt(monkeypatch):
     prompt = art_generator.build_flow_prompt({**record, "video_script": script})
     assert "3-7 s: A hand opens." in prompt and "On screen" not in prompt
     assert "Camera: Slow push-in." in prompt and "River, wind. No speech" in prompt
+
+
+def test_flow_story_script_has_exact_sourced_voiceover_and_feeds_one_prompt(monkeypatch):
+    import art_generator
+    import content_agent
+
+    record = {"id": "post_999", "format_id": "image_reel", "video_reel": True, "flow_story": True,
+              "profile_id": "rational_thoughts", "title": "The bandit who stopped",
+              "main_point": "A **bandit** with a sword chases the Buddha.",
+              "supporting_copy": "Anyone can stop and change.", "cta": "Send this to a friend.",
+              "caption": "Source: Angulimala Sutta, MN 86.",
+              "design_prompt": "A forest path, a bandit running, the Buddha walking calmly."}
+    service = Mock()
+    service.generate_reel.return_value = (
+        "Scene 1: A fierce bandit runs down a forest path, sword raised.\n"
+        'Voiceover 1: "A bandit chased the Buddha."\n'
+        "Scene 2: The Buddha walks calmly ahead; the bandit cannot catch him.\n"
+        'Voiceover 2: "He ran hard, but could not catch him."\n'
+        "Scene 3: The bandit kneels, his sword on the ground.\n"
+        'Voiceover 3: "“I have stopped. You stop too.”"\n'
+        "Music: soft bamboo flute\n")
+    script = content_agent.write_reel_script(record, ai_service=service)
+    assert script.splitlines()[0] == ('Scene 1 (0-3 s): A fierce bandit runs down a forest path, '
+                                      'sword raised. Narrator: "A bandit chased the Buddha."')
+    assert 'Closing card (10-11.5 s): "Send this to a friend."' in script
+    sent = service.generate_reel.call_args.args[0]
+    assert "Never invent a quote" in sent and "MN 86" in sent and "26 words" in sent
+
+    record["video_script"] = script
+    prompt = art_generator.build_flow_prompt(record)
+    assert 'Shot 3 (7-10 s): The bandit kneels, his sword on the ground. Narrator says: "I have stopped. You stop too."' in prompt
+    assert "Speak exactly the narrator lines" in prompt and "soft bamboo flute" in prompt
+    assert "Prince Siddhartha" in prompt and "No on-screen text" in prompt
+    assert "attached image" not in prompt
+
+    # Too many words for 10 seconds is refused rather than rushed.
+    service.generate_reel.return_value = service.generate_reel.return_value.replace(
+        "He ran hard, but could not catch him.", " ".join(["word"] * 30))
+    with pytest.raises(content_agent.AIServiceError, match="too long"):
+        content_agent.write_flow_story(record, ai_service=service)
+
+
+def test_flow_story_prompt_needs_a_script():
+    import art_generator
+
+    with pytest.raises(art_generator.ArtGenerationError, match="story script"):
+        art_generator.build_flow_story_prompt({"flow_story": True, "video_script": ""})

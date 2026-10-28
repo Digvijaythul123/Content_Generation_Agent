@@ -957,6 +957,98 @@ def apply_hook_options(record, ai_service=None):
     return record
 
 
+# A Flow story Reel: Flow makes the whole 10-second video (scenes, cuts,
+# narrator, music) from one script; nothing is written on screen.
+FLOW_STORY_BEATS = (("1", "0-3 s"), ("2", "3-7 s"), ("3", "7-10 s"))
+FLOW_STORY_MAX_WORDS = 26
+FLOW_NARRATOR = "a calm, warm, deep male narrator, unhurried, gentle and clear"
+
+
+def write_flow_story(record, ai_service=None):
+    """Write a three-scene script with an exact, sourced voiceover for a
+    Google Flow story Reel (labelled lines, shown on the review page and
+    turned into the Flow prompt)."""
+    from hook_score import formula_example, formulas_for
+
+    hook = _plain(record.get("main_point"))
+    payoff = _plain(record.get("supporting_copy"))
+    profile_id = record.get("profile_id")
+    formulas = formulas_for(profile_id)
+    prompt = (
+        "Write the script for a 10-second vertical video Reel that Google Veo "
+        "will film in one go: three short scenes with soft cuts, a narrator, "
+        "and soft music. Nothing is written on screen; the narrator carries "
+        "the words.\n\n"
+        f"Post title: {_plain(record.get('title'))}\n"
+        f"Hook (first spoken line): {hook}\n"
+        f"Payoff: {payoff}\n"
+        f"Caption with the teaching and source: {_plain(record.get('caption'))[:700]}\n"
+        f"Scene idea: {record.get('design_prompt', '')}\n\n"
+        "Rules:\n"
+        "- Scene 1 is the hook: the most striking image, and the narrator "
+        "speaks the hook line (keep it, or tighten it to at most 10 words).\n"
+        "- Scene 3 lands the payoff and the lesson.\n"
+        "- If the teaching has a story (from the Buddha's life or a sutta), "
+        "show it as a small arc across the three scenes (before, the turn, "
+        "after). Otherwise show one everyday moment that changes.\n"
+        f"- Voiceover: {FLOW_STORY_MAX_WORDS} words at most in all, plain "
+        "English, in short lines. Never invent a quote: put words in the "
+        "Buddha's mouth only if they are in the source above; otherwise "
+        "narrate in the third person.\n"
+        "- Keep the facts of the source. Legends from later biographies are "
+        "fine as scenes but are not claimed as history.\n"
+        "- Picture: wide or medium shots, calm natural movement; the Buddha "
+        "in his traditional form (curled dark hair with the rounded crown, "
+        "long earlobes, saffron robe); before his awakening he is Prince "
+        "Siddhartha with long dark hair in a topknot and fine white clothes. "
+        "No text, letters, or signs anywhere.\n"
+        "- The opening line should use one of these hook shapes:\n"
+        + "".join(
+            f"  - {formula['shape']} (e.g. {formula_example(formula, profile_id)})\n"
+            for formula in formulas[:8]
+        )
+        + "\nReply with exactly these lines and nothing else:\n"
+        "Scene 1: what we see and what moves, 0-3 s (one sentence)\n"
+        "Voiceover 1: \"the spoken hook\"\n"
+        "Scene 2: 3-7 s (one sentence)\n"
+        "Voiceover 2: \"spoken words\"\n"
+        "Scene 3: 7-10 s (one sentence)\n"
+        "Voiceover 3: \"spoken payoff\"\n"
+        "Music: soft instruments, for example bamboo flute and tanpura\n"
+    )
+    reply = (ai_service or AIService()).generate_reel(prompt)
+    found = {}
+    for label in ("Scene 1", "Voiceover 1", "Scene 2", "Voiceover 2", "Scene 3", "Voiceover 3", "Music"):
+        match = re.search(rf"^\W*{label}\W*[:\-]\s*(.+)$", reply, re.IGNORECASE | re.MULTILINE)
+        if match:
+            found[label] = match.group(1).strip().strip("*").strip()
+    if not all(f"Scene {n}" in found and f"Voiceover {n}" in found for n, _ in FLOW_STORY_BEATS):
+        raise AIServiceError("The model did not return a usable story script.")
+    spoken = []
+    for number, _ in FLOW_STORY_BEATS:
+        line = found[f"Voiceover {number}"].strip().strip('"\u201c\u201d').strip()
+        spoken.append(line)
+    if sum(len(line.split()) for line in spoken) > FLOW_STORY_MAX_WORDS + 6:
+        raise AIServiceError("The voiceover is too long for 10 seconds; write it again.")
+    lines = [
+        f"Scene {number} ({span}): {found[f'Scene {number}']} Narrator: \"{spoken[index]}\""
+        for index, (number, span) in enumerate(FLOW_STORY_BEATS)
+    ]
+    lines.append(f"Narrator: {FLOW_NARRATOR}.")
+    lines.append(f"Music: {found.get('Music') or 'soft bamboo flute and tanpura'}.")
+    cta = _plain(record.get("cta"))
+    if cta:
+        lines.append(f"Closing card (10-11.5 s): \"{cta}\"")
+    return "\n".join(lines)
+
+
+def write_reel_script(record, ai_service=None):
+    """The video plan for a Reel: a voiced story or a text-over-clip shot."""
+    if record.get("flow_story"):
+        return write_flow_story(record, ai_service=ai_service)
+    return write_video_script(record, ai_service=ai_service)
+
+
 def _short_name(thinker):
     """'The Buddha (Siddhartha Gautama)' -> 'The Buddha' for on-screen credits."""
     return thinker["name"].split(" (")[0]

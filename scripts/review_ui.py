@@ -23,7 +23,7 @@ from config_loader import (
     load_profile_weathers,
 )
 import ai_service
-from content_agent import apply_hook_options, simplify_copy, write_video_script
+from content_agent import apply_hook_options, simplify_copy, write_reel_script
 from content_models import (
     THREADS_MAX_CHARACTERS,
     ContentValidationError,
@@ -1494,7 +1494,10 @@ def make_video_script(content_id):
         raise ValueError(
             "Only One-image Reels with words added on top can be video Reels."
         )
-    record["video_script"] = write_video_script(record)
+    if not record.get("video_reel"):
+        # A Reel turned into a video now becomes a voiced Flow story.
+        record["flow_story"] = True
+    record["video_script"] = write_reel_script(record)
     record["video_reel"] = True
     save_post(content_id, record)
     _append_history("post", content_id, "video_script_written")
@@ -2677,8 +2680,10 @@ def generate_and_save(payload):
     apply_hook_options(data)
     if video:
         data["video_reel"] = True
+        # Flow makes the whole Reel: scenes, narrator, and music.
+        data["flow_story"] = True
         try:
-            data["video_script"] = write_video_script(data)
+            data["video_script"] = write_reel_script(data)
         except AIServiceError:
             pass  # the Flow prompt falls back to calm, general motion
     if result.request.scenery:

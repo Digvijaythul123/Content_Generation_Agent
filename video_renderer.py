@@ -614,6 +614,11 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
                 Path(folder) / "end_card.jpg",
                 IMAGE_REEL_SIZE,
             )
+        story = motion_clip and bool(record.get("flow_story"))
+        if story:
+            # Flow made the whole Reel (scenes, narrator, music): add no words
+            # or music on top, only the closing card.
+            text_layers, music = [], None
         clip_sound = False
         if motion_clip:
             length, has_sound = clip_info(background)
@@ -633,7 +638,7 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             clip_zoom=1.06,
             effects=(
                 render_effect_layers(effect_for(record), Path(folder), seconds)
-                if effect_for(record)
+                if effect_for(record) and not story
                 else ()
             ),
             zoom=DESIGNED_ZOOM_AMOUNT if designed else ZOOM_AMOUNT,

@@ -622,6 +622,8 @@ def build_flow_prompt(record):
             "Video clips are for Reels with words added on top; illustrated "
             "posts carry their words in the art and stay as images."
         )
+    if record.get("flow_story"):
+        return build_flow_story_prompt(record)
     scene = _TEXT_SPACE_PATTERN.sub("", _without_blocked_names(description, record))
     scene = " ".join(_CLOSE_SHOT.sub(" ", scene).split())
     setting = " ".join(_setting_lines(record))
@@ -692,6 +694,49 @@ def build_flow_prompt(record):
     if setting:
         parts.append(setting)
     return "\n\n".join(parts)
+
+
+_STORY_SCENE = re.compile(r"^Scene (\d) \(([^)]*)\):\s*(.*?)\s*Narrator:\s*\"(.*)\"\s*$")
+
+
+def build_flow_story_prompt(record):
+    """One Google Flow prompt for a whole voiced story Reel: three scenes
+    with soft cuts, the exact narration, music, and the Buddha's look."""
+    script = str(record.get("video_script") or "")
+    scenes, narrator, music = [], None, None
+    for line in script.splitlines():
+        match = _STORY_SCENE.match(line.strip())
+        if match:
+            scenes.append(match.groups())
+        elif line.startswith("Narrator:"):
+            narrator = line.split(":", 1)[1].strip().rstrip(".")
+        elif line.startswith("Music:"):
+            music = line.split(":", 1)[1].strip().rstrip(".")
+    if not scenes:
+        raise ArtGenerationError("Write the story script first (Write video script).")
+    shots = "\n".join(
+        f"Shot {number} ({span}): {_without_blocked_names(visual, record)} "
+        f"Narrator says: \"{spoken}\""
+        for number, span, visual, spoken in scenes
+    )
+    return "\n\n".join([
+        f"A {FLOW_CLIP_SECONDS}-second vertical 9:16 cinematic video, photorealistic, "
+        "warm natural light, told in three short shots joined by soft cuts.",
+        shots,
+        f"Voice: {narrator or 'a calm, warm, deep male narrator'}. Speak exactly the "
+        "narrator lines above, in English, at a calm pace that fits the "
+        f"{FLOW_CLIP_SECONDS} seconds; no other speech, and no one in the scene talks.",
+        f"Music and sound: {music or 'soft bamboo flute and tanpura'}, quiet under the "
+        "voice, with gentle natural ambience.",
+        "The Buddha appears in his traditional form: tightly curled dark hair with "
+        "the rounded crown (ushnisha), long earlobes, a serene face, and a simple "
+        "saffron robe over one shoulder; he is not a shaved-head monk, and his face "
+        "stays the same in every shot. Before his awakening he is Prince Siddhartha: "
+        "long dark hair in a topknot, fine white clothes. Monks have shaved heads.",
+        "Wide or medium shots with slow, calm camera moves; no fast action, no "
+        "dramatic gestures, no faces changing shape, no extra limbs, no modern objects.",
+        "No on-screen text, subtitles, captions, titles, logos, or watermarks.",
+    ])
 
 
 def detect_video_type(data):
