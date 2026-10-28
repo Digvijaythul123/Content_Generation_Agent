@@ -978,6 +978,10 @@ def get_art_prompt(content_type, content_id):
     return build_art_prompt(record, brand.template.art_style if brand else None)
 
 
+# Story modes whose art carries its own words; they stay as image Reels.
+_DESIGNED_SUBTYPE_IDS = {"mind_states", "numbered_list", "illustrated_metaphor", "parable_card"}
+
+
 def get_flow_prompt(content_type, content_id):
     """Return the Google Flow prompt that turns the post's art into an
     8-second video clip (paste it with the art as the first frame)."""
@@ -2393,6 +2397,16 @@ def generate_and_save(payload):
         else:
             raise ValueError("Content subtypes require a content profile.")
 
+    video = payload.get("reel_kind") == "video"
+    if video:
+        if payload.get("format_id") != "image_reel":
+            raise ValueError("Video Reels are One-image Reels: choose that content type.")
+        if subtype in _DESIGNED_SUBTYPE_IDS:
+            raise ValueError(
+                "Illustrated story modes (Mind States, Numbered List, Illustrated "
+                "Metaphor, Parable Card) carry their words in the art, so they "
+                "stay as image Reels. Pick another story mode for a video."
+            )
     result = generate_content(
         brand_id=payload.get("brand_id"),
         profile_id=payload.get("profile_id"),
@@ -2410,6 +2424,7 @@ def generate_and_save(payload):
         ),
         scenery=payload.get("scenery") or "auto",
         weather=payload.get("weather") or "auto",
+        video=video,
     )
     data = {
         "brand_id": (
@@ -2434,6 +2449,8 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
+    if video:
+        data["video_reel"] = True
     if result.request.scenery:
         data["scenery"] = result.request.scenery
     if result.request.weather:
@@ -2531,6 +2548,9 @@ def generate_batch_and_save(payload):
         ):
             qa_subtype_ids = tuple(
                 subtype["id"] for subtype in load_profile_subtypes(profile_id)
+                # Illustrated modes stay as image Reels.
+                if not (payload.get("reel_kind") == "video"
+                        and subtype["id"] in _DESIGNED_SUBTYPE_IDS)
             )
         if not payload.get("thinker_id"):
             thinker_ids = tuple(

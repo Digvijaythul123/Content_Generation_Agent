@@ -603,10 +603,19 @@ def build_flow_prompt(record):
     sound = ", ".join(sounds[:2]) or "a soft breeze and distant birds"
     style = visual_style_for(record)
     look = f" Keep the look: {' '.join(style['recipe'].split())}" if style else ""
-    parts = [
+    still = artwork_path(record["id"]) if record.get("id") else None
+    from_image = still is not None and not is_video_artwork(still)
+    opening = (
         f"One continuous {FLOW_CLIP_SECONDS}-second vertical 9:16 shot that starts exactly "
         "on the attached image (use it as the first frame). Keep every person, face, "
-        "robe, colour, and the light the same as in the image." + look,
+        "robe, colour, and the light the same as in the image."
+        if from_image
+        else f"One continuous {FLOW_CLIP_SECONDS}-second vertical 9:16 cinematic shot of "
+        "the scene below, photorealistic, softly lit, with the main figure large and "
+        "clear in the lower half of the frame."
+    )
+    parts = [
+        opening + look,
         "Motion: slow, calm, and natural. The main figure stays in place and keeps "
         "doing what the image shows (breathing, a slight turn of the head, a hand "
         "moving gently if they are giving or teaching). Robes, leaves, water, "

@@ -47,8 +47,12 @@ def generate_content(
     scenery=None,
     weather=None,
     hashtag_count=None,
+    video=False,
 ):
     """Resolve configuration, generate a draft, and validate its content.
+
+    ``video`` writes a One-image Reel whose scene is filmed as an 8-second
+    Google Flow clip instead of painted as a still.
 
     ``scenery`` and ``weather`` take an id, "auto" or None to rotate, or
     "none" to leave the place or light to the story.
@@ -112,6 +116,7 @@ def generate_content(
         weather=request.weather,
         hashtag_count=hashtag_count,
         life_scene=request.life_scene,
+        video=video,
     )
     raw_content = agent.generate_content()
     try:

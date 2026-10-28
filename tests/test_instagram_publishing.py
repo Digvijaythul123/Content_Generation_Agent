@@ -1636,7 +1636,7 @@ def test_flow_prompt_films_the_art_without_words(monkeypatch):
         "design_prompt": "Subject: a monk by a river in the rain at dusk.",
     }
     prompt = art_generator.build_flow_prompt(record)
-    assert "8-second vertical 9:16" in prompt and "first frame" in prompt
+    assert "8-second vertical 9:16" in prompt
     assert "steady soft rain" in prompt and "gentle flowing water" in prompt
     assert "No speech" in prompt and "no text" in prompt
     monkeypatch.setattr(art_generator, "is_designed", lambda record: True)
@@ -1658,3 +1658,32 @@ def test_video_clip_keeps_its_sound_under_the_music():
         motion_clip=True,
     )
     assert "[0:a]" not in silent[silent.index("-filter_complex") + 1]
+
+
+def test_video_reels_ask_for_a_moving_moment_and_skip_illustrated_modes(monkeypatch):
+    import content_agent
+    from scripts import review_ui
+
+    agent = content_agent.ContentAgent.__new__(content_agent.ContentAgent)
+    agent.video = True
+    assert "8-second video clip" in agent._video_reminder()
+    agent.video = False
+    assert agent._video_reminder() == ""
+    with pytest.raises(ValueError, match="stay as image Reels"):
+        review_ui.generate_and_save({
+            "profile_id": "rational_thoughts", "format_id": "image_reel",
+            "platform_id": "instagram", "content_subtype": "numbered_list",
+            "reel_kind": "video",
+        })
+
+
+def test_flow_prompt_without_still_art_is_text_to_video(monkeypatch):
+    import art_generator
+
+    monkeypatch.setattr(art_generator, "visual_style_for", lambda record: None)
+    monkeypatch.setattr(art_generator, "artwork_path", lambda post_id: None)
+    prompt = art_generator.build_flow_prompt({
+        "id": "post_999", "format_id": "image_reel", "video_reel": True,
+        "design_prompt": "Subject: a monk lighting a lamp in a temple.",
+    })
+    assert "attached image" not in prompt and "cinematic shot" in prompt

@@ -313,6 +313,7 @@
           <label>Caption language<select id="caption-language" name="caption_language"><option value="english">English</option><option value="hinglish">English + a Hinglish line</option><option value="hindi">English + a Hindi line</option><option value="thai">English + a Thai line</option><option value="sinhala">English + a Sinhala line</option><option value="vietnamese">English + a Vietnamese line</option><option value="burmese">English + a Burmese line</option><option value="japanese">English + a Japanese line</option><option value="chinese">English + a Chinese line</option></select></label>
           <label title="Instagram now indexes captions like search; test fewer hashtags and compare reach in Performance.">Hashtags<select id="hashtag-count" name="hashtag_count"><option value="">5 (default)</option><option value="3">3</option><option value="1">1</option><option value="0">None (searchable caption instead)</option></select></label>
           <label>Content type / format<select id="format" name="format_id" required></select></label>
+          <label id="reel-kind-field" title="Video: the app writes a Google Flow prompt instead of an art prompt; the 8-second clip gets the words, music, and closing card here (about 10 seconds).">Reel type<select id="reel-kind" name="reel_kind"><option value="image">Image Reel (still art)</option><option value="video">Video Reel (Google Flow, ~10 s)</option></select></label>
           <label>Platform<select id="platform" name="platform_id" required></select></label>
           <label>Drafts to generate<input id="count" name="count" type="number" min="1" max="10" value="1" required></label>
           <label class="brief-field">Brief<textarea id="brief" name="brief" placeholder="What should this content communicate?"></textarea></label>
@@ -494,6 +495,7 @@
 
     function updatePlatforms() {
       const format = state.options.formats.find((item) => item.id === $("format").value);
+      $("reel-kind-field").hidden = $("format").value !== "image_reel";
       const current = $("platform").value;
       const available = state.options.platforms.filter((item) =>
         !item.supported_format_ids.length || item.supported_format_ids.includes(format.id)
@@ -1412,15 +1414,21 @@
       if (state.record.format_id !== "image_reel" || !state.record.design_prompt
           || DESIGNED_SUBTYPES.includes(state.record.subtype)) return null;
       const details = document.createElement("details");
+      const video = Boolean(state.record.video_reel);
+      details.open = video;
       const summary = document.createElement("summary");
-      summary.textContent = "Make it a video Reel (Google Flow, free daily credits)";
+      summary.textContent = video
+        ? "Video Reel: make the clip in Google Flow"
+        : "Make it a video Reel (Google Flow, free daily credits)";
       const steps = document.createElement("p");
       steps.className = "message";
-      steps.textContent = "1. Make and add the still art first (above). "
-        + "2. In Google Flow choose Frames to Video, Veo, 9:16 portrait, and add the still art as the first frame. "
-        + "3. Paste this prompt and generate an 8-second clip. "
-        + "4. Download the MP4 and drop it below in place of the image. "
-        + "Then render the Reel video: the words, music (with the clip's own sound under it), and closing card are added here, about 10 seconds in all.";
+      steps.textContent = (video
+        ? "1. In Google Flow choose Text to Video (or Frames to Video if you added a still below first), Veo, 9:16 portrait. "
+        : "1. Make and add the still art first (above). "
+          + "In Google Flow choose Frames to Video, Veo, 9:16 portrait, and add the still art as the first frame. ")
+        + "2. Paste this prompt and generate an 8-second clip. "
+        + "3. Download the MP4 and drop it below. "
+        + "4. Render the Reel video: the words, music (with the clip's own sound under it), and closing card are added here, about 10 seconds in all.";
       const text = document.createElement("textarea");
       text.readOnly = true;
       text.rows = 7;
@@ -2623,6 +2631,7 @@
         caption_language: $("caption-language").value,
         hashtag_count: $("hashtag-count").value || null,
         format_id: $("format").value,
+        reel_kind: $("format").value === "image_reel" ? $("reel-kind").value : "image",
         platform_id: $("platform").value,
         count: Number($("count").value),
         brief: $("brief").value.trim() || null

@@ -93,8 +93,10 @@ class ContentAgent:
         weather=None,
         hashtag_count=None,
         life_scene=None,
+        video=False,
     ):
         self.ai_service = AIService()
+        self.video = video
         self.hashtag_count = hashtag_count
         self.life_scene = life_scene
         self.scenery = scenery
@@ -195,6 +197,7 @@ class ContentAgent:
         return self.ai_service.generate_reel(
             prompt + self._designed_reminder() + self._hashtag_reminder()
             + self._brief_reminder() + self._life_scene_reminder()
+            + self._video_reminder()
         )
 
     def _base_prompt(self):
@@ -651,6 +654,22 @@ class ContentAgent:
         # Many viewers read English as a second language; plain words reach
         # them, and the wider audience the page is aiming for.
         return PLAIN_ENGLISH_RULES
+
+    def _video_reminder(self):
+        """A video Reel's scene is filmed as one 8-second shot, so it needs a
+        moment with gentle movement rather than a frozen pose."""
+        if not self.video:
+            return ""
+        return (
+            "\n\nIMPORTANT: this Reel is an 8-second video clip, not a still. "
+            "The Design_prompt describes one continuous moment with gentle, "
+            "natural movement that a single slow shot can show: someone "
+            "walking slowly, pouring water, offering food, lighting a lamp, "
+            "breathing in meditation, leaves falling, rain on a pond, mist "
+            "drifting. Name what moves. Keep the Buddha calm and still in "
+            "body; no running, fighting, crowds, or sudden action. No words, "
+            "letters, or signs anywhere in the scene.\n"
+        )
 
     def _life_scene_reminder(self):
         """Restate the chosen life moment last, so it wins over the format's
