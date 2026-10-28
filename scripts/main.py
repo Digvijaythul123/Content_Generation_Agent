@@ -9,6 +9,7 @@ from config_loader import (
     load_profile_subtypes,
     load_focus_thinkers,
 )
+from content_agent import apply_hook_options
 from content_models import send_line, split_first_comment
 from content_pipeline import generate_content
 from post_prompt import build_post_prompt_file
@@ -73,6 +74,7 @@ def _save_result(result, caption_language="english"):
         targeted = send_line(data.get("caption"))
         if targeted or default_cta:
             data["cta"] = targeted or default_cta
+    apply_hook_options(data)
 
     if result.request.content_format.content_kind == "post":
         post_id, file_path = create_post(data)

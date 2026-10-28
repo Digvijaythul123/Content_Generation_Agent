@@ -22,7 +22,7 @@ from config_loader import (
     load_profile_visual_styles,
     load_profile_weathers,
 )
-from content_agent import simplify_copy, write_video_script
+from content_agent import apply_hook_options, simplify_copy, write_video_script
 from content_models import (
     THREADS_MAX_CHARACTERS,
     ContentValidationError,
@@ -1216,6 +1216,8 @@ def update_post_settings(content_id, payload):
         if not isinstance(text, str) or not text.strip():
             raise ValueError(f"The {field.replace('_', ' ')} cannot be empty.")
         record[field] = text.strip()
+        if field == "main_point":
+            _record_hook_formula(record)
         # The renders show the old words, so render them again.
         post_image_path(content_id).unlink(missing_ok=True)
         reel_video_path(content_id).unlink(missing_ok=True)
@@ -1375,6 +1377,45 @@ def simplify_post_text(content_id, fresh=False):
     suggestion = simplify_copy(record, fresh=fresh)
     _append_history("post", content_id, "text_suggested", fresh=fresh)
     return suggestion
+
+
+def _record_hook_formula(record):
+    """Keep hook_formula in step with an edited hook (for Performance)."""
+    from hook_score import classify, formulas_for
+
+    formula = classify(strip_highlights(record.get("main_point") or ""),
+                       formulas_for(record.get("profile_id")))
+    if formula:
+        record["hook_formula"] = formula["id"]
+    else:
+        record.pop("hook_formula", None)
+
+
+def score_hook_text(text, profile_id=None):
+    """Score a hook line for the review page."""
+    from hook_score import formulas_for, score_hook
+
+    return score_hook(text or "", formulas_for(profile_id or None))
+
+
+def make_hook_options(content_id):
+    """Write new scored hook options for a post (the hook is not changed)."""
+    record = load_post(content_id)
+    if record.get("status") == "Published":
+        raise ValueError("This post is published; its text cannot be changed.")
+    from content_agent import choose_hook, write_hook_options
+
+    options = write_hook_options(record)
+    if not options:
+        raise ValueError("Verified quotes keep their words, so they have no hook options.")
+    _, scored = choose_hook(record, options)
+    record["hook_options"] = [
+        {key: item[key] for key in ("text", "verdict", "band", "formula", "formula_name", "fix", "original")}
+        for item in scored
+    ]
+    save_post(content_id, record)
+    _append_history("post", content_id, "hook_options_written")
+    return record
 
 
 def make_video_script(content_id):
@@ -2466,6 +2507,7 @@ def generate_and_save(payload):
         data["visual_style"] = result.request.visual_style
     if result.request.life_scene:
         data["life_scene"] = result.request.life_scene
+    apply_hook_options(data)
     if video:
         data["video_reel"] = True
         try:

@@ -2,6 +2,25 @@ id: rational_thoughts
 display_name: Buddha's Teachings
 language: Simple, everyday English that a 12-year-old or a second-language reader understands on the first read
 
+# Hook formulas (config/hook_formulas.json) this page uses. The other eight
+# (i-tried-it, someone-elses-result, the-stack, the-deadline, the-receipt,
+# the-superlative, the-clock, the-teardown) stay in that file for other
+# channels; each has a note on why it does not fit here.
+hook_formulas:
+  - the-question
+  - the-mistake
+  - contrarian-flip
+  - the-impossible
+  - the-statistic
+  - the-list
+  - the-before-after
+  - the-warning
+  - the-direct-address
+  - the-origin
+  - the-insider
+  - the-comparison
+  - the-reveal
+
 audience:
   description: Buddhists of every tradition worldwide, and anyone drawn to the Buddha's teaching, meditation, and mindfulness, who want real, sourced teachings they can practise in daily life
 

@@ -31,6 +31,11 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         if request.path == "/api/performance":
             self._send_json({"report": ui.cached_report()})
             return
+        if request.path == "/api/hook_score":
+            query = parse_qs(request.query)
+            self._send_json(ui.score_hook_text(
+                (query.get("text") or [""])[0], (query.get("profile") or [""])[0]))
+            return
         if request.path == "/api/best_times":
             self._send_json(ui.best_posting_hours())
             return
@@ -293,6 +298,22 @@ class ReviewRequestHandler(BaseHTTPRequestHandler):
         ):
             try:
                 self._send_json({"item": ui.make_video_script(path_parts[3])})
+            except (KeyError, FileNotFoundError) as error:
+                self._send_json({"error": str(error)}, 404)
+            except ui.AIServiceError as error:
+                self._send_json({"error": str(error)}, 502)
+            except (ui.PostStorageError, ui.ReviewUIError, OSError) as error:
+                self._send_json({"error": str(error)}, 500)
+            except ValueError as error:
+                self._send_json({"error": str(error)}, 400)
+            return
+        if (
+            len(path_parts) == 5
+            and path_parts[:3] == ["api", "content", "post"]
+            and path_parts[4] == "hook_options"
+        ):
+            try:
+                self._send_json({"item": ui.make_hook_options(path_parts[3])})
             except (KeyError, FileNotFoundError) as error:
                 self._send_json({"error": str(error)}, 404)
             except ui.AIServiceError as error:

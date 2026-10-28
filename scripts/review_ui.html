@@ -1774,6 +1774,7 @@
         label.append(count, input);
         inputs[key] = input;
         box.append(label);
+        if (key === "main_point" && state.record.format_id !== "carousel") box.append(hookPanel(input));
       }
       const suggest = (label, fresh) => {
         const button = makeAction(label, async () => {
@@ -1838,6 +1839,73 @@
       }));
       box.append(captionRow);
       return box;
+    }
+
+    // Hook score and options for the on-screen hook (Main point).
+    function hookPanel(input) {
+      const panel = document.createElement("div");
+      panel.className = "hook-panel";
+      const scoreLine = document.createElement("p");
+      scoreLine.className = "hint";
+      const describe = (item) => `${item.verdict} ${item.band} · ${item.formula_name}`;
+      let timer;
+      const rescore = () => {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+          if (!input.value.trim() || input.value.includes("\n")) { scoreLine.textContent = ""; return; }
+          try {
+            const item = await requestJson(`/api/hook_score?text=${encodeURIComponent(input.value)}`
+              + `&profile=${encodeURIComponent(state.record.profile_id || "")}`);
+            scoreLine.textContent = `Hook score: ${describe(item)}. Weakest: ${item.weakest.toLowerCase()} (${item.fix}).`;
+          } catch (error) {
+            scoreLine.textContent = "";
+          }
+        }, 400);
+      };
+      input.addEventListener("input", rescore);
+      rescore();
+      panel.append(scoreLine);
+      const list = document.createElement("div");
+      const showOptions = (options) => {
+        list.replaceChildren();
+        (options || []).forEach((option) => {
+          const row = document.createElement("div");
+          row.className = "inline-actions hook-option";
+          const text = document.createElement("span");
+          text.textContent = `${option.text.replace(/\*\*/g, "")} — ${describe(option)}${option.original ? " (generated)" : ""}`;
+          const use = makeAction("Use", () => {
+            input.value = option.text;
+            input.dispatchEvent(new Event("input"));
+          }, "secondary");
+          row.append(use, text);
+          list.append(row);
+        });
+      };
+      showOptions(state.record.hook_options);
+      const details = document.createElement("details");
+      details.open = Boolean((state.record.hook_options || []).length);
+      const summary = document.createElement("summary");
+      summary.textContent = "Hook options (scored; Use, then Save text)";
+      const more = makeAction("New hook options", async () => {
+        more.disabled = true;
+        more.textContent = "Writing…";
+        try {
+          const { item } = await requestJson(
+            `/api/content/post/${encodeURIComponent(state.selected.id)}/hook_options`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          state.record.hook_options = item.hook_options;
+          showOptions(item.hook_options);
+          details.open = true;
+        } catch (error) {
+          window.alert(error.message);
+        } finally {
+          more.disabled = false;
+          more.textContent = "New hook options";
+        }
+      }, "secondary");
+      details.append(summary, list, more);
+      panel.append(details);
+      return panel;
     }
 
     function feedPostControls() {

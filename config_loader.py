@@ -79,6 +79,19 @@ def _load_profile_data(profile_id):
     return _load_mapping(path, f"Content profile {profile_id!r}")
 
 
+def load_profile_hook_formulas(profile_id):
+    """The hook formula ids a profile uses (config/hook_formulas.json), or
+    None to use them all."""
+    chosen = _load_profile_data(profile_id).get("hook_formulas")
+    if chosen is None:
+        return None
+    if not isinstance(chosen, list) or not all(isinstance(item, str) for item in chosen):
+        raise ConfigurationError(
+            f"Content profile {profile_id!r} 'hook_formulas' must be a list of ids."
+        )
+    return chosen
+
+
 def load_profile_story_settings(profile_id):
     """Return the profile's subtype label and optional Reel duration."""
     data = _load_profile_data(profile_id)

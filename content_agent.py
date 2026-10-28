@@ -826,6 +826,118 @@ def write_video_script(record, ai_service=None):
     return "\n".join(lines)
 
 
+# How many alternative hooks to ask for, and how much better (in hook_score
+# points) one must be to replace the generated hook.
+HOOK_OPTION_COUNT = 5
+HOOK_SWAP_MARGIN = 8
+
+
+def write_hook_options(record, ai_service=None, count=HOOK_OPTION_COUNT):
+    """Ask for alternative on-screen hooks (Main_point), one per formula.
+
+    Returns (formula id, hook line) pairs. Verified quotes keep their
+    words, so they get none.
+    """
+    from hook_score import formula_example, formulas_for, hook_rules
+
+    if (record.get("subtype") or record.get("qa_subtype")) == "verified_quote":
+        return []
+    profile_id = record.get("profile_id")
+    formulas = formulas_for(profile_id)
+    hook, payoff = _plain(record.get("main_point")), _plain(record.get("supporting_copy"))
+    life_story = record.get("subtype") == "life_story"
+    prompt = (
+        "Write alternative opening lines (hooks) for a 10-second Instagram "
+        "Reel. The hook is shown alone for the first seconds; the payoff "
+        "line appears after it.\n\n"
+        f"Current hook: {hook}\n"
+        f"Payoff (do not give it away): {payoff}\n"
+        f"Teaching and source, from the caption: {_plain(record.get('caption'))[:600]}\n\n"
+        "Hook formulas (name, shape, example):\n"
+        + "".join(
+            f"- {formula['id']}: {formula['shape']} Example: {formula_example(formula, profile_id)}\n"
+            for formula in formulas
+        )
+        + "\nRules:\n"
+        + _as_bullets(hook_rules())
+        + "\n- At most 14 words, plain everyday English.\n"
+        "- Wrap one or two key words in **double asterisks**.\n"
+        "- Each hook uses a different formula and must still lead to the payoff above.\n"
+        "- Keep the same teaching and source; never invent a number, quote, or source.\n"
+        + ("- Tell the moment itself: who and what happens in the story.\n" if life_story else "")
+        + f"\nReply with exactly {count} lines, each as: formula-id | hook\n"
+    )
+    reply = (ai_service or AIService()).generate_reel(prompt)
+    known = {formula["id"] for formula in formulas}
+    options = []
+    for line in reply.splitlines():
+        if "|" not in line:
+            continue
+        formula_id, text = (part.strip().strip("*-").strip() for part in line.split("|", 1))
+        text = text.strip().strip('"').strip()
+        if text and formula_id.lower() in known and len(_plain(text).split()) <= 18:
+            options.append((formula_id.lower(), text))
+    if not options:
+        raise AIServiceError("The model did not return usable hooks.")
+    return options[:count]
+
+
+def choose_hook(record, options, margin=HOOK_SWAP_MARGIN):
+    """Score the current hook and the options; returns (main_point, scored).
+
+    The best option replaces the current hook only when it is clearly
+    better, so a good generated hook is not churned for a tiny gain.
+    """
+    from hook_score import formulas_for, score_hook
+
+    current = record.get("main_point") or ""
+    formulas = formulas_for(record.get("profile_id"))
+    names = {formula["id"]: formula["name"] for formula in formulas}
+    scored = []
+    for index, option in enumerate([(None, current), *options]):
+        stated, text = option if isinstance(option, tuple) else (None, option)
+        if not _plain(text):
+            continue
+        item = score_hook(text, formulas)
+        if stated in names:
+            # The formula the model wrote it with beats a regex guess.
+            item.update(formula=stated, formula_name=names[stated])
+        item.update(text=text, original=index == 0)
+        scored.append(item)
+    scored.sort(key=lambda item: -item["verdict"])
+    best = scored[0] if scored else None
+    original = next((item for item in scored if item["original"]), None)
+    if best and original and not best["original"] and best["verdict"] - original["verdict"] >= margin:
+        return best["text"], scored
+    return current, scored
+
+
+def apply_hook_options(record, ai_service=None):
+    """Add scored hook options to a new draft and use the best hook.
+
+    Saves ``hook_options`` (best first) and ``hook_formula``; an AI failure
+    keeps the generated hook. Multi-line hooks (lists carried by the art)
+    and verified quotes are left alone.
+    """
+    hook = str(record.get("main_point") or "")
+    if not hook.strip() or "\n" in hook.strip():
+        return record
+    try:
+        options = write_hook_options(record, ai_service=ai_service)
+    except AIServiceError:
+        options = []
+    chosen, scored = choose_hook(record, options)
+    record["main_point"] = chosen
+    record["hook_options"] = [
+        {key: item[key] for key in ("text", "verdict", "band", "formula", "formula_name", "fix", "original")}
+        for item in scored
+    ]
+    picked = next((item for item in scored if item["text"] == chosen), None)
+    if picked and picked["formula"]:
+        record["hook_formula"] = picked["formula"]
+    return record
+
+
 def _short_name(thinker):
     """'The Buddha (Siddhartha Gautama)' -> 'The Buddha' for on-screen credits."""
     return thinker["name"].split(" (")[0]

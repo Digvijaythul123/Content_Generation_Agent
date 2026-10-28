@@ -1395,3 +1395,86 @@ def test_life_of_the_buddha_tells_one_episode_with_its_people(monkeypatch, tmp_p
 
     other = _prompt_for(subtype="mirror", thinker_id="buddha")
     assert "show him with other people rather than alone" in other
+
+
+def test_hook_score_ranks_specific_hooks_over_cliches():
+    import hook_score
+
+    formulas = hook_score.formulas_for("rational_thoughts")
+    cliche = hook_score.score_hook("Peace comes from within.", formulas)
+    question = hook_score.score_hook("Why does the same worry come back every night?", formulas)
+    rambling = hook_score.score_hook(
+        "Find your inner peace and manifest the energy of the universe today with "
+        "this amazing journey of the divine and much more", formulas)
+    assert cliche["band"] == "WEAK" and question["verdict"] > cliche["verdict"]
+    assert question["formula"] == "the-question"
+    assert rambling["properties"]["BREVITY"] < 50 and rambling["verdict"] < cliche["verdict"]
+    myth = hook_score.score_hook("Everyone quotes this line. The Buddha never said it.", formulas)
+    assert myth["formula"] == "contrarian-flip"
+    assert hook_score.score_hook("**Why** do you worry?")["hook"] == "Why do you worry?"
+
+
+def test_hook_formulas_keep_all_21_and_the_page_uses_13():
+    import hook_score
+
+    every = hook_score.all_formulas()
+    assert len(every) == 21
+    page = {formula["id"] for formula in hook_score.formulas_for("rational_thoughts")}
+    assert len(page) == 13 and "i-tried-it" not in page and "the-question" in page
+    unused = [formula for formula in every if formula["id"] not in page]
+    assert all(formula["note"]["rational_thoughts"] for formula in unused)
+    assert len(hook_score.formulas_for(None)) == 21  # another channel gets them all
+    assert "MIT" in json.loads(hook_score.FORMULAS_PATH.read_text())["attribution"]
+
+
+def test_hook_options_swap_only_a_clearly_better_hook():
+    record = {"profile_id": "rational_thoughts", "main_point": "Peace comes from **within**.",
+              "supporting_copy": "Stillness is enough.", "caption": "Source: Dhammapada 5."}
+    service = Mock()
+    service.generate_reel.return_value = (
+        "the-question | Why does the same **worry** come back every night?\n"
+        "made-up-formula | Ignored line\n"
+        "the-list | 3 things the Buddha said to do when **anger** rises.\n")
+    content_agent.apply_hook_options(record, ai_service=service)
+    assert record["main_point"] == "Why does the same **worry** come back every night?"
+    assert record["hook_formula"] == "the-question"
+    assert len(record["hook_options"]) == 3
+    assert [item["original"] for item in record["hook_options"]].count(True) == 1
+    prompt = service.generate_reel.call_args.args[0]
+    assert "the-question:" in prompt and "i-tried-it" not in prompt and "Stillness is enough." in prompt
+
+    # A small gain keeps the generated hook; a failed call changes nothing.
+    strong = {"profile_id": "rational_thoughts",
+              "main_point": "Why does the same **worry** come back every night?"}
+    service.generate_reel.return_value = "the-warning | Worry costs you sleep."
+    content_agent.apply_hook_options(strong, ai_service=service)
+    assert strong["main_point"].startswith("Why does")
+    failing = Mock()
+    failing.generate_reel.side_effect = content_agent.AIServiceError("down")
+    plain = {"profile_id": "rational_thoughts", "main_point": "Peace comes from within."}
+    content_agent.apply_hook_options(plain, ai_service=failing)
+    assert plain["main_point"] == "Peace comes from within." and len(plain["hook_options"]) == 1
+
+
+def test_verified_quotes_and_lists_keep_their_hook():
+    service = Mock()
+    quote = {"profile_id": "rational_thoughts", "subtype": "verified_quote",
+             "main_point": "Hatred never ends by hatred."}
+    content_agent.apply_hook_options(quote, ai_service=service)
+    assert quote["main_point"] == "Hatred never ends by hatred."
+    listed = {"profile_id": "rational_thoughts", "main_point": "1. One\n2. Two"}
+    content_agent.apply_hook_options(listed, ai_service=service)
+    assert "hook_options" not in listed
+    service.generate_reel.assert_not_called()
+
+
+def test_performance_groups_by_hook_formula():
+    import analytics
+
+    assert analytics._hook_formula({"hook_formula": "the-list"}) == "the-list"
+    assert analytics._hook_formula({"profile_id": "rational_thoughts",
+                                    "main_point": "**Why** does worry return?"}) == "the-question"
+    assert analytics._hook_formula({"main_point": "Peace comes from within."}) == "unclassified"
+    rows = [{"hook_formula": "the-question", "views": 10, "reach": 5, "saved": 1, "shares": 0,
+             "avg_watch_seconds": 3.0}]
+    assert analytics.summarize(rows)["Hook formula"][0]["value"] == "the-question"

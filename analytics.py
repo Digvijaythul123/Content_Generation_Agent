@@ -23,7 +23,24 @@ _GROUPS = (
     ("story_mode", "Story mode"),
     ("visual_style", "Visual style"),
     ("thinker", "Thinker"),
+    ("hook_formula", "Hook formula"),
 )
+
+
+def _hook_formula(record):
+    """The saved hook formula, or one read from an older post's hook."""
+    if record.get("hook_formula"):
+        return record["hook_formula"]
+    try:
+        from hook_score import classify, formulas_for
+
+        formula = classify(
+            re.sub(r"\*\*(.+?)\*\*", r"\1", str(record.get("main_point") or "")),
+            formulas_for(record.get("profile_id")),
+        )
+    except Exception:  # A config problem must not break the report.
+        return "unclassified"
+    return formula["id"] if formula else "unclassified"
 
 
 def hashtags_of(caption):
@@ -110,6 +127,7 @@ def fetch_performance(publisher=None, records=None, facebook=None):
                 or "unspecified",
                 "visual_style": record.get("visual_style") or "unspecified",
                 "thinker": record.get("thinker_id") or "unspecified",
+                "hook_formula": _hook_formula(record),
                 "likes": item.get("like_count", 0),
                 "comments": item.get("comments_count", 0),
                 **{name: values.get(name, 0) for name in _METRICS},
