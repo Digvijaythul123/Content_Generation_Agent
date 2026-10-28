@@ -650,6 +650,14 @@ def build_flow_prompt(record):
             f"Sound: natural ambience only: {sound}. No speech, no voice-over, no "
             "music, no singing."
         )
+    if "buddha" in words:
+        # Video tools often draw "the Buddha" as a shaved-head monk.
+        opening += (
+            " The Buddha appears in his traditional form: tightly curled dark hair "
+            "with the rounded crown (ushnisha), long earlobes, a serene face, and "
+            "a simple saffron robe over one shoulder; he is not a shaved-head monk. "
+            "Monks with him have shaved heads."
+        )
     parts = [
         opening + look,
         motion,

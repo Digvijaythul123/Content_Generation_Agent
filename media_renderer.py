@@ -321,13 +321,28 @@ def placement_script(artwork, record, size):
         data = json.dumps({
             "busy": profile[0], "lum": profile[1], "height": size[1],
             "factor": LOOK_BRIGHTNESS.get(weather_look(record), 1.0),
-            "light": TONE_LIGHT, "mid": TONE_MID,
+            "light": 10 ** 6 if _is_motion(record) else TONE_LIGHT, "mid": TONE_MID,
+            "motion": _is_motion(record),
         })
     return f"<script>window.PLACEMENT = {data};\n{code}</script>"
 
 
+def _is_motion(record):
+    """True when the post's art is a video clip (Flow, Meta AI)."""
+    clip = artwork_path(record.get("id")) if record.get("id") else None
+    return clip is not None and is_video_artwork(clip)
+
+
 def text_tone(artwork, record):
-    """'light', 'mid', or 'dark' for the art behind a poster's words."""
+    """'light', 'mid', or 'dark' for the art behind a poster's words.
+
+    Video clips never get dark text: leaves, mist, and light move behind
+    the words, and light text on a shade stays readable over all of it."""
+    tone = _still_tone(artwork, record)
+    return "mid" if tone == "light" and _is_motion(record) else tone
+
+
+def _still_tone(artwork, record):
     if artwork is None:
         return "dark"
     if is_image_reel(record):

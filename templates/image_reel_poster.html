@@ -78,6 +78,18 @@
   body.tone-mid .quote, body.tone-mid .takeaway {
     text-shadow: 0 2px 18px $background_rgba_strong, 0 0 4px $background_rgba_soft;
   }
+  /* Video clips: things move behind the words, so give them a deeper
+     shade and a larger payoff line. */
+  body.motion .glow {
+    background: radial-gradient(ellipse 85% 30% at 50% var(--glow-y, 560px),
+      rgba(12, 9, 6, .55) 0%, rgba(12, 9, 6, .28) 50%, transparent 78%);
+  }
+  body.motion .quote, body.motion .takeaway {
+    text-shadow: 0 2px 20px rgba(0, 0, 0, .8), 0 0 4px rgba(0, 0, 0, .6);
+  }
+  body.motion .takeaway { font-size: 60px; }
+  body.motion .quote, body.motion .takeaway { color: #FFF6E6; }
+  body.motion .quote .hl, body.motion .takeaway .hl { color: #F5C542; }
   /* The handle sits lower, over the art, so it keeps its own shadow. */
   body.tone-light .handle { color: #FFF8EC; }
 

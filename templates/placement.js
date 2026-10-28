@@ -4,6 +4,7 @@
 (function () {
   const data = window.PLACEMENT;
   const body = document.body;
+  if (data && data.motion) body.classList.add("motion");
   if (!data || !data.busy || !data.busy.length) return;
   const column = document.querySelector(body.dataset.place);
   const text = document.querySelector(body.dataset.placeText);
