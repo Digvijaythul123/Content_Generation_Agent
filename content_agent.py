@@ -1041,8 +1041,11 @@ def write_flow_story(record, ai_service=None):
         "- Keep the facts of the source. Legends from later biographies are "
         "fine as scenes but are not claimed as history.\n"
         "- Picture: wide or medium shots, calm natural movement; the Buddha "
-        "in his traditional form (curled dark hair with the rounded crown, "
-        "long earlobes, saffron robe); before his awakening he is Prince "
+        "is a living man (not a statue) in his traditional form (curled dark "
+        "hair with the rounded crown, long earlobes, saffron robe). Scenes "
+        "with him are set in his own time and land: the forests, villages, "
+        "rivers and parks of ancient northern India and Nepal (no prayer "
+        "flags, stupas, or later temples). Before his awakening he is Prince "
         "Siddhartha with long dark hair in a topknot and fine white clothes. "
         "No text, letters, or signs anywhere.\n"
         "- The opening line should use one of these hook shapes:\n"
@@ -1057,7 +1060,7 @@ def write_flow_story(record, ai_service=None):
         "Voiceover 2: \"spoken words\"\n"
         "Scene 3: 7-10 s (one sentence)\n"
         "Voiceover 3: \"spoken payoff\"\n"
-        "Music: soft instruments, for example bamboo flute and tanpura\n"
+        "Music: two soft instruments that fit the mood (for example: bamboo flute, tanpura)\n"
     )
     reply = (ai_service or AIService()).generate_reel(prompt)
     found = {}

@@ -683,6 +683,8 @@ def render_image_reel_video(post_id, seconds=DEFAULT_DURATION_SECONDS):
             ) from error
         except subprocess.TimeoutExpired as error:
             raise MediaRenderError("ffmpeg took longer than 10 minutes.") from error
+    # Reload first: a clip check may have saved its result while rendering.
+    record = load_post(post_id)
     try:
         record["video_path"] = str(output.relative_to(PROJECT_ROOT))
     except ValueError:

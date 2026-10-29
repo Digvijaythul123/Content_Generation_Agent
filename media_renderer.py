@@ -721,6 +721,8 @@ def render_post_image(post_id):
             post_image_path(post_id),
             IMAGE_REEL_SIZE if is_image_reel(record) else INSTAGRAM_FEED_SIZE,
         )
+    # Reload first: a clip check may have saved its result while rendering.
+    record = load_post(post_id)
     try:
         record["image_path"] = str(output_path.relative_to(PROJECT_ROOT))
     except ValueError:

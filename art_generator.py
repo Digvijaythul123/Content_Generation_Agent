@@ -751,7 +751,8 @@ def build_flow_story_prompt(record):
         "voice, with gentle natural ambience.",
         "The Buddha appears in his traditional form: tightly curled dark hair with "
         "the rounded crown (ushnisha), long earlobes, a serene face, and a simple "
-        "saffron robe over one shoulder; he is not a shaved-head monk, and his face "
+        "saffron robe over one shoulder; he is a living, breathing man with natural "
+        "skin, not a statue or a painting, and not a shaved-head monk; his face "
         "stays the same in every shot. Before his awakening he is Prince Siddhartha: "
         "long dark hair in a topknot, fine white clothes. Monks have shaved heads.",
         ("Shot 1 may be close on the host; the Buddha's shots are wide or medium. "
